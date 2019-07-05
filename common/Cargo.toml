@@ -12,7 +12,7 @@ specs-idvs = { git = "https://gitlab.com/veloren/specs-idvs.git", branch = "spec
 
 specs = { git = "https://github.com/amethyst/specs.git", features = ["serde", "storage-event-control"], rev = "7a2e348ab2223818bad487695c66c43db88050a5" }
 vek = { version = "0.11.0", features = ["serde"] }
-dot_vox = "4.0"
+dot_vox = { git = "https://github.com/Imberflur/dot_vox.git" }
 image = { version = "0.22.5", default-features = false, features = ["png"] }
 serde = { version = "1.0.110", features = ["derive"] }
 serde_json = "1.0.50"

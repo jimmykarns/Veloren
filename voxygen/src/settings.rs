@@ -154,6 +154,7 @@ impl ControlSettings {
             GameInput::Slot9 => KeyMouse::Key(VirtualKeyCode::Key9),
             GameInput::Slot10 => KeyMouse::Key(VirtualKeyCode::Q),
             GameInput::SwapLoadout => KeyMouse::Key(VirtualKeyCode::LAlt),
+            GameInput::PlaceVox => KeyMouse::Key(VirtualKeyCode::F7),
         }
     }
 }
@@ -217,6 +218,7 @@ impl Default for ControlSettings {
             GameInput::Slot9,
             GameInput::Slot10,
             GameInput::SwapLoadout,
+            GameInput::PlaceVox,
         ];
         for game_input in game_inputs {
             new_settings.insert_binding(game_input, ControlSettings::default_binding(game_input));
@@ -307,6 +309,7 @@ pub mod con_settings {
         pub interact: Button,
         pub toggle_wield: Button,
         pub swap_loadout: Button,
+        pub place_vox: Button,
         //pub charge: Button,
     }
 
@@ -396,6 +399,7 @@ pub mod con_settings {
                 interact: Button::Simple(GilButton::LeftTrigger2),
                 toggle_wield: Button::Simple(GilButton::DPadLeft),
                 swap_loadout: Button::Simple(GilButton::Unknown),
+                place_vox: Button::Simple(GilButton::Unknown),
                 //charge: Button::Simple(GilButton::Unknown),
             }
         }

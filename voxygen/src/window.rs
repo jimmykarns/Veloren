@@ -66,6 +66,7 @@ pub enum GameInput {
     FreeLook,
     AutoWalk,
     CycleCamera,
+    PlaceVox,
 }
 
 impl GameInput {
@@ -121,6 +122,7 @@ impl GameInput {
             GameInput::Slot9 => "gameinput.slot9",
             GameInput::Slot10 => "gameinput.slot10",
             GameInput::SwapLoadout => "gameinput.swaploadout",
+            GameInput::PlaceVox => "gameinput.placevox",
         }
     }
 }

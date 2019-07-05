@@ -20,8 +20,10 @@ use common::{
     msg::ClientState,
     terrain::{Block, BlockKind},
     util::Dir,
-    vol::ReadVol,
+    vol::{ReadVol, Vox},
 };
+use dot_vox::DotVoxData;
+use serde_derive::{Deserialize, Serialize};
 use specs::{Join, WorldExt};
 use std::{cell::RefCell, rc::Rc, time::Duration};
 use tracing::{error, info};
@@ -33,6 +35,70 @@ enum TickAction {
     Continue,
     // Disconnected (i.e. go to main menu)
     Disconnect,
+}
+#[derive(Serialize, Deserialize)]
+struct VoxSpec(String, [i32; 3]);
+
+#[derive(Serialize, Deserialize)]
+struct PlaceSpec {
+    pieces: Vec<VoxSpec>,
+}
+
+impl common::assets::Asset for PlaceSpec {
+    const ENDINGS: &'static [&'static str] = &["ron"];
+
+    fn parse(buf_reader: std::io::BufReader<std::fs::File>) -> Result<Self, common::assets::Error> {
+        Ok(ron::de::from_reader(buf_reader).expect("Error parsing place spec"))
+    }
+}
+
+impl PlaceSpec {
+    pub fn load_watched(
+        indicator: &mut common::assets::watch::ReloadIndicator,
+    ) -> std::sync::Arc<Self> {
+        common::assets::load_watched::<Self>("place", indicator).unwrap()
+    }
+
+    pub fn build_place(
+        &self,
+        indicator: &mut common::assets::watch::ReloadIndicator,
+    ) -> (common::figure::SparseScene, Vec3<i32>) {
+        use common::assets;
+        // TODO add sparse scene combination
+        //use common::figure::{DynaUnionizer, Segment};
+        use std::sync::Arc;
+        fn graceful_load_vox(
+            name: &str,
+            indicator: &mut assets::watch::ReloadIndicator,
+        ) -> Arc<DotVoxData> {
+            match assets::load_watched::<DotVoxData>(name, indicator) {
+                Ok(dot_vox) => dot_vox,
+                Err(_) => {
+                    error!("Could not load vox file for placement: {}", name);
+                    assets::load_expect::<DotVoxData>("voxygen.voxel.not_found")
+                },
+            }
+        }
+        //let mut unionizer = DynaUnionizer::new();
+        //for VoxSpec(specifier, offset) in &self.pieces {
+        //    let seg = Segment::from(graceful_load_vox(&specifier,
+        // indicator).as_ref());    unionizer = unionizer.add(seg,
+        // (*offset).into());
+        //}
+
+        //unionizer.unify()
+        (
+            match self.pieces.get(0) {
+                Some(VoxSpec(specifier, _offset)) => common::figure::SparseScene::from(
+                    graceful_load_vox(&specifier, indicator).as_ref(),
+                ),
+                None => assets::load_expect::<DotVoxData>("voxygen.voxel.not_found")
+                    .as_ref()
+                    .into(),
+            },
+            Vec3::zero(),
+        )
+    }
 }
 
 pub struct SessionState {
@@ -172,6 +238,13 @@ impl PlayState for SessionState {
             &mut localization_watcher,
         )
         .unwrap();
+        let mut placing_vox = None;
+        let mut last_sent = None;
+        let mut place_indicator = common::assets::watch::ReloadIndicator::new();
+        // TODO: use offset
+        let (mut vox, _) =
+            PlaceSpec::load_watched(&mut place_indicator).build_place(&mut place_indicator);
+        let mut placepos = Vec3::zero();
 
         let mut walk_forward_dir = self.scene.camera().forward_xy();
         let mut walk_right_dir = self.scene.camera().right_xy();
@@ -362,6 +435,38 @@ impl PlayState for SessionState {
                             stop_auto_walk(&mut auto_walk, &mut self.key_state, &mut self.hud);
                         }
                         self.key_state.up = state
+                    },
+                    Event::InputUpdate(GameInput::PlaceVox, state) => {
+                        if state {
+                            let client = self.client.borrow();
+                            // start placing
+                            if placing_vox.is_none() {
+                                let cam_pos = self.scene.camera().dependents().cam_pos;
+                                let cam_dir =
+                                    (self.scene.camera().get_focus_pos() - cam_pos).normalized();
+
+                                let (d, b) = {
+                                    let terrain = client.state().terrain();
+                                    let ray =
+                                        terrain.ray(cam_pos, cam_pos + cam_dir * 100.0).cast();
+                                    (ray.0, if let Ok(Some(_)) = ray.1 { true } else { false })
+                                };
+
+                                if b {
+                                    placepos =
+                                        (cam_pos + cam_dir * (d - 0.01)).map(|e| e.floor() as i32);
+
+                                    // check if vox was reloaded
+                                    if place_indicator.reloaded() {
+                                        vox = PlaceSpec::load_watched(&mut place_indicator)
+                                            .build_place(&mut place_indicator)
+                                            .0;
+                                    }
+                                    placing_vox = Some(vox.iter());
+                                    last_sent = None;
+                                }
+                            }
+                        }
                     },
                     Event::InputUpdate(GameInput::MoveBack, state) => {
                         if state && global_state.settings.gameplay.stop_auto_walk_on_input {
@@ -635,6 +740,62 @@ impl PlayState for SessionState {
             self.scene
                 .camera_mut()
                 .compute_dependents(&*self.client.borrow().state().terrain());
+            // Only send next portion when the previous subchunk finishes sending
+            if let Some((world_pos, block)) = last_sent.as_ref().copied() {
+                if self
+                    .client
+                    .borrow()
+                    .state()
+                    .terrain()
+                    .get(world_pos)
+                    .map(|b| *b == block)
+                    .unwrap_or(true)
+                {
+                    last_sent = None;
+                }
+            }
+
+            if last_sent.is_none() {
+                if let Some(mut chunk_iter) = placing_vox.take() {
+                    use common::vol::IntoFullVolIterator;
+
+                    let mut chunk_sent = false;
+                    if let Some((key, chunk)) = chunk_iter.next() {
+                        for (pos, cell) in chunk.full_vol_iter() {
+                            let world_pos = vox.key_pos(key) + pos + placepos;
+                            match cell.get_color() {
+                                Some(color) => {
+                                    let block = Block::new(BlockKind::Normal, color);
+                                    self.client.borrow_mut().place_block(world_pos, block);
+                                    last_sent = Some((world_pos, block))
+                                },
+                                None => {
+                                    // Comment out this section to not carve out the empty space
+                                    let mut client = self.client.borrow_mut();
+                                    // Only remove the block if there is something there
+                                    if client
+                                        .state()
+                                        .terrain()
+                                        .get(world_pos)
+                                        .map(|block| block.kind() != BlockKind::Air)
+                                        .unwrap_or(false)
+                                    {
+                                        client.remove_block(world_pos);
+                                        last_sent = Some((world_pos, Block::empty()))
+                                    }
+                                },
+                            }
+                        }
+
+                        chunk_sent = true;
+                    }
+
+                    if chunk_sent {
+                        placing_vox = Some(chunk_iter);
+                    }
+                }
+            }
+
             // Extract HUD events ensuring the client borrow gets dropped.
             let mut hud_events = self.hud.maintain(
                 &self.client.borrow(),

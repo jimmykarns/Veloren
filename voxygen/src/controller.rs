@@ -163,6 +163,9 @@ impl From<&crate::settings::GamepadSettings> for ControllerSettings {
                 /*map.entry(settings.game_buttons.charge)
                 .or_default()
                 .push(GameInput::Charge);*/
+                map.entry(settings.game_buttons.place_vox)
+                    .or_default()
+                    .push(GameInput::PlaceVox);
                 map
             },
             menu_button_map: {
