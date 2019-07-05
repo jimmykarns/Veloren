@@ -50,6 +50,7 @@ pub struct ControlSettings {
     pub interact: KeyMouse,
     pub toggle_wield: KeyMouse,
     pub charge: KeyMouse,
+    pub place_vox: KeyMouse,
 }
 
 /// Since Macbook trackpads lack middle click, on OS X we default to LShift
@@ -100,6 +101,7 @@ impl Default for ControlSettings {
             interact: KeyMouse::Mouse(MouseButton::Right),
             toggle_wield: KeyMouse::Key(VirtualKeyCode::T),
             charge: KeyMouse::Key(VirtualKeyCode::Key1),
+            place_vox: KeyMouse::Key(VirtualKeyCode::F7),
         }
     }
 }
