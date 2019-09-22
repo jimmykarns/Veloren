@@ -167,6 +167,7 @@ impl Scene {
             Vec3::zero(),
             Vec3::zero(),
             Vec3::new(self.char_ori.sin(), -self.char_ori.cos(), 0.0),
+            None,
             1.0,
             Rgba::broadcast(1.0),
             1.0 / 60.0, // TODO: Use actual deltatime here?

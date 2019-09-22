@@ -122,6 +122,7 @@ pub struct ControllerInputs {
     pub toggle_wield: Input,
     pub charge: Input,
     pub move_dir: Vec2<f32>,
+    pub control_dir: Vec2<f32>,
     pub look_dir: Vec3<f32>,
 }
 

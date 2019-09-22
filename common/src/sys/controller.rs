@@ -3,7 +3,7 @@ use crate::{
     comp::{
         self, item, projectile, ActionState, ActionState::*, Body, CharacterState, ControlEvent,
         Controller, ControllerInputs, Energy, EnergySource, HealthChange, HealthSource, ItemKind,
-        Mounting, MovementState, MovementState::*, PhysicsState, Projectile, Stats, Vel,
+        Mounting, MovementState, MovementState::*, PhysicsState, Projectile, Stats, Vel, Ori,
     },
     event::{Emitter, EventBus, LocalEvent, ServerEvent},
     state::DeltaTime,
@@ -253,6 +253,7 @@ impl<'a> System<'a> for Sys {
         WriteStorage<'a, Energy>,
         ReadStorage<'a, Body>,
         ReadStorage<'a, Vel>,
+        ReadStorage<'a, Ori>,
         ReadStorage<'a, PhysicsState>,
         ReadStorage<'a, Uid>,
         ReadStorage<'a, Mounting>,
@@ -272,6 +273,7 @@ impl<'a> System<'a> for Sys {
             mut energies,
             bodies,
             velocities,
+            orientations,
             physics_states,
             uids,
             mountings,
@@ -288,6 +290,7 @@ impl<'a> System<'a> for Sys {
             mut energy,
             body,
             vel,
+            ori,
             physics,
             mount,
         ) in (
@@ -299,6 +302,7 @@ impl<'a> System<'a> for Sys {
             &mut energies.restrict_mut(),
             &bodies,
             &velocities,
+            &orientations,
             &physics_states,
             mountings.maybe(),
         )
@@ -434,10 +438,7 @@ impl<'a> System<'a> for Sys {
                 // Any Action + Falling
                 (action_state, Fall) => {
                     character.movement = get_state_from_move_dir(&inputs.move_dir);
-                    if inputs.glide.is_pressed() && can_glide(body) {
-                        character.movement = Glide;
-                        continue;
-                    }
+
                     // Try to climb
                     if let (true, Some(_wall_dir)) = (
                         (inputs.climb.is_pressed() | inputs.climb_down.is_pressed())
@@ -457,6 +458,17 @@ impl<'a> System<'a> for Sys {
                         }
                     } else {
                         character.movement = Stand;
+                        continue;
+                    }
+
+                    // Glide
+                    // TODO: Check for glide ability/item
+                    if inputs.glide.is_pressed()
+                        && !physics.on_ground
+                        && (character.action == Idle || character.action.is_wield())
+                        && can_glide(body)
+                    {
+                        character.movement.start_glide(ori.0);
                         continue;
                     }
 
@@ -628,15 +640,6 @@ impl<'a> System<'a> for Sys {
                             continue;
                         }
                     }
-                    // While not on ground ...
-                    else {
-                        // Try to glide
-                        if physics.on_wall == None && inputs.glide.is_pressed() && can_glide(&body)
-                        {
-                            character.movement = Glide;
-                            continue;
-                        }
-                    }
 
                     // Tool Actions
                     if inputs.toggle_wield.is_just_pressed() {
@@ -698,7 +701,7 @@ impl<'a> System<'a> for Sys {
                 },
                 // Any Action + Gliding, shouldnt care about action,
                 // because should be Idle
-                (_, Glide) => {
+                (_, Glide { .. }) => {
                     character.action = Idle;
 
                     if !inputs.glide.is_pressed() {

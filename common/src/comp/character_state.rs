@@ -1,6 +1,11 @@
 use specs::{Component, FlaggedStorage, HashMapStorage};
 //use specs_idvs::IDVStorage;
-use std::time::Duration;
+use std::{
+    time::Duration,
+    hash::{Hash, Hasher},
+    ops::MulAssign,
+};
+use vek::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, Eq, Hash)]
 pub enum MovementState {
@@ -9,9 +14,24 @@ pub enum MovementState {
     Run,
     Jump,
     Fall,
-    Glide,
     Swim,
     Climb,
+    Glide { oriq: OriQ },
+    //Swim,
+}
+
+impl MovementState {
+    pub fn is_glide(&self) -> bool {
+        if let Self::Glide { .. } = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn start_glide(&mut self, ori: Vec3<f32>) {
+        *self = Self::Glide { oriq: OriQ::from(ori) }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, Eq, Hash)]
@@ -123,4 +143,56 @@ impl Default for CharacterState {
 
 impl Component for CharacterState {
     type Storage = FlaggedStorage<Self, HashMapStorage<Self>>;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct OriQ {
+    oriq: Quaternion<f32>
+}
+
+impl OriQ {
+    pub fn new(q: Quaternion<f32>) -> Self {
+        let l = q.magnitude_squared();
+        let flag = l.is_nan() || l.is_infinite() || l == 0.0;
+        Self {
+            oriq: if flag { Quaternion::identity() } else { q.normalized() }
+        }
+    }
+
+    pub fn val(&self) -> Quaternion<f32> {
+        self.oriq
+    }
+
+    pub fn ori(&self) -> Vec3<f32> {
+        self.oriq * Vec3::unit_y()
+    }
+
+    pub fn left(&self) -> Vec3<f32> {
+        self.oriq * -Vec3::unit_x()
+    }
+}
+
+impl Eq for OriQ {}
+
+impl Hash for OriQ {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        0.hash(state) // Two figures with different orientation quaternions are to be considered the same
+    }
+}
+
+impl From<Vec3<f32>> for OriQ {
+    fn from(v: Vec3<f32>) -> Self {
+        Self {
+            oriq: Quaternion::rotation_from_to_3d(Vec3::unit_y(), v)
+        }
+    }
+}
+
+// Representing multiplying this on the left by other
+impl MulAssign<Quaternion<f32>> for OriQ {
+    fn mul_assign(&mut self, other: Quaternion<f32>) {
+        *self = Self {
+            oriq: other * self.val()
+        }
+    }
 }

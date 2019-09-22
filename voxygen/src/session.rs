@@ -378,6 +378,7 @@ impl PlayState for SessionState {
                 Vec2::new(ori[0].sin(), ori[0].cos()),
             );
             let dir_vec = self.key_state.dir_vec();
+            self.inputs.control_dir = dir_vec;
             self.inputs.move_dir = unit_vecs.0 * dir_vec[0] + unit_vecs.1 * dir_vec[1];
 
             self.inputs.look_dir = cam_dir;

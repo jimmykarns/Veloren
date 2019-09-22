@@ -411,6 +411,12 @@ impl FigureMgr {
                         state.action_time = 0.0;
                     }
 
+                    //let time_since_movement_change =
+                    //    state.last_movement_change.elapsed().as_secs_f64();
+                    //let time_since_action_change = state.last_action_change.elapsed().as_secs_f64();
+
+                    let mut quat_out = None;
+
                     let target_base = match &character.movement {
                         Stand => anim::character::StandAnimation::update_skeleton(
                             &CharacterSkeleton::new(),
@@ -433,13 +439,16 @@ impl FigureMgr {
                             &mut movement_animation_rate,
                             skeleton_attr,
                         ),
-                        Glide => anim::character::GlidingAnimation::update_skeleton(
-                            &CharacterSkeleton::new(),
-                            (active_tool_kind, vel.0, ori.0, state.last_ori, time),
-                            state.movement_time,
-                            &mut movement_animation_rate,
-                            skeleton_attr,
-                        ),
+                        Glide { oriq } => {
+                            quat_out = Some(oriq.val());
+                            anim::character::GlidingAnimation::update_skeleton(
+                                &CharacterSkeleton::new(),
+                                (active_tool_kind, vel.0, ori.0, state.last_ori, time),
+                                state.movement_time,
+                                &mut movement_animation_rate,
+                                skeleton_attr,
+                            )
+                        },
                         Swim => anim::character::SwimAnimation::update_skeleton(
                             &CharacterSkeleton::new(),
                             (active_tool_kind, vel.0.magnitude(), ori.0.magnitude(), time),
@@ -523,6 +532,7 @@ impl FigureMgr {
                         pos.0,
                         vel.0,
                         ori.0,
+                        quat_out,
                         scale,
                         col,
                         dt,
@@ -594,6 +604,7 @@ impl FigureMgr {
                         pos.0,
                         vel.0,
                         ori.0,
+                        None,
                         scale,
                         col,
                         dt,
@@ -665,6 +676,7 @@ impl FigureMgr {
                         pos.0,
                         vel.0,
                         ori.0,
+                        None,
                         scale,
                         col,
                         dt,
@@ -734,6 +746,7 @@ impl FigureMgr {
                         pos.0,
                         vel.0,
                         ori.0,
+                        None,
                         scale,
                         col,
                         dt,
@@ -803,6 +816,7 @@ impl FigureMgr {
                         pos.0,
                         vel.0,
                         ori.0,
+                        None,
                         scale,
                         col,
                         dt,
@@ -872,6 +886,7 @@ impl FigureMgr {
                         pos.0,
                         vel.0,
                         ori.0,
+                        None,
                         scale,
                         col,
                         dt,
@@ -941,6 +956,7 @@ impl FigureMgr {
                         pos.0,
                         vel.0,
                         ori.0,
+                        None,
                         scale,
                         col,
                         dt,
@@ -1010,6 +1026,7 @@ impl FigureMgr {
                         pos.0,
                         vel.0,
                         ori.0,
+                        None,
                         scale,
                         col,
                         dt,
@@ -1079,6 +1096,7 @@ impl FigureMgr {
                         pos.0,
                         vel.0,
                         ori.0,
+                        None,
                         scale,
                         col,
                         dt,
@@ -1148,6 +1166,7 @@ impl FigureMgr {
                         pos.0,
                         vel.0,
                         ori.0,
+                        None,
                         scale,
                         col,
                         dt,
@@ -1169,6 +1188,7 @@ impl FigureMgr {
                         pos.0,
                         vel.0,
                         ori.0,
+                        None,
                         scale,
                         col,
                         dt,
@@ -1557,6 +1577,7 @@ impl<S: Skeleton> FigureState<S> {
         pos: Vec3<f32>,
         vel: Vec3<f32>,
         ori: Vec3<f32>,
+        oriq: Option<Quaternion<f32>>,
         scale: f32,
         col: Rgba<f32>,
         dt: f32,
@@ -1587,6 +1608,7 @@ impl<S: Skeleton> FigureState<S> {
             * Mat4::translation_3d(self.pos)
             * Mat4::rotation_z(-ori.x.atan2(ori.y))
             * Mat4::rotation_x(ori.z.atan2(Vec2::from(ori).magnitude()))
+            * if let Some(quat) = oriq { Mat4::from(quat) } else { Mat4::rotation_z(-ori.x.atan2(ori.y)) }
             * Mat4::scaling_3d(Vec3::from(0.8 * scale));
 
         let locals = FigureLocals::new(mat, col);

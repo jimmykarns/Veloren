@@ -157,7 +157,7 @@ impl MovementEventMapper {
             (MovementState::Stand, _, SfxEvent::Fall) => SfxEvent::Run,
             (MovementState::Fall, _, SfxEvent::Jump) => SfxEvent::Idle,
             (MovementState::Fall, _, _) => SfxEvent::Fall,
-            (MovementState::Glide, _, previous_event) => {
+            (MovementState::Glide { .. }, _, previous_event) => {
                 if previous_event != SfxEvent::GliderOpen && previous_event != SfxEvent::Glide {
                     SfxEvent::GliderOpen
                 } else {
