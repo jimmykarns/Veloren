@@ -11,7 +11,7 @@ impl Animation for GlidingAnimation {
 
     fn update_skeleton(
         skeleton: &Self::Skeleton,
-        (_active_tool_kind, velocity, orientation, last_ori, global_time): Self::Dependency,
+        (_active_tool_kind, velocity, _orientation, _last_ori, global_time): Self::Dependency,
         anim_time: f64,
         _rate: &mut f32,
         skeleton_attr: &SkeletonAttr,

@@ -440,7 +440,7 @@ impl FigureMgr {
                             skeleton_attr,
                         ),
                         Glide { oriq: q, .. } => {
-                            quat_out = Some(q.val());
+                            quat_out = Some(*q);
                             anim::character::GlidingAnimation::update_skeleton(
                                 &CharacterSkeleton::new(),
                                 (active_tool_kind, vel.0, ori.0, state.last_ori, time),
@@ -1603,12 +1603,15 @@ impl<S: Skeleton> FigureState<S> {
         self.movement_time += (dt * movement_rate) as f64;
         self.action_time += (dt * action_rate) as f64;
 
+        let glide_shift = -Vec3::unit_z() * scale * 1.7 * 0.5;
+
         // TODO: what are the interpolated ori values used for if not here???
         let mat = Mat4::<f32>::identity()
-            * Mat4::translation_3d(self.pos)
+            * Mat4::translation_3d(self.pos - glide_shift)
             * Mat4::rotation_z(-ori.x.atan2(ori.y))
             * Mat4::rotation_x(ori.z.atan2(Vec2::from(ori).magnitude()))
             * if let Some(quat) = oriq { Mat4::from(quat) } else { Mat4::rotation_z(-ori.x.atan2(ori.y)) }
+            * Mat4::translation_3d(glide_shift)
             * Mat4::scaling_3d(Vec3::from(0.8 * scale));
         let locals = FigureLocals::new(mat, col);
         renderer.update_consts(&mut self.locals, &[locals]).unwrap();
