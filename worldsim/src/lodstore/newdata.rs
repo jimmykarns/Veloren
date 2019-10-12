@@ -4,6 +4,7 @@ use super::index::{self, relative_to_1d, two_pow_u, AbsIndex, LodIndex};
 use std::collections::HashMap;
 use std::u32;
 use vek::*;
+use std::marker::PhantomData;
 /*
  Terminology:
  - Layer: the layer of the LoDTree, a tree can have n layers, every layer contains their child layer, except for the last one.
@@ -11,7 +12,8 @@ use vek::*;
  - Detail: Each Layer contains information about that layer, here called Detail. This is the usable information we want to store in the LoDTree
  - LodPos: A LodPos marks a specific position inside the LoDTree, but not their layer.
            Each Detail has a LodPos. Multiple Details can exist at the same LodPos on different layers!
- - Index: This refers to the actually storage for the index for the next layer (often a u16,u32)
+ - Index: This refers to the actually storage for the index for the next layer (often a u16,u32).
+          The Index is used to find the child in a spare storage.
  - Key: always refers to the storage of a LAYER. Any keyword with KEY is either of type usize or LodPos.
  - Prefix P always means parent, Prexix C always child, no prefix means for this layer.
 
@@ -37,30 +39,27 @@ use vek::*;
                 When LoDTree.traverse() returns a LayerResult.
 */
 
+
 pub type LodPos = LodIndex;
 
-pub trait KeyConvertable {
-    type KEY;
-    type INDEX;
-    fn uncompress(&self, index: &Self::INDEX) -> Self::KEY;
-    fn compress(&self, key: &Self::KEY) -> Self::INDEX;
+pub trait Index {}
+
+pub trait Key {
+    fn from_index<T: Index>(index: T) -> Self;
+    fn to_index<T: Index>(self) -> T;
 }
 
 pub trait IndexStore {
-    type PARENT_DETAIL: DetailStore;
+    type KEY: Key;
     type INDEX: Copy;
     const OWN_PER_PARENT: usize; // theoretically this can be auto calculated in a new trait, however rust ist detecting conflicting implementations
 
-    fn load(&self, key: Self::PARENT_DETAIL::KEY) -> Self::INDEX;
-    fn store(&mut self, key: Self::PARENT_DETAIL::KEY, index: Self::INDEX);
+    fn load(&self, key: Self::KEY) -> Self::INDEX;
+    fn store(&mut self, key: Self::KEY, index: Self::INDEX);
 }
-// Every IndexStore practivally needs this, but i want to autocalculte OWN_PER_PARENT so this needs to be an extra trait
-pub trait IndexStoreLevel: IndexStore {
 
-
-}
 pub trait DetailStore {
-    type KEY;
+    type KEY: Key;
     type DETAIL;
     const LEVEL: u8;
 
@@ -69,8 +68,8 @@ pub trait DetailStore {
     fn store(&mut self, key: Self::KEY, detail: Self::DETAIL);
 }
 
-pub trait Nestable {
-    type NESTED: IndexStore + DetailStore;
+pub trait Nestable: DetailStore {
+    type NESTED: IndexStore<KEY = <Self as DetailStore>::KEY> + DetailStore;
 
     fn nested(&self) -> &Self::NESTED;
 }
@@ -90,6 +89,11 @@ pub struct LayerResult<'a, N: DetailStore> {
     wanted: LodPos,
     key: N::KEY,
 }
+
+impl Index for u16 {}
+impl Index for u32 {}
+impl Index for LodPos {}
+
 
 //TODO: optimize this self away! vtable
 //TODO: arrr and the clone
@@ -137,15 +141,40 @@ pub struct HashNoneNestLayer<N: IndexStore + DetailStore, T, const L: u8> {
 }
 
 #[rustfmt::skip]
-impl<T, P: , const L: u8> DetailStore for VecVecLayer<T, PI, { L }> {
-    type PARENT_DETAIL = usize; type DETAIL=T; const LEVEL: u8 = { L };
+impl<T, PI: Copy, const L: u8> IndexStore for VecVecLayer<T, PI, { L }> {
+    type KEY = usize; type INDEX=PI; const OWN_PER_PARENT: usize = 4096; //TODO: calculate these correctly
+    fn load(&self, key: usize) -> PI {  *self.index.get(key).unwrap() }
+    fn store(&mut self, key: usize, index: PI) { self.index.insert(key, index); }
+}
+#[rustfmt::skip]
+impl<N: IndexStore<KEY = usize> + DetailStore, T, PI: Copy, const L: u8> IndexStore for VecVecNestLayer<N, T, PI, { L }> {
+    type KEY = usize; type INDEX=PI; const OWN_PER_PARENT: usize = 32768;
+    fn load(&self, key: usize) -> PI { *self.index.get(key).unwrap() }
+    fn store(&mut self, key: usize, index: PI) { self.index.insert(key, index); }
+}
+#[rustfmt::skip]
+impl<T, PI: Copy, const L: u8> IndexStore for VecHashLayer<T, PI, { L }> {
+    type KEY = LodPos; type INDEX=PI; const OWN_PER_PARENT: usize = 1337;
+    fn load(&self, key: LodPos) -> PI { *self.index.get(&key).unwrap() }
+    fn store(&mut self, key: LodPos, index: PI) { self.index.insert(key, index); }
+}
+#[rustfmt::skip]
+impl<N: IndexStore<KEY = usize> + DetailStore, T, PI: Copy, const L: u8> IndexStore for VecHashNestLayer<N, T, PI, { L }>  {
+    type KEY = LodPos; type INDEX=PI; const OWN_PER_PARENT: usize = 4096;
+    fn load(&self, key: LodPos) -> PI { *self.index.get(&key).unwrap() }
+    fn store(&mut self, key: LodPos, index: PI) { self.index.insert(key, index); }
+}
+
+#[rustfmt::skip]
+impl<T, PI: Copy, const L: u8> DetailStore for VecVecLayer<T, PI, { L }> {
+    type KEY = usize; type DETAIL=T; const LEVEL: u8 = { L };
     fn load(&self, key: usize) -> &T {  self.detail.get(key).unwrap() }
     fn load_mut(&mut self, key: usize) -> &mut T {  self.detail.get_mut(key).unwrap() }
     fn store(&mut self, key: usize, detail: T) { self.detail.insert(key, detail); }
 }
 #[rustfmt::skip]
 impl<N: IndexStore<KEY = usize> + DetailStore, T, PI: Copy, const L: u8> DetailStore for VecVecNestLayer<N, T, PI, { L }>  {
-    type PARENT_DETAIL = usize; type DETAIL=T; const LEVEL: u8 = { L };
+    type KEY = usize; type DETAIL=T; const LEVEL: u8 = { L };
     fn load(&self, key: usize) -> &T { self.detail.get(key).unwrap() }
     fn load_mut(&mut self, key: usize) -> &mut T {  self.detail.get_mut(key).unwrap() }
     fn store(&mut self, key: usize, detail: T) { self.detail.insert(key, detail); }
@@ -170,31 +199,6 @@ impl<N: IndexStore<KEY = LodPos> + DetailStore, T, const L: u8> DetailStore for 
     fn load(&self, key: LodPos) -> &T { self.detail.get(&key).unwrap() }
     fn load_mut(&mut self, key: LodPos) -> &mut T {  self.detail.get_mut(&key).unwrap() }
     fn store(&mut self, key: LodPos, detail: T) { self.detail.insert(key, detail); }
-}
-
-#[rustfmt::skip]
-impl<T, PI: Copy, const L: u8> IndexStore for VecVecLayer<T, PI, { L }> {
-    type KEY = usize; type INDEX=PI; const OWN_PER_PARENT: usize = 4096; //TODO: calculate these correctly
-    fn load(&self, key: usize) -> PI {  *self.index.get(key).unwrap() }
-    fn store(&mut self, key: usize, index: PI) { self.index.insert(key, index); }
-}
-#[rustfmt::skip]
-impl<N: IndexStore<KEY = usize> + DetailStore, T, PI: Copy, const L: u8> IndexStore for VecVecNestLayer<N, T, PI, { L }> {
-    type KEY = usize; type INDEX=PI; const OWN_PER_PARENT: usize = 32768;
-    fn load(&self, key: usize) -> PI { *self.index.get(key).unwrap() }
-    fn store(&mut self, key: usize, index: PI) { self.index.insert(key, index); }
-}
-#[rustfmt::skip]
-impl<T, PI: Copy, const L: u8> IndexStore for VecHashLayer<T, PI, { L }> {
-    type KEY = LodPos; type INDEX=PI; const OWN_PER_PARENT: usize = 1337;
-    fn load(&self, key: LodPos) -> PI { *self.index.get(&key).unwrap() }
-    fn store(&mut self, key: LodPos, index: PI) { self.index.insert(key, index); }
-}
-#[rustfmt::skip]
-impl<N: IndexStore<KEY = usize> + DetailStore, T, PI: Copy, const L: u8> IndexStore for VecHashNestLayer<N, T, PI, { L }>  {
-    type KEY = LodPos; type INDEX=PI; const OWN_PER_PARENT: usize = 4096;
-    fn load(&self, key: LodPos) -> PI { *self.index.get(&key).unwrap() }
-    fn store(&mut self, key: LodPos, index: PI) { self.index.insert(key, index); }
 }
 
 #[rustfmt::skip]
@@ -245,15 +249,23 @@ where N::NESTED: IndexStore,
     }
 }*/
 
+impl<'a, N: Nestable + DetailStore<KEY=Nestable::NESTED::KEY>>
+Traversable<LayerResult<'a, N::NESTED>> for LayerResult<'a, N>
+    where N::NESTED: IndexStore,
+          <N::NESTED as IndexStore>::KEY: Copy,
+{
+    fn get(self) -> LayerResult<'a, N::NESTED> {
+        println!("{}", N::LEVEL);
+        unimplemented!();
+    }
+}
 
-impl<'a, N: DetailStore + Nestable>
+/*
+impl<'a, N: Nestable>
 Traversable<LayerResult<'a, N::NESTED>> for LayerResult<'a, N>
 where N::NESTED: IndexStore,
       <N::NESTED as IndexStore>::KEY: Copy,
       <N as DetailStore>::KEY: KeyConvertable<KEY=<N::NESTED as DetailStore>::KEY, INDEX=<N::NESTED as IndexStore>::INDEX>,
-// ERROR PRATISCH GESEHEN GILT DIE FOLGENDE ZEILE IMMER, aber das sieht der compiler nur wenn wir auf den structs arbeiten,
-// AUF DEN TRAITS WEIS ER ES NICHT! DAS IST KAKA
-      <N::NESTED as IndexStore>::KEY == <N as DetailStore>::KEY
 {
     fn get(self) -> LayerResult<'a, N::NESTED> {
         println!("{}", N::LEVEL);
@@ -267,6 +279,7 @@ where N::NESTED: IndexStore,
         }
     }
 }
+*/
 
 impl<'a, N: IndexStore + DetailStore> Materializeable<N::DETAIL> for LayerResult<'a, N> {
     fn mat(self) -> N::DETAIL {
@@ -285,6 +298,57 @@ pub type ExampleDelta =
             > ,Option<()> , u16, 9
         > ,() , 13
     >;
+
+
+
+/*
+
+UNS INTERESSIERT DOCH GARNICHT der speicher DES INDEXES, OB ES EIN LodPOS oder u8 Index ist, es interessiert mich was für eine
+ART INDEX DAS IST!!!
+DIRECT HASH LOOKUP?
+NESTED VEC LOOKUP!
+und unterschiedliche indexe (index trait) haben unterschliedlichen speicher undder verhält sich unterschiedlich !!!!!!!
+
+A (data: Hashmap)
+B (data: Vec, Index: Hashmap)
+C (data: Vec, Index: Vec)
+D (data: Vec, Index: Vec)
+
+A.data = [1 entry]
+B.data = [8 entries]
+C.data = [64 entries]
+D.data = [8 entries]
+B.index = [0] <- every entry in A has 8 childs. there are 1 entry in A, it has ... 8 child. The first of his childs can be found at 0*8 in B.data
+C.index = [0, 1, 2, 3, 4, 5, 6, 7] <- because created in order, these are in order to, they mark the positions i*8 = [0,8,16,24,32,4,48,56] in C.data
+D.index = [/,/,/,/,0,/,/,/,<56 more />] <- the first 4 od C dont have childs, then 1 C has 8 childs starting at 0*8 in D.data, the last of the 59 are again empty
+
+
+NEUE IDEE: IndexStore
+
+DirectHashLookup {
+    store() -> <empt<>
+    load(LodPos) -> LodPos
+}
+
+NestedVecLokup {
+    store(DIESE VERDAMTEN PARAMETER SIND NICHT GLEICH) -> <empt<>
+    load(LodPos) -> LodPos
+}
+
+
+
+
+
+Tree->iter() -> A()
+A.mat() -> A.data[a.pos]
+a.pos = B.index[LodPos]
+
+A.get() -> B()
+B.mat() -> B.data[b.pos]
+b.pos = C.index[]
+
+
+*/
 
 #[cfg(test)]
 mod tests {
