@@ -18,6 +18,7 @@ use vek::*;
  traits:
  - IndexStore: Every layer must implement this for either KEY = usize or KEY = LodPos and INDEX is often u16/u32. depending on the store of the parent detail.
                It is accessed by parent layer to store the index when a detail is added or removed.
+               Every IndexStore has a parent, and a constant OWN_PER_PARENT which says, how many details fit into one element of the parent.
  - DetailStore: Every layer must implement this for either KEY = usize or KEY = LodPos, independent from the parent.
                 This is used to store the actual detail of every layer.
  - Nestable: All layers, except the lowest one implement this trait. It links the below layer to interact with the child layer.
@@ -38,19 +39,32 @@ use vek::*;
 
 pub type LodPos = LodIndex;
 
-pub trait IndexStore {
+pub trait KeyConvertable {
     type KEY;
-    type INDEX: Copy;
+    type INDEX;
+    fn uncompress(&self, index: &Self::INDEX) -> Self::KEY;
+    fn compress(&self, key: &Self::KEY) -> Self::INDEX;
+}
 
-    fn load(&mut self, key: Self::KEY) -> Self::INDEX;
-    fn store(&mut self, key: Self::KEY, index: Self::INDEX);
+pub trait IndexStore {
+    type PARENT_DETAIL: DetailStore;
+    type INDEX: Copy;
+    const OWN_PER_PARENT: usize; // theoretically this can be auto calculated in a new trait, however rust ist detecting conflicting implementations
+
+    fn load(&self, key: Self::PARENT_DETAIL::KEY) -> Self::INDEX;
+    fn store(&mut self, key: Self::PARENT_DETAIL::KEY, index: Self::INDEX);
+}
+// Every IndexStore practivally needs this, but i want to autocalculte OWN_PER_PARENT so this needs to be an extra trait
+pub trait IndexStoreLevel: IndexStore {
+
+
 }
 pub trait DetailStore {
     type KEY;
     type DETAIL;
     const LEVEL: u8;
 
-    fn load(&mut self, key: Self::KEY) -> &Self::DETAIL;
+    fn load(&self, key: Self::KEY) -> &Self::DETAIL;
     fn load_mut(&mut self, key: Self::KEY) -> &mut Self::DETAIL;
     fn store(&mut self, key: Self::KEY, detail: Self::DETAIL);
 }
@@ -70,10 +84,26 @@ pub trait Materializeable<T> {
     fn mat(self) -> T;
 }
 
-pub struct LayerResult<'a, N: IndexStore + DetailStore, PK> {
+//CK is childs key of IndexStore, its needed for Traversable, but IndexStore cannot be a dependency, because of last node which acets materializeable but not Traversable
+pub struct LayerResult<'a, N: DetailStore> {
     child: &'a N,
     wanted: LodPos,
-    index: PK,
+    key: N::KEY,
+}
+
+//TODO: optimize this self away! vtable
+//TODO: arrr and the clone
+impl KeyConvertable<KEY=usize, INDEX=u16> {
+    fn uncompress(&self, index: &u16) -> usize { index.clone() as usize }
+    fn compress(&self, key: &usize) -> u16 { key.clone() as u16 }
+}
+impl KeyConvertable<KEY=usize, INDEX=u32> {
+    fn uncompress(&self, index: &u32) -> usize { index.clone() as usize }
+    fn compress(&self, key: &usize) -> u32 { key.clone() as u32 }
+}
+impl KeyConvertable<KEY=LodPos, INDEX=LodPos> {
+    fn uncompress(&self, index: &LodPos) -> LodPos { index.clone() }
+    fn compress(&self, key: &LodPos) -> LodPos { key.clone() }
 }
 
 //#######################################################
@@ -107,64 +137,64 @@ pub struct HashNoneNestLayer<N: IndexStore + DetailStore, T, const L: u8> {
 }
 
 #[rustfmt::skip]
-impl<T, PI: Copy, const L: u8> IndexStore for VecVecLayer<T, PI, { L }> {
-    type KEY = usize; type INDEX=PI;
-    fn load(&mut self, key: usize) -> PI {  *self.index.get(key).unwrap() }
-    fn store(&mut self, key: usize, index: PI) { self.index.insert(key, index); }
-}
-#[rustfmt::skip]
-impl<N: IndexStore<KEY = usize> + DetailStore, T, PI: Copy, const L: u8> IndexStore for VecVecNestLayer<N, T, PI, { L }> {
-    type KEY = usize; type INDEX=PI;
-    fn load(&mut self, key: usize) -> PI { *self.index.get(key).unwrap() }
-    fn store(&mut self, key: usize, index: PI) { self.index.insert(key, index); }
-}
-#[rustfmt::skip]
-impl<T, PI: Copy, const L: u8> IndexStore for VecHashLayer<T, PI, { L }> {
-    type KEY = LodPos; type INDEX=PI;
-    fn load(&mut self, key: LodPos) -> PI { *self.index.get(&key).unwrap() }
-    fn store(&mut self, key: LodPos, index: PI) { self.index.insert(key, index); }
-}
-#[rustfmt::skip]
-impl<N: IndexStore<KEY = usize> + DetailStore, T, PI: Copy, const L: u8> IndexStore for VecHashNestLayer<N, T, PI, { L }>  {
-    type KEY = LodPos; type INDEX=PI;
-    fn load(&mut self, key: LodPos) -> PI { *self.index.get(&key).unwrap() }
-    fn store(&mut self, key: LodPos, index: PI) { self.index.insert(key, index); }
-}
-
-#[rustfmt::skip]
-impl<T, PI: Copy, const L: u8> DetailStore for VecVecLayer<T, PI, { L }> {
-    type KEY = usize; type DETAIL=T; const LEVEL: u8 = { L };
-    fn load(&mut self, key: usize) -> &T {  self.detail.get(key).unwrap() }
+impl<T, P: , const L: u8> DetailStore for VecVecLayer<T, PI, { L }> {
+    type PARENT_DETAIL = usize; type DETAIL=T; const LEVEL: u8 = { L };
+    fn load(&self, key: usize) -> &T {  self.detail.get(key).unwrap() }
     fn load_mut(&mut self, key: usize) -> &mut T {  self.detail.get_mut(key).unwrap() }
     fn store(&mut self, key: usize, detail: T) { self.detail.insert(key, detail); }
 }
 #[rustfmt::skip]
 impl<N: IndexStore<KEY = usize> + DetailStore, T, PI: Copy, const L: u8> DetailStore for VecVecNestLayer<N, T, PI, { L }>  {
-    type KEY = usize; type DETAIL=T; const LEVEL: u8 = { L };
-    fn load(&mut self, key: usize) -> &T { self.detail.get(key).unwrap() }
+    type PARENT_DETAIL = usize; type DETAIL=T; const LEVEL: u8 = { L };
+    fn load(&self, key: usize) -> &T { self.detail.get(key).unwrap() }
     fn load_mut(&mut self, key: usize) -> &mut T {  self.detail.get_mut(key).unwrap() }
     fn store(&mut self, key: usize, detail: T) { self.detail.insert(key, detail); }
 }
 #[rustfmt::skip]
 impl<T, PI: Copy, const L: u8> DetailStore for VecHashLayer<T, PI, { L }> {
     type KEY = usize; type DETAIL=T; const LEVEL: u8 = { L };
-    fn load(&mut self, key: usize) -> &T { self.detail.get(key).unwrap() }
+    fn load(&self, key: usize) -> &T { self.detail.get(key).unwrap() }
     fn load_mut(&mut self, key: usize) -> &mut T {  self.detail.get_mut(key).unwrap() }
     fn store(&mut self, key: usize, detail: T) { self.detail.insert(key, detail); }
 }
 #[rustfmt::skip]
 impl<N: IndexStore<KEY = usize> + DetailStore, T, PI: Copy, const L: u8> DetailStore for VecHashNestLayer<N, T, PI, { L }>  {
     type KEY = usize; type DETAIL=T; const LEVEL: u8 = { L };
-    fn load(&mut self, key: usize) -> &T { self.detail.get(key).unwrap() }
+    fn load(&self, key: usize) -> &T { self.detail.get(key).unwrap() }
     fn load_mut(&mut self, key: usize) -> &mut T {  self.detail.get_mut(key).unwrap() }
     fn store(&mut self, key: usize, detail: T) { self.detail.insert(key, detail); }
 }
 #[rustfmt::skip]
 impl<N: IndexStore<KEY = LodPos> + DetailStore, T, const L: u8> DetailStore for HashNoneNestLayer<N, T, { L }>  {
     type KEY = LodPos; type DETAIL=T; const LEVEL: u8 = { L };
-    fn load(&mut self, key: LodPos) -> &T { self.detail.get(&key).unwrap() }
+    fn load(&self, key: LodPos) -> &T { self.detail.get(&key).unwrap() }
     fn load_mut(&mut self, key: LodPos) -> &mut T {  self.detail.get_mut(&key).unwrap() }
     fn store(&mut self, key: LodPos, detail: T) { self.detail.insert(key, detail); }
+}
+
+#[rustfmt::skip]
+impl<T, PI: Copy, const L: u8> IndexStore for VecVecLayer<T, PI, { L }> {
+    type KEY = usize; type INDEX=PI; const OWN_PER_PARENT: usize = 4096; //TODO: calculate these correctly
+    fn load(&self, key: usize) -> PI {  *self.index.get(key).unwrap() }
+    fn store(&mut self, key: usize, index: PI) { self.index.insert(key, index); }
+}
+#[rustfmt::skip]
+impl<N: IndexStore<KEY = usize> + DetailStore, T, PI: Copy, const L: u8> IndexStore for VecVecNestLayer<N, T, PI, { L }> {
+    type KEY = usize; type INDEX=PI; const OWN_PER_PARENT: usize = 32768;
+    fn load(&self, key: usize) -> PI { *self.index.get(key).unwrap() }
+    fn store(&mut self, key: usize, index: PI) { self.index.insert(key, index); }
+}
+#[rustfmt::skip]
+impl<T, PI: Copy, const L: u8> IndexStore for VecHashLayer<T, PI, { L }> {
+    type KEY = LodPos; type INDEX=PI; const OWN_PER_PARENT: usize = 1337;
+    fn load(&self, key: LodPos) -> PI { *self.index.get(&key).unwrap() }
+    fn store(&mut self, key: LodPos, index: PI) { self.index.insert(key, index); }
+}
+#[rustfmt::skip]
+impl<N: IndexStore<KEY = usize> + DetailStore, T, PI: Copy, const L: u8> IndexStore for VecHashNestLayer<N, T, PI, { L }>  {
+    type KEY = LodPos; type INDEX=PI; const OWN_PER_PARENT: usize = 4096;
+    fn load(&self, key: LodPos) -> PI { *self.index.get(&key).unwrap() }
+    fn store(&mut self, key: LodPos, index: PI) { self.index.insert(key, index); }
 }
 
 #[rustfmt::skip]
@@ -185,25 +215,60 @@ impl<N: IndexStore<KEY = LodPos> + DetailStore, T, const L: u8> Nestable for Has
 
 //#######################################################
 
-impl<N: IndexStore<KEY = LodPos> + DetailStore, T, const L: u8> HashNoneNestLayer<N, T, { L }> {
-    pub fn trav<'a>(&'a self, index: LodPos) -> LayerResult<'a, N, usize> {
+impl<NC: IndexStore<KEY = LodPos> + DetailStore, T, const L: u8> HashNoneNestLayer<NC, T, { L }>
+{
+    pub fn trav<'a>(&'a self, pos: LodPos) -> LayerResult<'a, Self> {
         LayerResult {
-            child: &self.nested,
-            wanted: index,
-            index: 0,
+            child: self,
+            wanted: pos,
+            key: pos.align_to_layer_id(Self::LEVEL),
         }
     }
 }
 
-impl<'a, N: IndexStore + DetailStore + Nestable, PK>
-    Traversable<LayerResult<'a, N::NESTED, <N as IndexStore>::KEY>> for LayerResult<'a, N, PK>
+/*impl<'a, N: DetailStore + Nestable>
+Traversable<LayerResult<'a, N::NESTED, <N::NESTED as IndexStore>::KEY>> for LayerResult<'a, N, <N::NESTED as IndexStore>::KEY>
+where N::NESTED: IndexStore,
+      <N::NESTED as IndexStore>::KEY: Copy,
+      <N::NESTED as IndexStore>::KEY: KeyConvertable<KEY=<N::NESTED as IndexStore>::KEY, INDEX=<N::NESTED as IndexStore>::INDEX>
 {
-    fn get(self) -> LayerResult<'a, N::NESTED, <N as IndexStore>::KEY> {
-        unimplemented!();
+    fn get(self) -> LayerResult<'a, N::NESTED, <N::NESTED as IndexStore>::KEY> {
+        println!("{}", N::LEVEL);
+        let child = self.child.nested();
+        let key = self.key;
+        //let index = self.index.align_to_layer_id(N::LEVEL);
+        LayerResult {
+            child,
+            wanted: self.wanted,
+            key: key.uncompress(&IndexStore::load(child, key)),
+        }
+    }
+}*/
+
+
+impl<'a, N: DetailStore + Nestable>
+Traversable<LayerResult<'a, N::NESTED>> for LayerResult<'a, N>
+where N::NESTED: IndexStore,
+      <N::NESTED as IndexStore>::KEY: Copy,
+      <N as DetailStore>::KEY: KeyConvertable<KEY=<N::NESTED as DetailStore>::KEY, INDEX=<N::NESTED as IndexStore>::INDEX>,
+// ERROR PRATISCH GESEHEN GILT DIE FOLGENDE ZEILE IMMER, aber das sieht der compiler nur wenn wir auf den structs arbeiten,
+// AUF DEN TRAITS WEIS ER ES NICHT! DAS IST KAKA
+      <N::NESTED as IndexStore>::KEY == <N as DetailStore>::KEY
+{
+    fn get(self) -> LayerResult<'a, N::NESTED> {
+        println!("{}", N::LEVEL);
+        let child = self.child.nested();
+        let key = self.key;
+        //let index = self.index.align_to_layer_id(N::LEVEL);
+        LayerResult {
+            child,
+            wanted: self.wanted,
+            key: key.uncompress(&IndexStore::load(child, key)),
+        }
     }
 }
 
-impl<'a, N: IndexStore + DetailStore, PK> Materializeable<N::DETAIL> for LayerResult<'a, N, PK> {
+impl<'a, N: IndexStore + DetailStore> Materializeable<N::DETAIL> for LayerResult<'a, N> {
     fn mat(self) -> N::DETAIL {
         unimplemented!();
     }
@@ -244,7 +309,7 @@ mod tests {
         };
         let i = LodPos::new(Vec3::new(0, 1, 2));
         let y = x.trav(i);
-        let ttc = y.get().get();
+        let ttc = y.get().get().get();
         let tt = ttc.mat();
     }
 }
