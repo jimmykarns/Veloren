@@ -50,12 +50,7 @@ pub trait Key {
 }
 
 pub trait IndexStore {
-    type KEY: Key;
-    type INDEX: Copy;
-    const OWN_PER_PARENT: usize; // theoretically this can be auto calculated in a new trait, however rust ist detecting conflicting implementations
-
-    fn load(&self, key: Self::KEY) -> Self::INDEX;
-    fn store(&mut self, key: Self::KEY, index: Self::INDEX);
+    fn load(&self, pos: LodPos) -> usize;
 }
 
 pub trait DetailStore {
@@ -63,9 +58,9 @@ pub trait DetailStore {
     type DETAIL;
     const LEVEL: u8;
 
-    fn load(&self, key: Self::KEY) -> &Self::DETAIL;
-    fn load_mut(&mut self, key: Self::KEY) -> &mut Self::DETAIL;
-    fn store(&mut self, key: Self::KEY, detail: Self::DETAIL);
+    DER RETURNWERT MUSS EIN EIGENER TYPE SEIN JE NACHDEM VEC ODER HASH
+
+    fn load(&self, pos: LodPos) -> usize;
 }
 
 pub trait Nestable: DetailStore {
@@ -90,74 +85,55 @@ pub struct LayerResult<'a, N: DetailStore> {
     key: N::KEY,
 }
 
-impl Index for u16 {}
-impl Index for u32 {}
-impl Index for LodPos {}
-
-
-//TODO: optimize this self away! vtable
-//TODO: arrr and the clone
-impl KeyConvertable<KEY=usize, INDEX=u16> {
-    fn uncompress(&self, index: &u16) -> usize { index.clone() as usize }
-    fn compress(&self, key: &usize) -> u16 { key.clone() as u16 }
-}
-impl KeyConvertable<KEY=usize, INDEX=u32> {
-    fn uncompress(&self, index: &u32) -> usize { index.clone() as usize }
-    fn compress(&self, key: &usize) -> u32 { key.clone() as u32 }
-}
-impl KeyConvertable<KEY=LodPos, INDEX=LodPos> {
-    fn uncompress(&self, index: &LodPos) -> LodPos { index.clone() }
-    fn compress(&self, key: &LodPos) -> LodPos { key.clone() }
-}
-
 //#######################################################
 
-pub struct VecVecLayer<T, PI: Copy, const L: u8> {
+pub struct VecLayer<T, const L: u8> {
     pub detail: Vec<T>,
-    pub index: Vec<PI>,
 }
-pub struct VecHashLayer<T, PI: Copy, const L: u8> {
-    pub detail: Vec<T>,
-    pub index: HashMap<LodPos, PI>,
-}
-
-//T: own detail type
-//PI: parents index type u16, u32
-pub struct VecVecNestLayer<N: IndexStore + DetailStore, T, PI: Copy, const L: u8> {
-    pub detail: Vec<T>,
-    pub index: Vec<PI>,
-    pub nested: N,
-}
-
-pub struct VecHashNestLayer<N: IndexStore + DetailStore, T, PI: Copy, const L: u8> {
-    pub detail: Vec<T>,
-    pub index: HashMap<LodPos, PI>,
-    pub nested: N,
-}
-
-pub struct HashNoneNestLayer<N: IndexStore + DetailStore, T, const L: u8> {
+pub struct HashLayer<T, const L: u8> {
     pub detail: HashMap<LodPos, T>,
+}
+
+pub struct VecNestLayer<N: DetailStore, T, I: Copy, const L: u8> {
+    pub detail: Vec<T>,
+    pub index: Vec<I>,
+    pub nested: N,
+}
+
+pub struct HashNestLayer<N: DetailStore, T, I: Copy, const L: u8> {
+    pub detail_index: HashMap<LodPos, (T, I)>,
     pub nested: N,
 }
 
 #[rustfmt::skip]
-impl<T, PI: Copy, const L: u8> IndexStore for VecVecLayer<T, PI, { L }> {
-    type KEY = usize; type INDEX=PI; const OWN_PER_PARENT: usize = 4096; //TODO: calculate these correctly
-    fn load(&self, key: usize) -> PI {  *self.index.get(key).unwrap() }
-    fn store(&mut self, key: usize, index: PI) { self.index.insert(key, index); }
+impl<N: DetailStore, T, I: Copy, const L: u8> IndexStore for VecNestLayer<N, T, I, { L }> {
+    fn load(&self, pos: LodPos) -> usize {
+        let adjusted_pos = pos;
+        let pos_offset = 0;
+        let childs_per_own = 8;
+        let u1 = ( self.index[adjusted_pos * childs_per_own ) as usize + pos_offset;
+        return u1;
+    }
 }
 #[rustfmt::skip]
-impl<N: IndexStore<KEY = usize> + DetailStore, T, PI: Copy, const L: u8> IndexStore for VecVecNestLayer<N, T, PI, { L }> {
-    type KEY = usize; type INDEX=PI; const OWN_PER_PARENT: usize = 32768;
-    fn load(&self, key: usize) -> PI { *self.index.get(key).unwrap() }
-    fn store(&mut self, key: usize, index: PI) { self.index.insert(key, index); }
+impl<N: DetailStore, T, I: Copy, const L: u8> IndexStore for HashNestLayer<N, T, I, { L }> {
+    fn load(&self, pos: LodPos) -> usize {
+        let adjusted_pos = pos;
+        let pos_offset = 0;
+        let childs_per_own = 8;
+        let u1 = ( self.index[adjusted_pos * childs_per_own ) as usize + pos_offset;
+        return u1;
+    }
 }
+
+
 #[rustfmt::skip]
-impl<T, PI: Copy, const L: u8> IndexStore for VecHashLayer<T, PI, { L }> {
+impl<T, PI: Copy, const L: u8> IndexStore for HashNestLayer<T, PI, { L }> {
     type KEY = LodPos; type INDEX=PI; const OWN_PER_PARENT: usize = 1337;
     fn load(&self, key: LodPos) -> PI { *self.index.get(&key).unwrap() }
     fn store(&mut self, key: LodPos, index: PI) { self.index.insert(key, index); }
 }
+
 #[rustfmt::skip]
 impl<N: IndexStore<KEY = usize> + DetailStore, T, PI: Copy, const L: u8> IndexStore for VecHashNestLayer<N, T, PI, { L }>  {
     type KEY = LodPos; type INDEX=PI; const OWN_PER_PARENT: usize = 4096;
@@ -289,14 +265,14 @@ impl<'a, N: IndexStore + DetailStore> Materializeable<N::DETAIL> for LayerResult
 
 #[rustfmt::skip]
 pub type ExampleDelta =
-    HashNoneNestLayer<
-        VecHashNestLayer<
-            VecVecNestLayer<
-                VecVecLayer<
-                    (), u16, 0
-                > ,(), u32, 4
-            > ,Option<()> , u16, 9
-        > ,() , 13
+    HashNestLayer<
+        VecNestLayer<
+            VecNestLayer<
+                VecLayer<
+                    (), 0
+                > ,(), u16, 4
+            > ,Option<()> , u32, 9
+        > ,() ,u16. 13
     >;
 
 
@@ -327,7 +303,7 @@ NEUE IDEE: IndexStore
 
 DirectHashLookup {
     store() -> <empt<>
-    load(LodPos) -> LodPos
+    load(LodPos) -> LodAbs
 }
 
 NestedVecLokup {
