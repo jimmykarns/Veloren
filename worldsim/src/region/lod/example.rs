@@ -2,13 +2,15 @@ use crate::lodstore::{
     LodData,
     LodConfig,
     data::CacheLine,
-    index::LodIndex,
-    index::AbsIndex,
+    lodpos::LodPos,
+    lodpos::AbsIndex,
     area::LodArea,
     delta::LodDelta,
 };
 use vek::*;
 use std::u32;
+
+pub type LodIndex = LodPos;
 
 #[derive(Clone)]
 pub struct Example9 {
@@ -215,14 +217,15 @@ mod tests {
         region::lod::example::ExampleLodConfig,
         region::lod::example::*,
         lodstore::LodData,
-        lodstore::index::LodIndex,
-        lodstore::index,
+        lodstore::lodpos::LodPos,
+        lodstore::lodpos,
     };
     use std::{thread, time, mem::size_of};
     use vek::*;
     use rand::Rng;
     use rand::ThreadRng;
     use test::Bencher;
+    pub type LodIndex = LodPos;
 
     fn randIndex(rng: &mut ThreadRng) -> LodIndex {
         let x: u16 = rng.gen();
@@ -239,10 +242,10 @@ mod tests {
         let mut rng = rand::thread_rng();
         let mut delta = ExampleDelta::new();
         let mut result = Example::new();
-        let abs9 = (index::two_pow_u(15-13) as u64).pow(3);
-        let abs5 = (index::two_pow_u(15-9) as u64).pow(3);
-        let abs0 = (index::two_pow_u(15-4) as u64).pow(3);
-        let abs_4 = (index::two_pow_u(15)  as u64).pow(3);
+        let abs9 = (lodpos::two_pow_u(15-13) as u64).pow(3);
+        let abs5 = (lodpos::two_pow_u(15-9) as u64).pow(3);
+        let abs0 = (lodpos::two_pow_u(15-4) as u64).pow(3);
+        let abs_4 = (lodpos::two_pow_u(15)  as u64).pow(3);
         let p_e9 = 1.0+p_foreign;
         let p_e5 = p_e9*p_e5;
         let p_e0 = p_e5*p_e0;
@@ -252,7 +255,7 @@ mod tests {
         let act0 = (abs0 as f32 * p_e0 ) as u32;
         let act_4 = (abs_4 as f32 * p_e_4 ) as u32;
 
-        let w9 = index::two_pow_u(13) as u32;
+        let w9 = lodpos::two_pow_u(13) as u32;
         result.layer13 = vec![Example9::new(); 8*8*8];
         result.child13 = vec![u32::MAX; 8*8*8];
         println!("size test {} -- {}", size_of::<usize>(), size_of::<Option<usize>>());
@@ -267,19 +270,19 @@ mod tests {
         println!("creating Region with {} 5er, {} 0er, {} -4er", act5, act0 , act_4);
         while result.layer9.len() < act5 as usize {
             let index = randIndex(&mut rng);
-            let low = index.align_to_layer_id(9);
+            let low = index.align_to_level(9);
             let area = LodArea::new(low, low);
             result.make_at_least(area,9, Some(&mut delta));
         }
         while result.layer4.len() < act0 as usize {
             let index = randIndex(&mut rng);
-            let low = index.align_to_layer_id(4);
+            let low = index.align_to_level(4);
             let area = LodArea::new(low, low);
             result.make_at_least(area, 4, Some(&mut delta));
         }
         while result.layer0.len() < act_4 as usize {
             let index = randIndex(&mut rng);
-            let low = index.align_to_layer_id(0);
+            let low = index.align_to_level(0);
             let area = LodArea::new(low, low);
             result.make_at_least(area, 0, Some(&mut delta));
         }

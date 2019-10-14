@@ -5067,6 +5067,7 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "dot_vox",
+ "fxhash",
  "log",
  "mio",
  "mio-extras",

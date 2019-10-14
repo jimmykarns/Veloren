@@ -3,9 +3,11 @@ use super::{
         LodData,
         LodConfig,
     },
-    index::LodIndex,
+    lodpos::LodPos,
     area::LodArea,
 };
+
+pub type LodIndex = LodPos;
 
 /*
     A LodDelta applies a change to a Lod

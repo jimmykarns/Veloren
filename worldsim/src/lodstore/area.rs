@@ -1,5 +1,5 @@
-use super::index::{
-    LodIndex,
+use super::lodpos::{
+    LodPos,
 };
 
 /*
@@ -8,19 +8,19 @@ use super::index::{
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub struct LodArea {
-    pub lower: LodIndex,
-    pub upper: LodIndex,
+    pub lower: LodPos,
+    pub upper: LodPos,
 }
 
 impl LodArea {
-    pub fn new(lower: LodIndex, upper: LodIndex) -> Self {
+    pub fn new(lower: LodPos, upper: LodPos) -> Self {
         LodArea {
             lower,
             upper,
         }
     }
 
-    pub fn is_inside(&self, lod: LodIndex) -> bool {
+    pub fn is_inside(&self, lod: LodPos) -> bool {
         let lower = self.lower.get();
         let upper = self.upper.get();
         let lod = lod.get();

@@ -1,9 +1,9 @@
 use std::u32;
 use std::collections::HashMap;
 use vek::*;
-use super::index::{
+use super::lodpos::{
     self,
-    LodIndex,
+    LodPos,
     AbsIndex,
     relative_to_1d,
     two_pow_u,
@@ -14,6 +14,8 @@ use super::area::{
 use super::delta::{
     LodDelta,
 };
+
+pub type LodIndex = LodPos;
 
 /*
 LOD Data contains different Entries in different Vecs, every entry has a "pointer" to it's child start.
@@ -228,7 +230,7 @@ impl<X: LodConfig> LodData<X>
     // uses parent_child_index as a buffer, to not calculate it again
     fn int_get(parent_abs: AbsIndex, child_lod: LodIndex, parent_lod: LodIndex, parent_child_index: usize) -> AbsIndex {
         let child_layer = X::child_layer_id[parent_abs.layer as usize].unwrap();
-        let child_lod = child_lod.align_to_layer_id(child_layer);
+        let child_lod = child_lod.align_to_level(child_layer);
         let child_offset = relative_to_1d(child_lod, parent_lod, child_layer, X::layer_volume[child_layer as usize]);
         //println!("{} int_get - parent_abs {} child_lod {} parent_lod {} parent_child_index {} child_offset {}", Self::debug_offset(parent_abs.layer), parent_abs, child_lod, parent_lod, parent_child_index, child_offset);
         AbsIndex::new(child_layer, parent_child_index + child_offset)
@@ -236,7 +238,7 @@ impl<X: LodConfig> LodData<X>
 
     // slower variant of int_get which requiere self lookups
     fn int_get_lockup(&self, parent_abs: AbsIndex, child_lod: LodIndex) -> AbsIndex {
-        let parent_lod = child_lod.align_to_layer_id(parent_abs.layer);
+        let parent_lod = child_lod.align_to_level(parent_abs.layer);
         let parent_child_index = self.int_get_child_index(parent_abs);
         Self::int_get(parent_abs, child_lod, parent_lod, parent_child_index)
     }
@@ -255,7 +257,7 @@ impl<X: LodConfig> LodData<X>
     }
 
     pub fn int_get_n(&self, index: LodIndex, layer: u8) -> AbsIndex {
-        let anchor_lod = index.align_to_layer_id(X::anchor_layer_id);
+        let anchor_lod = index.align_to_level(X::anchor_layer_id);
         let anchor_abs = AbsIndex::new(X::anchor_layer_id, self.anchor[&anchor_lod]);
         let wanted_abs = self.int_recursive_get(anchor_abs, index, layer);
         debug_assert_eq!(wanted_abs.layer, layer);
@@ -272,10 +274,10 @@ impl<X: LodConfig> LodData<X>
             parent_abs = self.int_get_lockup(parent_abs, child_lod);
             if parent_abs.layer <= target_layer {
                 let parent_width = two_pow_u(old_parent_abs.layer ) as u32;
-                let parent_lod = child_lod.align_to_layer_id(old_parent_abs.layer);
+                let parent_lod = child_lod.align_to_level(old_parent_abs.layer);
                 //TODO: Dont recalc the first 3 values
                 cache.last_parent_area = LodArea::new(parent_lod, parent_lod + LodIndex::new(Vec3::new(parent_width,parent_width,parent_width)));
-                cache.last_parent_lod = child_lod.align_to_layer_id(old_parent_abs.layer);
+                cache.last_parent_lod = child_lod.align_to_level(old_parent_abs.layer);
                 cache.last_parent_child_index = self.int_get_child_index(old_parent_abs);
                 cache.last_parent_abs = old_parent_abs;
                 return parent_abs;
@@ -292,7 +294,7 @@ impl<X: LodConfig> LodData<X>
             //println!("nay");
             //println!("{} {}", cache.last_parent_area.lower, cache.last_parent_area.upper);
             //println!("{}", index);
-            let anchor_lod = index.align_to_layer_id(X::anchor_layer_id);
+            let anchor_lod = index.align_to_level(X::anchor_layer_id);
             let anchor_abs = AbsIndex::new(X::anchor_layer_id, self.anchor[&anchor_lod]);
             self.int_recursive_get_cached(cache, anchor_abs, index, layer)
         };
@@ -472,7 +474,7 @@ impl<X: LodConfig> LodData<X>
     fn int_make_at_least(&mut self, parent: AbsIndex, /*parent_lod2: LodIndex,*/ area: LodArea, target_layer: u8, delta: &Option<&mut LodDelta<X>>) {
         let child_layer = X::child_layer_id[parent.layer as usize];
         let parent_lod_width = two_pow_u(parent.layer) as u32;
-        let parent_lod = area.lower.align_to_layer_id(parent.layer);
+        let parent_lod = area.lower.align_to_level(parent.layer);
         //assert_eq!(parent_lod, parent_lod2);
         //println!("{} lower, upper {} {} {} - {:?}", Self::debug_offset(parent.layer), area.lower, area.upper, parent_lod_width, child_layer);
         //let delta = delta.unwrap();
@@ -497,8 +499,8 @@ impl<X: LodConfig> LodData<X>
                 let child_layer = child_layer.unwrap();
                 let child_lod_width = two_pow_u(child_layer) as u32;
                 //calc childs which needs to be called recusivly, there childs will be the new parents
-                let child_lower = area.lower.align_to_layer_id(child_layer);
-                let child_upper = area.upper.align_to_layer_id(child_layer);
+                let child_lower = area.lower.align_to_level(child_layer);
+                let child_upper = area.upper.align_to_level(child_layer);
                 let child_base_abs_index = self.int_get_child_index(parent);
                 let child_volume = X::layer_volume[child_layer as usize];
                 // loop over childs and calculate correct lower and
@@ -517,8 +519,8 @@ impl<X: LodConfig> LodData<X>
                             let child_lower = parent_lod + LodIndex::new(Vec3::new(x * child_lod_width, y * child_lod_width, z * child_lod_width));
                             let child_upper = child_lower + LodIndex::new(Vec3::new(child_lod_width-1, child_lod_width-1, child_lod_width-1));
 
-                            let inner_lower = index::max(area.lower, child_lower);
-                            let inner_upper = index::min(area.upper, child_upper);
+                            let inner_lower = lodpos::max(area.lower, child_lower);
+                            let inner_upper = lodpos::min(area.upper, child_upper);
                             //println!("{} restrict {} {} to {} {}", Self::debug_offset(parent.layer), area.lower, area.upper, inner_lower, inner_upper);
                             let inner_area = LodArea::new(inner_lower, inner_upper);
                             Self::int_make_at_least(self, child_abs, inner_area, target_layer, delta);
@@ -536,11 +538,11 @@ impl<X: LodConfig> LodData<X>
 
     pub fn make_at_least(&mut self, area: LodArea, target_layer: u8, delta: Option<&mut LodDelta<X>>) {
         let anchor_layer_id = X::anchor_layer_id;
-        let anchor_lower = area.lower.align_to_layer_id(anchor_layer_id);
-        let anchor_upper = area.upper.align_to_layer_id(anchor_layer_id);
+        let anchor_lower = area.lower.align_to_level(anchor_layer_id);
+        let anchor_upper = area.upper.align_to_level(anchor_layer_id);
         let lower_xyz = anchor_lower.get();
         let upper_xyz = anchor_upper.get();
-        let anchor_width = index::two_pow_u(anchor_layer_id) as u32;
+        let anchor_width = lodpos::two_pow_u(anchor_layer_id) as u32;
         let mut x = lower_xyz[0];
         //println!("{} xxx lower, upper {} {} {}", Self::debug_offset(anchor_layer_id), lower_xyz, upper_xyz, anchor_width);
         while x <= upper_xyz[0] {
@@ -553,8 +555,8 @@ impl<X: LodConfig> LodData<X>
                     if anchor_abs.layer > target_layer {
                         let child_lod_upper = Self::get_last_child_lod(anchor_lod, anchor_abs.layer);
 
-                        let inner_lower = index::max(area.lower, anchor_lod);
-                        let inner_upper = index::min(area.upper, child_lod_upper);
+                        let inner_lower = lodpos::max(area.lower, anchor_lod);
+                        let inner_upper = lodpos::min(area.upper, child_lod_upper);
 
                         //println!("{}call child with lower, upper {} {} instead of {} {} ", Self::debug_offset(anchor_layer_id), inner_lower, inner_upper, anchor_lod, child_lod_upper);
                         let inner_area = LodArea::new(inner_lower, inner_upper);

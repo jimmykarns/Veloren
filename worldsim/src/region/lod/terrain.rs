@@ -1,12 +1,13 @@
 use crate::lodstore::{
     LodData,
     LodConfig,
-    index::LodIndex,
-    index::AbsIndex,
+    lodpos::LodPos,
+    lodpos::AbsIndex,
     delta::LodDelta,
 };
 use vek::*;
 use std::u32;
+pub type LodIndex = LodPos;
 
 #[derive(Debug, Clone)]
 pub struct Region9 {
