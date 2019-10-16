@@ -1,8 +1,3 @@
-use vek::*;
-use std::ops::Sub;
-use std::ops::Add;
-use std::cmp;
-use std::fmt;
 use std::{u16, u32};
 
 pub trait ToOptionUsize: Copy {

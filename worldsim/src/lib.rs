@@ -1,4 +1,4 @@
-#![feature(const_generics, associated_type_bounds, euclidean_division, duration_float, trait_alias, bind_by_move_pattern_guards, const_fn, test)]
+#![feature(const_generics, test)]
 
 extern crate serde_derive;
 #[macro_use]
@@ -6,10 +6,10 @@ extern crate log;
 extern crate test;
 
 pub mod job;
-pub mod regionmanager;
-pub mod region;
-pub mod server;
 pub mod lodstore;
+pub mod region;
+pub mod regionmanager;
+pub mod server;
 
 #[cfg(test)]
 mod tests {

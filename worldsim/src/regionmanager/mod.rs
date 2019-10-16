@@ -1,21 +1,15 @@
 pub mod meta;
+use crate::{
+    regionmanager::meta::{Region, RegionId, RegionManagerMsg, Server, REGION_MAX, REGION_MIN},
+    server::meta::ServerMsg,
+};
+use std::collections::HashMap;
 use std::sync::{
-    Arc,
-    mpsc,
     atomic::{AtomicBool, Ordering},
+    mpsc, Arc,
 };
 use std::thread::sleep;
-use std::collections::HashMap;
 use std::time::Duration;
-use crate::{
-    regionmanager::meta::{
-        Server, Region, RegionId, RegionManagerMsg, RegionMIN, RegionMAX,
-    },
-    server::meta::{
-        ServerMsg,
-    },
-    job::JobManager,
-};
 
 #[derive(Debug)]
 pub struct RegionManager {
@@ -26,17 +20,16 @@ pub struct RegionManager {
     regions: HashMap<RegionId, Region>,
 }
 
-impl RegionManager{
+impl RegionManager {
     pub fn new(tx: mpsc::Sender<RegionManagerMsg>, rx: mpsc::Receiver<ServerMsg>) -> Self {
-
         let running = Arc::new(AtomicBool::new(true));
 
-        let mut servers = vec!();
+        let servers = vec![];
         let mut regions = HashMap::new();
 
-        for x in RegionMIN..RegionMAX {
-            for y in RegionMIN..RegionMAX {
-                regions.insert((x,y), Region::new(None));
+        for x in REGION_MIN..REGION_MAX {
+            for y in REGION_MIN..REGION_MAX {
+                regions.insert((x, y), Region::new(None));
             }
         }
 
@@ -54,19 +47,27 @@ impl RegionManager{
         //It is widely important, that it causes as minimal shifting as necessary
 
         //.... fell f*** it for now
-        for x in RegionMIN..RegionMAX {
-            for y in RegionMIN..RegionMAX {
+        for x in REGION_MIN..REGION_MAX {
+            for y in REGION_MIN..REGION_MAX {
                 if !self.servers.is_empty() {
-                    let old = self.regions.get(&(x,y)).unwrap().server_id;
+                    let old = self.regions.get(&(x, y)).unwrap().server_id;
 
-                    self.regions.get_mut(&(x,y)).unwrap().server_id = Some(((x as usize) % self.servers.len()) as u8);
+                    self.regions.get_mut(&(x, y)).unwrap().server_id =
+                        Some(((x as usize) % self.servers.len()) as u8);
                     if let Some(id) = old {
-                        self.tx.send(RegionManagerMsg::TakeOverRegionFrom{region_id: (x,y), server_id: id as u64});
+                        self.tx
+                            .send(RegionManagerMsg::TakeOverRegionFrom {
+                                region_id: (x, y),
+                                server_id: id as u64,
+                            })
+                            .unwrap();
                     } else {
-                        self.tx.send(RegionManagerMsg::CreateRegion{region_id: (x,y)});
+                        self.tx
+                            .send(RegionManagerMsg::CreateRegion { region_id: (x, y) })
+                            .unwrap();
                     }
                 } else {
-                    self.regions.get_mut(&(x,y)).unwrap().server_id = None;
+                    self.regions.get_mut(&(x, y)).unwrap().server_id = None;
                 }
             }
         }
@@ -81,15 +82,20 @@ impl RegionManager{
                 match msg {
                     ServerMsg::Attach() => {
                         //ERROR i cannot acceess self here ...
-                        self.servers.push(Server::new("Hello".to_string()) );
-                        self.tx.send(RegionManagerMsg::Attached{server_id: self.servers.len() as u64 , seed: 1337});
+                        self.servers.push(Server::new("Hello".to_string()));
+                        self.tx
+                            .send(RegionManagerMsg::Attached {
+                                server_id: self.servers.len() as u64,
+                                seed: 1337,
+                            })
+                            .unwrap();
                         error!("yay");
                         println!("attached");
                         self.rearange();
                     }
                 }
-            },
-            Err(e) => {
+            }
+            Err(_e) => {
                 //panic!("Work error {:?}", e);
             }
         }

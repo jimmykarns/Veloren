@@ -7,8 +7,6 @@ pub struct RegionMeta {
 
 impl RegionMeta {
     pub fn new(id: RegionId) -> Self {
-        Self {
-            id,
-        }
+        Self { id }
     }
 }

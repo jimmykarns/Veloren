@@ -1,9 +1,6 @@
-use super::area::LodArea;
-//use super::delta::LodDelta;
-use super::lodpos::{self, multily_with_2_pow_n, relative_to_1d, two_pow_u32, AbsIndex, LodPos};
 use super::index::ToOptionUsize;
+use super::lodpos::{multily_with_2_pow_n, relative_to_1d, two_pow_u32, LodPos};
 use fxhash::FxHashMap;
-use std::collections::HashMap;
 use std::{u16, u32};
 use vek::*;
 
@@ -20,7 +17,7 @@ use vek::*;
 
  traits:
  - Layer: Every layer must implement this. KEY is the storage Type and either usize/LodPos. Layer is also defined here.
- - ParentLayer: Is a Layer that contains a CHILD layer and some const functions based on their const properties
+ - ParentLayer: Is a Layer that contains a CHILD layer and some const properties
  - IndexStore: Every layer must implement this for their Layer::KEY and INDEX is often u16/u32.
                The index is accessed by this layer to get the corresponding child.
                Every Indexstore is a ParentLayer.
@@ -52,19 +49,13 @@ pub trait Layer {
 pub trait ParentLayer: Layer {
     type CHILD: Layer;
     fn child(&self) -> &Self::CHILD;
-    fn CHILDS_PER_OWN_TOTAL() -> usize {
-        two_pow_u32(Self::LOG2_OF_CHILDS_PER_OWN_TOTAL()) as usize
-    }
-    fn LOG2_OF_CHILDS_PER_OWN_TOTAL() -> u8 {
-        3 * ({ Self::LEVEL } - Self::CHILD::LEVEL)
-    }
-    fn CHILDS_PER_OWN() -> Vec3<u32> {
-        Vec3 {
-            x: two_pow_u32(Self::LEVEL - Self::CHILD::LEVEL) as u32,
-            y: two_pow_u32(Self::LEVEL - Self::CHILD::LEVEL) as u32,
-            z: two_pow_u32(Self::LEVEL - Self::CHILD::LEVEL) as u32,
-        }
-    }
+    const CHILDS_PER_OWN_TOTAL: usize = two_pow_u32(Self::LOG2_OF_CHILDS_PER_OWN_TOTAL) as usize;
+    const LOG2_OF_CHILDS_PER_OWN_TOTAL: u8 = 3 * ({ Self::LEVEL } - Self::CHILD::LEVEL);
+    const CHILDS_PER_OWN: Vec3<u32> = Vec3 {
+        x: two_pow_u32(Self::LEVEL - Self::CHILD::LEVEL) as u32,
+        y: two_pow_u32(Self::LEVEL - Self::CHILD::LEVEL) as u32,
+        z: two_pow_u32(Self::LEVEL - Self::CHILD::LEVEL) as u32,
+    };
 }
 
 pub trait IndexStore: ParentLayer {
@@ -86,21 +77,21 @@ pub trait Materializeable<T> {
 
 //#######################################################
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone)]
 pub struct VecLayer<T, const L: u8> {
     pub detail: Vec<T>,
 }
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone)]
 pub struct HashLayer<T, const L: u8> {
     pub detail: FxHashMap<LodPos, T>,
 }
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone)]
 pub struct VecNestLayer<C: DetailStore, T, I: ToOptionUsize, const L: u8> {
     pub detail: Vec<T>,
     pub index: Vec<I>,
     pub child: C,
 }
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone)]
 pub struct HashNestLayer<C: DetailStore, T, I: ToOptionUsize, const L: u8> {
     pub detail_index: FxHashMap<LodPos, (T, I)>,
     pub child: C,
@@ -118,35 +109,42 @@ pub struct VecIter<'a, C: DetailStore> {
     layer_key: usize,
 }
 
-#[rustfmt::skip]
 impl<T, const L: u8> Layer for VecLayer<T, { L }> {
-    type KEY = ( usize ); const LEVEL: u8 = { L };
+    type KEY = (usize);
+    const LEVEL: u8 = { L };
 }
-#[rustfmt::skip]
 impl<T, const L: u8> Layer for HashLayer<T, { L }> {
-    type KEY = ( LodPos ); const LEVEL: u8 = { L };
+    type KEY = (LodPos);
+    const LEVEL: u8 = { L };
 }
-#[rustfmt::skip]
 impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> Layer for VecNestLayer<C, T, I, { L }> {
-    type KEY = ( usize ); const LEVEL: u8 = { L };
+    type KEY = (usize);
+    const LEVEL: u8 = { L };
 }
-#[rustfmt::skip]
 impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> Layer for HashNestLayer<C, T, I, { L }> {
-    type KEY = ( LodPos ); const LEVEL: u8 = { L };
+    type KEY = (LodPos);
+    const LEVEL: u8 = { L };
 }
 
-#[rustfmt::skip]
-impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> ParentLayer for VecNestLayer<C, T, I, { L }> {
+impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> ParentLayer
+    for VecNestLayer<C, T, I, { L }>
+{
     type CHILD = C;
-    fn child(&self) -> &Self::CHILD { &self.child }
+    fn child(&self) -> &Self::CHILD {
+        &self.child
+    }
 }
-#[rustfmt::skip]
-impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> ParentLayer for HashNestLayer<C, T, I, { L }> {
+impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> ParentLayer
+    for HashNestLayer<C, T, I, { L }>
+{
     type CHILD = C;
-    fn child(&self) -> &Self::CHILD { &self.child }
+    fn child(&self) -> &Self::CHILD {
+        &self.child
+    }
 }
 
 impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> HashNestLayer<C, T, I, { L }> {
+    #[allow(dead_code)]
     fn trav(&self, pos: LodPos) -> HashIter<Self> {
         HashIter {
             layer: &self,
@@ -156,43 +154,44 @@ impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> HashNestLayer<C, T, I, { 
     }
 }
 
-#[rustfmt::skip]
 impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> IndexStore for VecNestLayer<C, T, I, { L }> {
     type INDEX = I;
-    fn load(&self, key: Self::KEY) -> Self::INDEX { self.index[key] }
+    fn load(&self, key: Self::KEY) -> Self::INDEX {
+        self.index[key]
+    }
 }
-#[rustfmt::skip]
-impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> IndexStore for HashNestLayer<C, T, I, { L }> {
+impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> IndexStore
+    for HashNestLayer<C, T, I, { L }>
+{
     type INDEX = I;
     fn load(&self, key: Self::KEY) -> Self::INDEX {
         debug_assert_eq!(key, key.align_to_level({ L }));
         self.detail_index[&key].1
     }
 }
-
-#[rustfmt::skip]
-impl<C: DetailStore, I: ToOptionUsize, T, const L: u8> DetailStore for VecNestLayer<C, T, I, { L }> {
+impl<C: DetailStore, I: ToOptionUsize, T, const L: u8> DetailStore
+    for VecNestLayer<C, T, I, { L }>
+{
     type DETAIL = T;
     fn load(&self, key: Self::KEY) -> &Self::DETAIL {
         &self.detail[key]
     }
 }
-#[rustfmt::skip]
-impl<C: DetailStore, I: ToOptionUsize, T, const L: u8> DetailStore for HashNestLayer<C, T, I, { L }> {
+impl<C: DetailStore, I: ToOptionUsize, T, const L: u8> DetailStore
+    for HashNestLayer<C, T, I, { L }>
+{
     type DETAIL = T;
     fn load(&self, key: LodPos) -> &Self::DETAIL {
         debug_assert_eq!(key, key.align_to_level({ L }));
         &self.detail_index[&key].0
     }
 }
-#[rustfmt::skip]
 impl<T, const L: u8> DetailStore for VecLayer<T, { L }> {
     type DETAIL = T;
     fn load(&self, key: usize) -> &Self::DETAIL {
         &self.detail[key]
     }
 }
-#[rustfmt::skip]
 impl<T, const L: u8> DetailStore for HashLayer<T, { L }> {
     type DETAIL = T;
     fn load(&self, key: LodPos) -> &Self::DETAIL {
@@ -202,13 +201,22 @@ impl<T, const L: u8> DetailStore for HashLayer<T, { L }> {
 }
 
 impl<'a, L: DetailStore<KEY = LodPos> + IndexStore> Traversable<VecIter<'a, L::CHILD>>
-for HashIter<'a, L>
-    where
-        L::CHILD: DetailStore, {
+    for HashIter<'a, L>
+where
+    L::CHILD: DetailStore,
+{
     fn get(self) -> VecIter<'a, L::CHILD> {
-        let child_lod = self.wanted.align_to_level(L::CHILD::LEVEL );
-        let pos_offset = relative_to_1d(child_lod, self.layer_lod, L::CHILD::LEVEL, L::CHILDS_PER_OWN());
-        let layer_key = ( multily_with_2_pow_n( IndexStore::load(self.layer, self.layer_lod).into_usize(), L::LOG2_OF_CHILDS_PER_OWN_TOTAL()) ) + pos_offset;
+        let child_lod = self.wanted.align_to_level(L::CHILD::LEVEL);
+        let pos_offset = relative_to_1d(
+            child_lod,
+            self.layer_lod,
+            L::CHILD::LEVEL,
+            L::CHILDS_PER_OWN,
+        );
+        let layer_key = (multily_with_2_pow_n(
+            IndexStore::load(self.layer, self.layer_lod).into_usize(),
+            L::LOG2_OF_CHILDS_PER_OWN_TOTAL,
+        )) + pos_offset;
         VecIter {
             layer: self.layer.child(),
             wanted: self.wanted,
@@ -219,13 +227,22 @@ for HashIter<'a, L>
 }
 
 impl<'a, L: DetailStore<KEY = usize> + IndexStore> Traversable<VecIter<'a, L::CHILD>>
-for VecIter<'a, L>
-    where
-        L::CHILD: DetailStore, {
+    for VecIter<'a, L>
+where
+    L::CHILD: DetailStore,
+{
     fn get(self) -> VecIter<'a, L::CHILD> {
-        let child_lod = self.wanted.align_to_level(L::CHILD::LEVEL );
-        let pos_offset = relative_to_1d(child_lod, self.layer_lod, L::CHILD::LEVEL, L::CHILDS_PER_OWN());
-        let layer_key = ( multily_with_2_pow_n( IndexStore::load(self.layer, self.layer_key).into_usize(), L::LOG2_OF_CHILDS_PER_OWN_TOTAL()) ) + pos_offset;
+        let child_lod = self.wanted.align_to_level(L::CHILD::LEVEL);
+        let pos_offset = relative_to_1d(
+            child_lod,
+            self.layer_lod,
+            L::CHILD::LEVEL,
+            L::CHILDS_PER_OWN,
+        );
+        let layer_key = (multily_with_2_pow_n(
+            IndexStore::load(self.layer, self.layer_key).into_usize(),
+            L::LOG2_OF_CHILDS_PER_OWN_TOTAL,
+        )) + pos_offset;
         VecIter {
             layer: self.layer.child(),
             wanted: self.wanted,
@@ -235,13 +252,13 @@ for VecIter<'a, L>
     }
 }
 
-impl<'a, L: DetailStore<KEY=LodPos>> Materializeable<&'a L::DETAIL> for HashIter<'a, L> {
+impl<'a, L: DetailStore<KEY = LodPos>> Materializeable<&'a L::DETAIL> for HashIter<'a, L> {
     fn mat(self) -> &'a L::DETAIL {
         DetailStore::load(self.layer, self.layer_lod)
     }
 }
 
-impl<'a, L: DetailStore<KEY=usize>> Materializeable<&'a L::DETAIL> for VecIter<'a, L> {
+impl<'a, L: DetailStore<KEY = usize>> Materializeable<&'a L::DETAIL> for VecIter<'a, L> {
     fn mat(self) -> &'a L::DETAIL {
         DetailStore::load(self.layer, self.layer_key)
     }
@@ -270,19 +287,56 @@ mod tests {
         ExampleData {
             detail_index,
             child: VecNestLayer {
-                detail: vec!((),(),()),
-                index: vec!(0,1,u32::MAX),
+                detail: vec![(), (), ()],
+                index: vec![0, 1, u32::MAX],
                 child: VecNestLayer {
-                    detail: vec!(None,None,None,Some(()),Some(()),None,None,None,None,None,None,None,None,None,None,None),
-                    index: vec!(0,u16::MAX,u16::MAX,0,u16::MAX,u16::MAX,u16::MAX,u16::MAX,u16::MAX,u16::MAX,u16::MAX,u16::MAX,u16::MAX,u16::MAX,u16::MAX,u16::MAX),
+                    detail: vec![
+                        None,
+                        None,
+                        None,
+                        Some(()),
+                        Some(()),
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                    ],
+                    index: vec![
+                        0,
+                        u16::MAX,
+                        u16::MAX,
+                        0,
+                        u16::MAX,
+                        u16::MAX,
+                        u16::MAX,
+                        u16::MAX,
+                        u16::MAX,
+                        u16::MAX,
+                        u16::MAX,
+                        u16::MAX,
+                        u16::MAX,
+                        u16::MAX,
+                        u16::MAX,
+                        u16::MAX,
+                    ],
                     child: VecLayer {
-                        detail: vec!(7,6,5,4,3,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),
+                        detail: vec![
+                            7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        ],
                     },
                 },
             },
         }
     }
-
 
     #[test]
     fn compilation() {
@@ -291,7 +345,7 @@ mod tests {
         if false {
             let y = x.trav(i);
             let ttc = y.get().get().get();
-            let tt = ttc.mat();
+            let _tt = ttc.mat();
         }
     }
 

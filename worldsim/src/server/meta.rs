@@ -4,7 +4,10 @@ pub enum ServerMsg {
 }
 
 pub type RegionIdSize = i8;
-pub type RegionId = (/*x*/RegionIdSize, /*y*/RegionIdSize /*z = 0*/);
+pub type RegionId = (
+    /*x*/ RegionIdSize,
+    /*y*/ RegionIdSize, /*z = 0*/
+);
 
-pub const RegionMIN:i8 = -64;
-pub const RegionMAX:i8 = 63;
+pub const REGION_MIN: i8 = -64;
+pub const REGION_MAX: i8 = 63;

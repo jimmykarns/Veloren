@@ -1,14 +1,11 @@
-pub mod meta;
 mod lod;
+pub mod meta;
 use std::sync::Arc;
 
-use crate::{
-    regionmanager::meta::RegionId,
-    job::JobManager,
-};
+use crate::{job::JobManager, regionmanager::meta::RegionId};
 use lod::terrain::TerrainLod;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Region {
     id: RegionId,
     jobmanager: Arc<JobManager>,
@@ -34,38 +31,32 @@ impl Region {
     }
 }
 
-fn rasterize(region: &Region) -> Vec<u64> {
-    let mut res = Vec::new();
+fn _rasterize(_region: &Region) -> Vec<u64> {
+    let mut _res = Vec::new();
 
     // iterate over all Region9 / chunk5 / Block0 / subBlock that dont have children in RECT XYZ
     //region.block
 
-    res
+    _res
 }
 
-
-
-fn plant_trees(region: &Region) -> Vec<u64> {
-    let mut res = Vec::new();
+fn _plant_trees(_region: &Region) -> Vec<u64> {
+    let mut _res = Vec::new();
 
     // iterate over all Region9 / chunk5 / Block0 / subBlock that dont have children in RECT XYZ
     // acces blocks around
 
-    res
+    _res
 }
 
-
-
-fn corrosion(region: &Region) -> Vec<u64> {
-    let mut res = Vec::new();
+fn _corrosion(_region: &Region) -> Vec<u64> {
+    let mut _res = Vec::new();
 
     // iterate over all Region9 / chunk5 / Block0 / subBlock that dont have children in RECT XYZ
     // access neighbours
 
-    res
+    _res
 }
-
-
 
 /*
 

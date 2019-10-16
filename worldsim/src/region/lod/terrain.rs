@@ -1,14 +1,4 @@
-use crate::lodstore::{
-    HashNestLayer,
-    VecNestLayer,
-    HashLayer,
-    VecLayer,
-    lodpos::LodPos,
-    lodpos::AbsIndex,
-};
-use vek::*;
-use std::u32;
-pub type LodIndex = LodPos;
+use crate::lodstore::{HashNestLayer, VecLayer, VecNestLayer};
 
 #[derive(Debug, Clone, Default)]
 pub struct Region {
@@ -35,7 +25,6 @@ pub struct Block {
 pub struct SubBlock {
     material: u32,
 }
-
 
 #[rustfmt::skip]
 pub type TerrainLod =
