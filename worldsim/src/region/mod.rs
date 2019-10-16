@@ -6,18 +6,18 @@ use crate::{
     regionmanager::meta::RegionId,
     job::JobManager,
 };
-use lod::terrain::Terrain;
+use lod::terrain::TerrainLod;
 
 #[derive(Debug, Clone)]
 pub struct Region {
     id: RegionId,
     jobmanager: Arc<JobManager>,
 
-    pub block: Terrain,
-    temp: Terrain,
-    light: Terrain,
-    evil: Terrain,
-    civ: Terrain,
+    pub block: TerrainLod,
+    temp: TerrainLod,
+    light: TerrainLod,
+    evil: TerrainLod,
+    civ: TerrainLod,
 }
 
 impl Region {
@@ -25,11 +25,11 @@ impl Region {
         Self {
             id,
             jobmanager,
-            block: Terrain::new(),
-            temp: Terrain::new(),
-            light: Terrain::new(),
-            evil: Terrain::new(),
-            civ: Terrain::new(),
+            block: TerrainLod::default(),
+            temp: TerrainLod::default(),
+            light: TerrainLod::default(),
+            evil: TerrainLod::default(),
+            civ: TerrainLod::default(),
         }
     }
 }

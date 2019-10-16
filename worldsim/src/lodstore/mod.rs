@@ -1,8 +1,11 @@
 pub mod lodpos;
 pub mod area;
 pub mod index;
-pub mod newdata;
 pub mod data;
 pub mod delta;
-pub use data::LodData;
-pub use data::LodConfig;
+pub use data::{
+    HashNestLayer,
+    VecNestLayer,
+    HashLayer,
+    VecLayer,
+};
