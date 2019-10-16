@@ -23,6 +23,7 @@ use vek::*;
                Every Indexstore is a ParentLayer.
  - DetailStore: Every layer must implement this for their KEY.
                 This is used to store the actual DETAIL of every layer.
+ - DetailStoreMut: allows mut borrow for Vec types (Hash not supported)
  !!Calculations will be implemented on these 2 Stores, rather than the actual structs to reduce duplciate coding!!
  - ToOptionUsize: to store INDEX in z16/u32 efficiently and move up to usize on calculation
  - Traversable: trait is used to get child layer and child Index for a concrete position.
@@ -66,13 +67,19 @@ pub trait IndexStore: ParentLayer {
 pub trait DetailStore: Layer {
     type DETAIL;
     fn load(&self, key: Self::KEY) -> &Self::DETAIL;
+    fn save(&mut self, key: Self::KEY, detail: Self::DETAIL);
+}
+pub trait DetailStoreMut: DetailStore {
+    fn load_mut(&mut self, key: Self::KEY) -> &mut Self::DETAIL;
 }
 
-pub trait Traversable<C> {
-    fn get(self) -> C;
+pub trait Traversable {
+    type TRAV_CHILD;
+    fn get(self) -> Self::TRAV_CHILD;
 }
-pub trait Materializeable<T> {
-    fn mat(self) -> T;
+pub trait Materializeable {
+    type MAT_CHILD;
+    fn mat(self) -> Self::MAT_CHILD;
 }
 
 //#######################################################
@@ -176,6 +183,16 @@ impl<C: DetailStore, I: ToOptionUsize, T, const L: u8> DetailStore
     fn load(&self, key: Self::KEY) -> &Self::DETAIL {
         &self.detail[key]
     }
+    fn save(&mut self, key: Self::KEY, detail: Self::DETAIL) {
+        self.detail.insert(key, detail);
+    }
+}
+impl<C: DetailStore, I: ToOptionUsize, T, const L: u8> DetailStoreMut
+    for VecNestLayer<C, T, I, { L }>
+{
+    fn load_mut(&mut self, key: Self::KEY) -> &mut Self::DETAIL {
+        &mut self.detail[key]
+    }
 }
 impl<C: DetailStore, I: ToOptionUsize, T, const L: u8> DetailStore
     for HashNestLayer<C, T, I, { L }>
@@ -185,11 +202,23 @@ impl<C: DetailStore, I: ToOptionUsize, T, const L: u8> DetailStore
         debug_assert_eq!(key, key.align_to_level({ L }));
         &self.detail_index[&key].0
     }
+    fn save(&mut self, key: LodPos, detail: Self::DETAIL) {
+        debug_assert_eq!(key, key.align_to_level({ L }));
+        self.detail_index.insert(key, (detail, I::none()));
+    }
 }
 impl<T, const L: u8> DetailStore for VecLayer<T, { L }> {
     type DETAIL = T;
     fn load(&self, key: usize) -> &Self::DETAIL {
         &self.detail[key]
+    }
+    fn save(&mut self, key: usize, detail: Self::DETAIL) {
+        self.detail[key] = detail;
+    }
+}
+impl<T, const L: u8> DetailStoreMut for VecLayer<T, { L }> {
+    fn load_mut(&mut self, key: usize) -> &mut Self::DETAIL {
+        &mut self.detail[key]
     }
 }
 impl<T, const L: u8> DetailStore for HashLayer<T, { L }> {
@@ -198,13 +227,18 @@ impl<T, const L: u8> DetailStore for HashLayer<T, { L }> {
         debug_assert_eq!(key, key.align_to_level({ L }));
         &self.detail[&key]
     }
+    fn save(&mut self, key: LodPos, detail: Self::DETAIL) {
+        debug_assert_eq!(key, key.align_to_level({ L }));
+        self.detail.insert(key, detail);
+    }
 }
 
-impl<'a, L: DetailStore<KEY = LodPos> + IndexStore> Traversable<VecIter<'a, L::CHILD>>
-    for HashIter<'a, L>
+impl<'a, L: DetailStore<KEY = LodPos> + IndexStore> Traversable for HashIter<'a, L>
 where
     L::CHILD: DetailStore,
 {
+    type TRAV_CHILD = VecIter<'a, L::CHILD>;
+
     fn get(self) -> VecIter<'a, L::CHILD> {
         let child_lod = self.wanted.align_to_level(L::CHILD::LEVEL);
         let pos_offset = relative_to_1d(
@@ -226,11 +260,12 @@ where
     }
 }
 
-impl<'a, L: DetailStore<KEY = usize> + IndexStore> Traversable<VecIter<'a, L::CHILD>>
-    for VecIter<'a, L>
+impl<'a, L: DetailStore<KEY = usize> + IndexStore> Traversable for VecIter<'a, L>
 where
     L::CHILD: DetailStore,
 {
+    type TRAV_CHILD = VecIter<'a, L::CHILD>;
+
     fn get(self) -> VecIter<'a, L::CHILD> {
         let child_lod = self.wanted.align_to_level(L::CHILD::LEVEL);
         let pos_offset = relative_to_1d(
@@ -252,34 +287,38 @@ where
     }
 }
 
-impl<'a, L: DetailStore<KEY = LodPos>> Materializeable<&'a L::DETAIL> for HashIter<'a, L> {
+impl<'a, L: DetailStore<KEY = LodPos>> Materializeable for HashIter<'a, L> {
+    type MAT_CHILD = &'a L::DETAIL;
+
     fn mat(self) -> &'a L::DETAIL {
         DetailStore::load(self.layer, self.layer_lod)
     }
 }
 
-impl<'a, L: DetailStore<KEY = usize>> Materializeable<&'a L::DETAIL> for VecIter<'a, L> {
+impl<'a, L: DetailStore<KEY = usize>> Materializeable for VecIter<'a, L> {
+    type MAT_CHILD = &'a L::DETAIL;
+
     fn mat(self) -> &'a L::DETAIL {
         DetailStore::load(self.layer, self.layer_key)
     }
 }
 
-#[rustfmt::skip]
-pub type ExampleData =
-HashNestLayer<
-    VecNestLayer<
-        VecNestLayer<
-            VecLayer<
-                i8, 0
-            > ,Option<()>, u16, 2
-        > ,() , u32, 3
-    > ,() ,u16, 4
->;
-
 #[cfg(test)]
 mod tests {
     use crate::lodstore::data::*;
     use test::Bencher;
+
+    #[rustfmt::skip]
+    pub type ExampleData =
+    HashNestLayer<
+        VecNestLayer<
+            VecNestLayer<
+                VecLayer<
+                    i8, 0
+                > ,Option<()>, u16, 2
+            > ,() , u32, 3
+        > ,() ,u16, 4
+    >;
 
     fn gen_simple_example() -> ExampleData {
         let mut detail_index = FxHashMap::default();

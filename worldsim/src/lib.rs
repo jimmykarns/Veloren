@@ -1,3 +1,4 @@
+#![allow(incomplete_features)]
 #![feature(const_generics, test)]
 
 extern crate serde_derive;
