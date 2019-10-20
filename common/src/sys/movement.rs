@@ -32,7 +32,7 @@ const CLIMB_SPEED: f32 = 5.0;
 const CLIMB_COST: i32 = 5;
 
 // Glider constants
-const MASS: f32 = 10.0;
+const MASS: f32 = 20.0;
 const LIFT: f32 = 4.0; // This must be less than 3DRAG[2]^(1/3)(DRAG[0]/2)^(2/3) to conserve energy
 const DRAG: [f32; 3] = [1.0, 3.5, 10.0]; // Drag coefficients (forwards/back, left/right, up/down)
 const ANG_INP: [f32; 2] = [0.75, 1.0]; // Angle changes from user input in a unit time step (pitch and roll)
@@ -225,9 +225,8 @@ impl<'a> System<'a> for Sys {
                 // --- Calculate forces on the glider and apply the velocity change in this time step
                 let mut frame = *q; // Rotation quaternion to change from the body frame to the space frame
                 let mut rot = *dq; // Rotation in this time step from angular velocity
-                let frame_inv = frame.conjugate();
-                let frame_v = Quaternion::rotation_from_to_3d(frame * Vec3::unit_y(), vel.0); // Rotation to the direction of the velocity
-                let vf = frame_inv * vel.0; // The character's velocity in the stationary reference frame that has the front of the glider aligned with +y
+                let frame_v = Quaternion::rotation_from_to_3d(Vec3::unit_y(), vel.0); // Rotation to the direction of the velocity
+                let vf = frame.conjugate() * vel.0; // The character's velocity in the stationary reference frame that has the front of the glider aligned with +y
                 let lift = Vec3::new(0.0, 0.0, LIFT * vf.y * vf.y.abs()); // Calculate lift force from the forwards-velocity
                 let drag = Vec3::from(DRAG) * vf.map(|v| -v * v.abs()); // Quadratic drag along each axis
                 let acc = frame * (lift + drag) / MASS; // Acceleration rotated back into the space frame
@@ -246,6 +245,7 @@ impl<'a> System<'a> for Sys {
                 frame = rot * frame;
                 *q = frame.normalized();
                 ori.0 = frame * ori.0; // Update the orientation vector so we are facing the right way when we land
+                ori.0.z = 0.0; // Make sure we are horizontal when we land
             }
 
             // Climb
