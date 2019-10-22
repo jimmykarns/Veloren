@@ -1,7 +1,6 @@
-use super::data::{DetailStore, Layer, ParentLayer, Traversable};
-use super::index::ToOptionUsize;
-use super::lodpos::{multily_with_2_pow_n, relative_to_1d, two_pow_u32, LodPos};
-use serde::export::PhantomData;
+use super::data::{DetailStore, EntryLayer, Layer, Materializeable, ParentLayer, Traversable};
+use super::lodpos::LodPos;
+use std::marker::PhantomData;
 /*
     A LodDelta applies a change to a Lod
     The rules for LodDeltas are strict in order to make them as simple as possible.
@@ -32,18 +31,19 @@ pub struct VecNestDelta<D: Delta, T, const L: u8> {
     pub child: D,
 }
 
-pub struct DeltaWriter<'a, C: DetailStore, D: Delta> {
+pub struct DeltaWriter<'a, C: EntryLayer<'a> + DetailStore, D: EntryLayer<'a> + Delta> {
     pub delta: &'a mut D,
     pub data: &'a mut C,
 }
 
-struct VecDataIter<'a, D: Delta> {
+pub struct VecDataIter<'a, D: Delta> {
     layer: &'a D,
 }
 
-struct DataWriterIter<DT: Traversable, CT: Traversable> {
+pub struct DataWriterIter<'a, DT: 'a, CT: 'a> {
     delta_iter: DT,
     data_iter: CT,
+    _a: PhantomData<&'a ()>,
 }
 
 //#######################################################
@@ -64,16 +64,33 @@ impl<D: Delta, T, const L: u8> ParentLayer for VecNestDelta<D, T, { L }> {
     }
 }
 
-impl<'a, C: DetailStore, D: Delta> DeltaWriter<'a, C, D> {
+impl<'a, C: DetailStore + EntryLayer<'a>, D: Delta + EntryLayer<'a>> DeltaWriter<'a, C, D> {
     pub fn new(delta: &'a mut D, data: &'a mut C) -> Self {
         DeltaWriter { delta, data }
     }
 }
 
-impl<'a, C: DetailStore, D: Delta> DeltaWriter<'a, C, D> {
-    #[allow(dead_code)]
-    fn trav(&'a self, pos: LodPos) -> VecDataIter<'a, D> {
-        VecDataIter { layer: &self.delta }
+impl<'a, D: 'a + Delta, T: 'a, const L: u8> EntryLayer<'a> for VecNestDelta<D, T, { L }> {
+    type TRAV = VecDataIter<'a, VecNestDelta<D, T, { L }>>;
+
+    fn trav(&'a self, pos: LodPos) -> Self::TRAV {
+        VecDataIter { layer: &self }
+    }
+}
+
+impl<'a, C: DetailStore + EntryLayer<'a>, D: Delta + EntryLayer<'a>> EntryLayer<'a>
+    for DeltaWriter<'a, C, D>
+where
+    <<C as EntryLayer<'a>>::TRAV as Traversable>::TRAV_CHILD: Traversable,
+    <<D as EntryLayer<'a>>::TRAV as Traversable>::TRAV_CHILD: Traversable,
+{
+    type TRAV = DataWriterIter<'a, D::TRAV, C::TRAV>;
+    fn trav(&'a self, pos: LodPos) -> DataWriterIter<D::TRAV, C::TRAV> {
+        DataWriterIter {
+            delta_iter: self.delta.trav(pos),
+            data_iter: self.data.trav(pos),
+            _a: PhantomData::<&'a ()>::default(),
+        }
     }
 }
 
@@ -90,20 +107,30 @@ where
     }
 }
 
-impl<'a, DT: Traversable, CT: Traversable> Traversable for DataWriterIter<DT, CT>
+impl<'a, DT: Traversable, CT: Traversable> Traversable for DataWriterIter<'a, DT, CT>
 where
     DT::TRAV_CHILD: Traversable,
     CT::TRAV_CHILD: Traversable,
 {
-    type TRAV_CHILD = DataWriterIter<DT::TRAV_CHILD, CT::TRAV_CHILD>;
+    type TRAV_CHILD = DataWriterIter<'a, DT::TRAV_CHILD, CT::TRAV_CHILD>;
 
-    fn get(self) -> DataWriterIter<DT::TRAV_CHILD, CT::TRAV_CHILD> {
+    fn get(self) -> DataWriterIter<'a, DT::TRAV_CHILD, CT::TRAV_CHILD> {
         DataWriterIter {
             delta_iter: self.delta_iter.get(),
             data_iter: self.data_iter.get(),
+            _a: PhantomData::<&'a ()>::default(),
         }
     }
 }
+/*
+impl<'a, DT: Materializeable, CT: Materializeable> Materializeable
+    for DataWriterIter<DT, CT> {
+    type MAT_CHILD = &'a CT::MAT_CHILD;
+
+    fn mat(self) -> &'a CT::MAT_CHILD {
+        self.data_iter.mat()
+    }
+}*/
 
 impl<T, const L: u8> Delta for VecDelta<T, { L }> {}
 impl<C: Delta, T, const L: u8> Delta for VecNestDelta<C, T, { L }> {}

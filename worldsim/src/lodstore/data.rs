@@ -28,6 +28,7 @@ use vek::*;
  - ToOptionUsize: to store INDEX in z16/u32 efficiently and move up to usize on calculation
  - Traversable: trait is used to get child layer and child Index for a concrete position.
  - Materializeable: trait is used to actually return a Detail for a concrete position.
+ - EntryLayer: the topmost layer which can generate a Traversable for a LodPos must implement this, e.g. needed by delta
 
  Actual structs regarding of position in the chain. They represent the Layers and contain the Details, they implement (some of) the 2 Store traits
  Naming Scheme is <Own Detail Type>[Nest]Layer
@@ -80,6 +81,10 @@ pub trait Traversable {
 pub trait Materializeable {
     type MAT_CHILD;
     fn mat(self) -> Self::MAT_CHILD;
+}
+pub trait EntryLayer<'a> {
+    type TRAV: Traversable;
+    fn trav(&'a self, pos: LodPos) -> Self::TRAV;
 }
 
 //#######################################################
@@ -150,9 +155,12 @@ impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> ParentLayer
     }
 }
 
-impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> HashNestLayer<C, T, I, { L }> {
-    #[allow(dead_code)]
-    fn trav(&self, pos: LodPos) -> HashIter<Self> {
+impl<'a, C: 'a + DetailStore, T: 'a, I: 'a + ToOptionUsize, const L: u8> EntryLayer<'a>
+    for HashNestLayer<C, T, I, { L }>
+{
+    type TRAV = HashIter<'a, HashNestLayer<C, T, I, { L }>>;
+
+    fn trav(&'a self, pos: LodPos) -> Self::TRAV {
         HashIter {
             layer: &self,
             wanted: pos,
