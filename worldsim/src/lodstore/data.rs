@@ -312,7 +312,7 @@ impl<'a, L: DetailStore<KEY = usize>> Materializeable for VecIter<'a, L> {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::lodstore::data::*;
     use test::Bencher;
 
@@ -328,7 +328,7 @@ mod tests {
         > ,() ,u16, 4
     >;
 
-    fn gen_simple_example() -> ExampleData {
+    pub fn gen_simple_example() -> ExampleData {
         let mut detail_index = FxHashMap::default();
         detail_index.insert(LodPos::xyz(0, 0, 0), ((), 0));
         ExampleData {

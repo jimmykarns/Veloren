@@ -1,8 +1,4 @@
 use super::delta::Delta;
-use super::index::ToOptionUsize;
-use fxhash::FxHashMap;
-use std::{u16, u32};
-use vek::*;
 
 /*
  traits:

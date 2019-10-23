@@ -73,7 +73,7 @@ impl<'a, C: DetailStore + EntryLayer<'a>, D: Delta + EntryLayer<'a>> DeltaWriter
 impl<'a, D: 'a + Delta, T: 'a, const L: u8> EntryLayer<'a> for VecNestDelta<D, T, { L }> {
     type TRAV = VecDataIter<'a, VecNestDelta<D, T, { L }>>;
 
-    fn trav(&'a self, pos: LodPos) -> Self::TRAV {
+    fn trav(&'a self, _pos: LodPos) -> Self::TRAV {
         VecDataIter { layer: &self }
     }
 }
@@ -107,11 +107,7 @@ where
     }
 }
 
-impl<'a, DT: Traversable, CT: Traversable> Traversable for DataWriterIter<'a, DT, CT>
-where
-    DT::TRAV_CHILD: Traversable,
-    CT::TRAV_CHILD: Traversable,
-{
+impl<'a, DT: Traversable, CT: Traversable> Traversable for DataWriterIter<'a, DT, CT> {
     type TRAV_CHILD = DataWriterIter<'a, DT::TRAV_CHILD, CT::TRAV_CHILD>;
 
     fn get(self) -> DataWriterIter<'a, DT::TRAV_CHILD, CT::TRAV_CHILD> {
@@ -122,15 +118,14 @@ where
         }
     }
 }
-/*
-impl<'a, DT: Materializeable, CT: Materializeable> Materializeable
-    for DataWriterIter<DT, CT> {
-    type MAT_CHILD = &'a CT::MAT_CHILD;
 
-    fn mat(self) -> &'a CT::MAT_CHILD {
+impl<'a, DT, CT: Materializeable> Materializeable for DataWriterIter<'a, DT, CT> {
+    type MAT_CHILD = CT::MAT_CHILD;
+
+    fn mat(self) -> CT::MAT_CHILD {
         self.data_iter.mat()
     }
-}*/
+}
 
 impl<T, const L: u8> Delta for VecDelta<T, { L }> {}
 impl<C: Delta, T, const L: u8> Delta for VecNestDelta<C, T, { L }> {}
@@ -139,21 +134,11 @@ impl<C: Delta, T, const L: u8> Delta for VecNestDelta<C, T, { L }> {}
 
 #[cfg(test)]
 mod tests {
+    use crate::lodstore::data::tests::gen_simple_example;
+    use crate::lodstore::data::tests::ExampleData;
     use crate::lodstore::data::*;
     use crate::lodstore::delta::*;
     use test::Bencher;
-
-    #[rustfmt::skip]
-    pub type ExampleData =
-    HashNestLayer<
-        VecNestLayer<
-            VecNestLayer<
-                VecLayer<
-                    i8, 0
-                > ,Option<()>, u16, 2
-            > ,() , u32, 3
-        > ,() ,u16, 4
-    >;
 
     #[rustfmt::skip]
     pub type ExampleDelta =
@@ -174,14 +159,44 @@ mod tests {
         {
             let w = DeltaWriter::new(&mut d, &mut x);
             let i = LodPos::xyz(0, 1, 2);
-
-            if false {}
+            if false {
+                let y = w.trav(i);
+                let ttc = y.get().get().get();
+                let _tt = ttc.mat();
+            }
         }
     }
 
     #[test]
     fn access_first_element() {
-        let x = ExampleDelta::default();
-        let i = LodPos::xyz(0, 0, 0);
+        let mut x = gen_simple_example();
+        let mut d = ExampleDelta::default();
+        {
+            let w = DeltaWriter::new(&mut d, &mut x);
+            let i = LodPos::xyz(0, 0, 0);
+            assert_eq!(*w.trav(i).get().get().get().mat(), 7_i8);
+        }
+    }
+
+    #[bench]
+    fn bench_access_trav(b: &mut Bencher) {
+        let mut x = gen_simple_example();
+        let mut d = ExampleDelta::default();
+        {
+            let w = DeltaWriter::new(&mut d, &mut x);
+            let access = LodPos::xyz(0, 0, 0);
+            b.iter(|| w.trav(access));
+        }
+    }
+
+    #[bench]
+    fn bench_access_3(b: &mut Bencher) {
+        let mut x = gen_simple_example();
+        let mut d = ExampleDelta::default();
+        {
+            let w = DeltaWriter::new(&mut d, &mut x);
+            let access = LodPos::xyz(0, 0, 0);
+            b.iter(|| w.trav(access).get().get().get().mat());
+        }
     }
 }
