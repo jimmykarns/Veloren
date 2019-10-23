@@ -1,64 +1,13 @@
 use super::index::ToOptionUsize;
-use super::lodpos::{multily_with_2_pow_n, relative_to_1d, two_pow_u32, LodPos};
+use super::lodpos::LodPos;
+use super::layer::{Layer, ParentLayer};
+#[allow(unused_imports)] //not unsued, cargo is just to stupud to detect that
+use super::traversable::Traversable;
+#[allow(unused_imports)]
+use super::materializeable::Materializeable;
+#[allow(unused_imports)]
+use super::entrylayer::EntryLayer;
 use fxhash::FxHashMap;
-use std::{u16, u32};
-use vek::*;
-
-/*
- Terminology:
- - Layer: the layer of the LoDTree, a tree can have n layers, every layer contains their child layer, except for the last one.
-          Each layer contains a level, a number from 15-0. the level of each child must be lower than the parents layer!
- - Detail: Each Layer contains information about that layer, here called Detail. This is the usable information we want to store in the LoDTree
- - LodPos: A LodPos marks a specific position inside the LoDTree, but not their layer.
-           Each Detail has a LodPos. Multiple Details can exist at the same LodPos on different layers!
- - Index: This refers to the actually storage for the index for the next layer (often a u16,u32).
-          The Index is used to find the child in a spare storage.
- - Key: always refers to the storage of a LAYER. Any keyword with KEY is either of type usize or LodPos.
-
- traits:
- - Layer: Every layer must implement this. KEY is the storage Type and either usize/LodPos. Layer is also defined here.
- - ParentLayer: Is a Layer that contains a CHILD layer and some const properties
- - IndexStore: Every layer must implement this for their Layer::KEY and INDEX is often u16/u32.
-               The index is accessed by this layer to get the corresponding child.
-               Every Indexstore is a ParentLayer.
- - DetailStore: Every layer must implement this for their KEY.
-                This is used to store the actual DETAIL of every layer.
- - DetailStoreMut: allows mut borrow for Vec types (Hash not supported)
- !!Calculations will be implemented on these 2 Stores, rather than the actual structs to reduce duplciate coding!!
- - ToOptionUsize: to store INDEX in z16/u32 efficiently and move up to usize on calculation
- - Traversable: trait is used to get child layer and child Index for a concrete position.
- - Materializeable: trait is used to actually return a Detail for a concrete position.
- - EntryLayer: the topmost layer which can generate a Traversable for a LodPos must implement this, e.g. needed by delta
-
- Actual structs regarding of position in the chain. They represent the Layers and contain the Details, they implement (some of) the 2 Store traits
- Naming Scheme is <Own Detail Type>[Nest]Layer
- - VecLayer: KEY=usize, stores in Vec, leaf layer
- - HashLayer:KEY=LodPos, stores in Vec, leaf layer
- - VecNestLayer: KEY=usize, stores in Vec, has childs
- - HashNestLayer: KEY=LodPos, stores in Vec, has childs
-
- Result Structs:
- - HashIter/VecIter: Is used to access a layer meta information or Detail via LoDTree.trav().get().get().get().mat().
-                     When LoDTree.trav() returns a HashIter.
-                     It keeps information to next layer to not recalculate it
-*/
-
-pub trait Layer {
-    type KEY;
-    const LEVEL: u8;
-}
-
-pub trait ParentLayer: Layer {
-    type CHILD: Layer;
-    fn child(&self) -> &Self::CHILD;
-    const CHILDS_PER_OWN_TOTAL: usize = two_pow_u32(Self::LOG2_OF_CHILDS_PER_OWN_TOTAL) as usize;
-    const LOG2_OF_CHILDS_PER_OWN_TOTAL: u8 = 3 * ({ Self::LEVEL } - Self::CHILD::LEVEL);
-    const CHILDS_PER_OWN: Vec3<u32> = Vec3 {
-        x: two_pow_u32(Self::LEVEL - Self::CHILD::LEVEL) as u32,
-        y: two_pow_u32(Self::LEVEL - Self::CHILD::LEVEL) as u32,
-        z: two_pow_u32(Self::LEVEL - Self::CHILD::LEVEL) as u32,
-    };
-}
 
 pub trait IndexStore: ParentLayer {
     type INDEX: ToOptionUsize;
@@ -70,21 +19,10 @@ pub trait DetailStore: Layer {
     fn load(&self, key: Self::KEY) -> &Self::DETAIL;
     fn save(&mut self, key: Self::KEY, detail: Self::DETAIL);
 }
+// TODO: There should be a Trait: to provide a independent Hash which doesnt choose even when having mut access to an element.
+// then we can store e.g. an ID within the detail of every region (wich are prob 1kb, and get load_mut behavior for free
 pub trait DetailStoreMut: DetailStore {
     fn load_mut(&mut self, key: Self::KEY) -> &mut Self::DETAIL;
-}
-
-pub trait Traversable {
-    type TRAV_CHILD;
-    fn get(self) -> Self::TRAV_CHILD;
-}
-pub trait Materializeable {
-    type MAT_CHILD;
-    fn mat(self) -> Self::MAT_CHILD;
-}
-pub trait EntryLayer<'a> {
-    type TRAV: Traversable;
-    fn trav(&'a self, pos: LodPos) -> Self::TRAV;
 }
 
 //#######################################################
@@ -110,63 +48,15 @@ pub struct HashNestLayer<C: DetailStore, T, I: ToOptionUsize, const L: u8> {
 }
 
 pub struct HashIter<'a, C: DetailStore> {
-    layer: &'a C,
-    wanted: LodPos,
-    layer_lod: LodPos, //LodPos aligned to layer::LEVEL
+    pub( super ) layer: &'a C,
+    pub( super ) wanted: LodPos,
+    pub( super ) layer_lod: LodPos, //LodPos aligned to layer::LEVEL
 }
 pub struct VecIter<'a, C: DetailStore> {
-    layer: &'a C,
-    wanted: LodPos,
-    layer_lod: LodPos, //LodPos aligned to layer::LEVEL
-    layer_key: usize,
-}
-
-impl<T, const L: u8> Layer for VecLayer<T, { L }> {
-    type KEY = (usize);
-    const LEVEL: u8 = { L };
-}
-impl<T, const L: u8> Layer for HashLayer<T, { L }> {
-    type KEY = (LodPos);
-    const LEVEL: u8 = { L };
-}
-impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> Layer for VecNestLayer<C, T, I, { L }> {
-    type KEY = (usize);
-    const LEVEL: u8 = { L };
-}
-impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> Layer for HashNestLayer<C, T, I, { L }> {
-    type KEY = (LodPos);
-    const LEVEL: u8 = { L };
-}
-
-impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> ParentLayer
-    for VecNestLayer<C, T, I, { L }>
-{
-    type CHILD = C;
-    fn child(&self) -> &Self::CHILD {
-        &self.child
-    }
-}
-impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> ParentLayer
-    for HashNestLayer<C, T, I, { L }>
-{
-    type CHILD = C;
-    fn child(&self) -> &Self::CHILD {
-        &self.child
-    }
-}
-
-impl<'a, C: 'a + DetailStore, T: 'a, I: 'a + ToOptionUsize, const L: u8> EntryLayer<'a>
-    for HashNestLayer<C, T, I, { L }>
-{
-    type TRAV = HashIter<'a, HashNestLayer<C, T, I, { L }>>;
-
-    fn trav(&'a self, pos: LodPos) -> Self::TRAV {
-        HashIter {
-            layer: &self,
-            wanted: pos,
-            layer_lod: pos.align_to_level({ L }),
-        }
-    }
+    pub( super ) layer: &'a C,
+    pub( super ) wanted: LodPos,
+    pub( super ) layer_lod: LodPos, //LodPos aligned to layer::LEVEL
+    pub( super ) layer_key: usize,
 }
 
 impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> IndexStore for VecNestLayer<C, T, I, { L }> {
@@ -241,80 +131,11 @@ impl<T, const L: u8> DetailStore for HashLayer<T, { L }> {
     }
 }
 
-impl<'a, L: DetailStore<KEY = LodPos> + IndexStore> Traversable for HashIter<'a, L>
-where
-    L::CHILD: DetailStore,
-{
-    type TRAV_CHILD = VecIter<'a, L::CHILD>;
-
-    fn get(self) -> VecIter<'a, L::CHILD> {
-        let child_lod = self.wanted.align_to_level(L::CHILD::LEVEL);
-        let pos_offset = relative_to_1d(
-            child_lod,
-            self.layer_lod,
-            L::CHILD::LEVEL,
-            L::CHILDS_PER_OWN,
-        );
-        let layer_key = (multily_with_2_pow_n(
-            IndexStore::load(self.layer, self.layer_lod).into_usize(),
-            L::LOG2_OF_CHILDS_PER_OWN_TOTAL,
-        )) + pos_offset;
-        VecIter {
-            layer: self.layer.child(),
-            wanted: self.wanted,
-            layer_key,
-            layer_lod: child_lod,
-        }
-    }
-}
-
-impl<'a, L: DetailStore<KEY = usize> + IndexStore> Traversable for VecIter<'a, L>
-where
-    L::CHILD: DetailStore,
-{
-    type TRAV_CHILD = VecIter<'a, L::CHILD>;
-
-    fn get(self) -> VecIter<'a, L::CHILD> {
-        let child_lod = self.wanted.align_to_level(L::CHILD::LEVEL);
-        let pos_offset = relative_to_1d(
-            child_lod,
-            self.layer_lod,
-            L::CHILD::LEVEL,
-            L::CHILDS_PER_OWN,
-        );
-        let layer_key = (multily_with_2_pow_n(
-            IndexStore::load(self.layer, self.layer_key).into_usize(),
-            L::LOG2_OF_CHILDS_PER_OWN_TOTAL,
-        )) + pos_offset;
-        VecIter {
-            layer: self.layer.child(),
-            wanted: self.wanted,
-            layer_key,
-            layer_lod: child_lod,
-        }
-    }
-}
-
-impl<'a, L: DetailStore<KEY = LodPos>> Materializeable for HashIter<'a, L> {
-    type MAT_CHILD = &'a L::DETAIL;
-
-    fn mat(self) -> &'a L::DETAIL {
-        DetailStore::load(self.layer, self.layer_lod)
-    }
-}
-
-impl<'a, L: DetailStore<KEY = usize>> Materializeable for VecIter<'a, L> {
-    type MAT_CHILD = &'a L::DETAIL;
-
-    fn mat(self) -> &'a L::DETAIL {
-        DetailStore::load(self.layer, self.layer_key)
-    }
-}
-
 #[cfg(test)]
 pub mod tests {
     use crate::lodstore::data::*;
     use test::Bencher;
+    use std::{u16, u32};
 
     #[rustfmt::skip]
     pub type ExampleData =
