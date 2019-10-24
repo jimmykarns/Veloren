@@ -12,6 +12,7 @@ pub trait Layer {
 pub trait ParentLayer: Layer {
     type CHILD: Layer;
     fn child(&self) -> &Self::CHILD;
+    fn child_mut(&mut self) -> &mut Self::CHILD;
     const CHILDS_PER_OWN_TOTAL: usize = two_pow_u(Self::LOG2_OF_CHILDS_PER_OWN_TOTAL) as usize;
     const LOG2_OF_CHILDS_PER_OWN_TOTAL: u8 = 3 * ({ Self::LEVEL } - Self::CHILD::LEVEL);
     const CHILDS_PER_OWN: Vec3<u32> = Vec3 {
@@ -47,6 +48,9 @@ impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> ParentLayer
     fn child(&self) -> &Self::CHILD {
         &self.child
     }
+    fn child_mut(&mut self) -> &mut Self::CHILD {
+        &mut self.child
+    }
 }
 impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> ParentLayer
     for HashNestLayer<C, T, I, { L }>
@@ -54,6 +58,9 @@ impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> ParentLayer
     type CHILD = C;
     fn child(&self) -> &Self::CHILD {
         &self.child
+    }
+    fn child_mut(&mut self) -> &mut Self::CHILD {
+        &mut self.child
     }
 }
 
@@ -72,5 +79,8 @@ impl<D: Delta, T, const L: u8> ParentLayer for VecNestDelta<D, T, { L }> {
     type CHILD = D;
     fn child(&self) -> &Self::CHILD {
         &self.child
+    }
+    fn child_mut(&mut self) -> &mut Self::CHILD {
+        &mut self.child
     }
 }

@@ -52,8 +52,19 @@ pub struct HashIter<'a, C: DetailStore> {
     pub( super ) wanted: LodPos,
     pub( super ) layer_lod: LodPos, //LodPos aligned to layer::LEVEL
 }
+pub struct HashIterMut<'a, C: DetailStore> {
+    pub( super ) layer: &'a mut C,
+    pub( super ) wanted: LodPos,
+    pub( super ) layer_lod: LodPos, //LodPos aligned to layer::LEVEL
+}
 pub struct VecIter<'a, C: DetailStore> {
     pub( super ) layer: &'a C,
+    pub( super ) wanted: LodPos,
+    pub( super ) layer_lod: LodPos, //LodPos aligned to layer::LEVEL
+    pub( super ) layer_key: usize,
+}
+pub struct VecIterMut<'a, C: DetailStore> {
+    pub( super ) layer: &'a mut C,
     pub( super ) wanted: LodPos,
     pub( super ) layer_lod: LodPos, //LodPos aligned to layer::LEVEL
     pub( super ) layer_key: usize,
@@ -136,6 +147,7 @@ pub mod tests {
     use crate::lodstore::data::*;
     use test::Bencher;
     use std::{u16, u32};
+    use crate::lodstore::traversable::Traversable;
 
     #[rustfmt::skip]
     pub type ExampleData =
@@ -239,6 +251,36 @@ pub mod tests {
         assert_eq!(*x.trav(LodPos::xyz(1, 0, 0)).get().get().get().mat(), 0_i8);
         assert_eq!(*x.trav(LodPos::xyz(0, 2, 0)).get().get().get().mat(), 0_i8);
     }
+
+    #[test]
+    fn mut_simple_elements() {
+        let mut x = gen_simple_example();
+        assert_eq!(*x.trav(LodPos::xyz(0, 0, 0)).get().get().get().mat(), 7_i8);
+        assert_eq!(*x.trav(LodPos::xyz(0, 0, 1)).get().get().get().mat(), 6_i8);
+        x.trav_mut(LodPos::xyz(0, 0, 0)).get().get().get().store(123);
+        assert_eq!(*x.trav(LodPos::xyz(0, 0, 0)).get().get().get().mat(), 123_i8);
+    }
+
+    #[test]
+    fn mut2_simple_elements() {
+        let mut x = gen_simple_example();
+        assert_eq!(*x.trav(LodPos::xyz(0, 0, 0)).get().get().get().mat(), 7_i8);
+        let c = *x.trav(LodPos::xyz(0, 0, 0)).get().get().get().mat();
+        x.trav_mut(LodPos::xyz(0, 0, 0)).get().get().get().store(111 + c);
+        assert_eq!(*x.trav(LodPos::xyz(0, 0, 0)).get().get().get().mat(), 118_i8);
+    }
+
+    /* allow this once we guarante get to be consistent even on Hash Lookups!
+    TODO: shuldnt this already ne the case ?
+    #[test]
+    fn mut3_simple_elements() {
+        let mut x = gen_simple_example();
+        let a = x.trav_mut(LodPos::xyz(0, 0, 0)).get().get().get();
+        assert_eq!(*a.mat(), 7_i8);
+        a.store(123);
+        assert_eq!(*a.mat(), 123_i8);
+        assert_eq!(*x.trav(LodPos::xyz(0, 0, 0)).get().get().get().mat(), 123_i8);
+    }*/
 
     #[bench]
     fn bench_access_trav(b: &mut Bencher) {
