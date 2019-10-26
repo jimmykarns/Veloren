@@ -6,7 +6,7 @@ use crate::{
     window::KeyMouse,
 };
 use directories::{ProjectDirs, UserDirs};
-use glutin::{MouseButton, VirtualKeyCode};
+use glutin::event::{MouseButton, VirtualKeyCode};
 use hashbrown::{HashMap, HashSet};
 use log::warn;
 use serde_derive::{Deserialize, Serialize};
