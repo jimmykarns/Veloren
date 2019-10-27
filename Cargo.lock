@@ -443,10 +443,11 @@ checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 
 [[package]]
 name = "cgl"
-version = "0.3.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ced0551234e87afee12411d535648dd89d2e7f34c78b753395567aff3d447ff"
+checksum = "55e7ec0b74fe5897894cbc207092c577e87c52f8a59e8ca8d97ef37551f60a49"
 dependencies = [
+ "gleam",
  "libc",
 ]
 
@@ -515,6 +516,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddfc5b9aa5d4507acaf872de71051dfd0e309860e88966e1051e462a077aac4f"
 dependencies = [
  "bitflags",
+]
+
+[[package]]
+name = "cocoa"
+version = "0.18.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1706996401131526e36b3b49f0c4d912639ce110996f3ca144d78946727bce54"
+dependencies = [
+ "bitflags",
+ "block",
+ "core-foundation 0.6.4",
+ "core-graphics",
+ "foreign-types",
+ "libc",
+ "objc",
 ]
 
 [[package]]
@@ -1511,6 +1527,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "gleam"
+version = "0.6.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cae10d7c99d0e77b4766e850a60898a17c1abaf01075531f1066f03dc7dc5fc5"
+dependencies = [
+ "gl_generator 0.13.1",
+]
+
+[[package]]
 name = "glib"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1552,15 +1577,16 @@ dependencies = [
 
 [[package]]
 name = "glutin"
-version = "0.22.1"
+version = "0.22.0-alpha3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "639246c8838b02a83b9339bd87da3714e73e52ecfaa758e15d761eb77b2290b5"
+checksum = "fcdd3592b515014281a21a42addd91f41eaff0c5f54295ee28dac8ea6bbbceba"
 dependencies = [
  "android_glue",
  "cgl",
- "cocoa",
+ "cocoa 0.18.5",
  "core-foundation 0.6.4",
  "core-graphics",
+ "derivative",
  "glutin_egl_sys",
  "glutin_emscripten_sys",
  "glutin_gles2_sys",
@@ -1571,7 +1597,7 @@ dependencies = [
  "log 0.4.8",
  "objc",
  "osmesa-sys",
- "parking_lot 0.10.0",
+ "parking_lot 0.8.0",
  "wayland-client",
  "winapi 0.3.8",
  "winit",
@@ -2103,6 +2129,15 @@ checksum = "ae91b68aebc4ddb91978b11a1b02ddd8602a05ec19002801c5666000e05e0f83"
 
 [[package]]
 name = "lock_api"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed946d4529956a20f2d63ebe1b69996d5a2137c91913fe3ebbeff957f5bca7ff"
+dependencies = [
+ "scopeguard",
+]
+
+[[package]]
+name = "lock_api"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79b2de95ecb4691949fea4716ca53cdbcfccb2c612e19644a8bad05edcf9f47b"
@@ -2305,7 +2340,7 @@ name = "msgbox"
 version = "0.4.0"
 source = "git+https://github.com/bekker/msgbox-rs.git?rev=68fe39a#68fe39a60019b38a1569ae4e9ed796a0f0542673"
 dependencies = [
- "cocoa",
+ "cocoa 0.19.1",
  "gtk",
  "objc",
  "winapi 0.3.8",
@@ -2688,23 +2723,24 @@ dependencies = [
 
 [[package]]
 name = "parking_lot"
-version = "0.9.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f842b1982eb6c2fe34036a4fbfb06dd185a3f5c8edfaacdf7d1ea10b07de6252"
+checksum = "fa7767817701cce701d5585b9c4db3cdd02086398322c1d7e8bf5094a96a2ce7"
 dependencies = [
- "lock_api",
- "parking_lot_core 0.6.2",
+ "lock_api 0.2.0",
+ "parking_lot_core 0.5.0",
  "rustc_version",
 ]
 
 [[package]]
 name = "parking_lot"
-version = "0.10.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92e98c49ab0b7ce5b222f2cc9193fc4efe11c6d0bd4f648e374684a6857b1cfc"
+checksum = "f842b1982eb6c2fe34036a4fbfb06dd185a3f5c8edfaacdf7d1ea10b07de6252"
 dependencies = [
- "lock_api",
- "parking_lot_core 0.7.0",
+ "lock_api 0.3.3",
+ "parking_lot_core 0.6.2",
+ "rustc_version",
 ]
 
 [[package]]
@@ -2721,6 +2757,22 @@ dependencies = [
 
 [[package]]
 name = "parking_lot_core"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb88cb1cb3790baa6776844f968fea3be44956cf184fa1be5a03341f5491278c"
+dependencies = [
+ "cfg-if",
+ "cloudabi",
+ "libc",
+ "rand 0.6.5",
+ "redox_syscall",
+ "rustc_version",
+ "smallvec 0.6.13",
+ "winapi 0.3.8",
+]
+
+[[package]]
+name = "parking_lot_core"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b876b1b9e7ac6e1a74a6da34d25c42e17e8862aa409cbbbdcfc8d86c6f3bc62b"
@@ -2731,20 +2783,6 @@ dependencies = [
  "redox_syscall",
  "rustc_version",
  "smallvec 0.6.13",
- "winapi 0.3.8",
-]
-
-[[package]]
-name = "parking_lot_core"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7582838484df45743c8434fbff785e8edf260c28748353d44bc0da32e0ceabf1"
-dependencies = [
- "cfg-if",
- "cloudabi",
- "libc",
- "redox_syscall",
- "smallvec 1.2.0",
  "winapi 0.3.8",
 ]
 
@@ -4713,13 +4751,14 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "winit"
-version = "0.20.0"
+version = "0.20.0-alpha4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ba128780050481f453bec2a115b916dbc6ae79c303dee9bad8b9080bdccd4f5"
+checksum = "56c565622ccb05351d92445415952ca09dade6a53e75dd9e75d9bd35d4e99333"
 dependencies = [
  "android_glue",
  "bitflags",
- "cocoa",
+ "calloop",
+ "cocoa 0.19.1",
  "core-foundation 0.6.4",
  "core-graphics",
  "core-video-sys",
@@ -4728,10 +4767,8 @@ dependencies = [
  "lazy_static",
  "libc",
  "log 0.4.8",
- "mio",
- "mio-extras",
  "objc",
- "parking_lot 0.10.0",
+ "parking_lot 0.9.0",
  "percent-encoding 2.1.0",
  "raw-window-handle",
  "serde",

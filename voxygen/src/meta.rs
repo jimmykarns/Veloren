@@ -37,13 +37,13 @@ impl Meta {
             match bincode::deserialize_from(file) {
                 Ok(s) => return s,
                 Err(e) => {
-                    log::warn!("Failed to parse meta file! Fallback to default. {}", e);
+                    warn!("Failed to parse meta file! Fallback to default. {}", e);
                     // Rename the corrupted settings file
                     let mut new_path = path.to_owned();
                     new_path.pop();
                     new_path.push("meta.invalid.dat");
                     if let Err(err) = std::fs::rename(path, new_path) {
-                        log::warn!("Failed to rename meta file. {}", err);
+                        warn!("Failed to rename meta file. {}", err);
                     }
                 },
             }

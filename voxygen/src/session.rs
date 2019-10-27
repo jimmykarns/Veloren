@@ -11,8 +11,7 @@ use crate::{
 };
 use client::{self, Client, Event::Chat};
 use common::{
-    assets::{load_watched, watch},
-    clock::Clock,
+    assets::{load_expect, load_watched},
     comp,
     comp::{Pos, Vel, MAX_PICKUP_RANGE_SQR},
     msg::ClientState,
@@ -108,35 +107,13 @@ impl SessionState {
 
     /// Clean up the session (and the client attached to it) after a tick.
     pub fn cleanup(&mut self) { self.client.borrow_mut().cleanup(); }
-
-    /// Render the session to the screen.
-    ///
-    /// This method should be called once per frame.
-    pub fn render(&mut self, renderer: &mut Renderer) {
-        // Clear the screen
-        renderer.clear();
-
-        // Render the screen using the global renderer
-        {
-            let client = self.client.borrow();
-            self.scene
-                .render(renderer, client.state(), client.entity(), client.get_tick());
-        }
-        // Draw the UI to the screen
-        self.hud.render(renderer, self.scene.globals());
-
-        // Finish the frame
-        renderer.flush();
-    }
 }
 
 impl PlayState for SessionState {
-    fn play(&mut self, _: Direction, global_state: &mut GlobalState) -> PlayStateResult {
+    fn enter(&mut self, global_state: &mut GlobalState, _: Direction) {
         // Trap the cursor.
         global_state.window.grab_cursor(true);
 
-        // Set up an fps clock.
-        let mut clock = Clock::start();
         self.client.borrow_mut().clear_terrain();
 
         // Send startup commands to the server
@@ -145,18 +122,15 @@ impl PlayState for SessionState {
                 self.client.borrow_mut().send_chat(cmd.to_string());
             }
         }
+    }
 
-        // Keep a watcher on the language
-        let mut localization_watcher = watch::ReloadIndicator::new();
-        let mut localized_strings = load_watched::<VoxygenLocalization>(
-            &i18n_asset_key(&global_state.settings.language.selected_language),
-            &mut localization_watcher,
-        )
-        .unwrap();
+    fn tick(&mut self, global_state: &mut GlobalState, events: Vec<Event>) -> PlayStateResult {
+        let localized_strings = load_expect::<VoxygenLocalization>(&i18n_asset_key(
+            &global_state.settings.language.selected_language,
+        ));
 
-        // Game loop
-        let mut current_client_state = self.client.borrow().get_client_state();
-        while let ClientState::Pending | ClientState::Character = current_client_state {
+        let client_state = self.client.borrow().get_client_state();
+        if let ClientState::Pending | ClientState::Character = client_state {
             // Compute camera data
             self.scene
                 .camera_mut()
@@ -222,7 +196,7 @@ impl PlayState for SessionState {
             }));
 
             // Handle window events.
-            for event in global_state.window.fetch_events(&mut global_state.settings) {
+            for event in events {
                 // Pass all events to the ui first.
                 if self.hud.handle_event(event.clone(), global_state) {
                     continue;
@@ -435,7 +409,7 @@ impl PlayState for SessionState {
                 || !global_state.singleplayer.as_ref().unwrap().is_paused()
             {
                 // Perform an in-game tick.
-                match self.tick(clock.get_avg_delta()) {
+                match self.tick(global_state.clock.get_avg_delta()) {
                     Ok(TickAction::Continue) => {}, // Do nothing
                     Ok(TickAction::Disconnect) => return PlayStateResult::Pop, // Go to main menu
                     Err(err) => {
@@ -448,19 +422,17 @@ impl PlayState for SessionState {
                 }
             }
 
-            // Maintain global state.
-            global_state.maintain(clock.get_last_delta().as_secs_f32());
-
             // Recompute dependents just in case some input modified the camera
             self.scene
                 .camera_mut()
                 .compute_dependents(&*self.client.borrow().state().terrain());
+
             // Extract HUD events ensuring the client borrow gets dropped.
             let mut hud_events = self.hud.maintain(
                 &self.client.borrow(),
                 global_state,
                 DebugInfo {
-                    tps: clock.get_tps(),
+                    tps: global_state.clock.get_tps(),
                     ping_ms: self.client.borrow().get_ping_ms(),
                     coordinates: self
                         .client
@@ -484,11 +456,12 @@ impl PlayState for SessionState {
                     num_figures_visible: self.scene.figure_mgr().figure_count_visible() as u32,
                 },
                 &self.scene.camera(),
-                clock.get_last_delta(),
+                global_state.clock.get_last_delta(),
             );
 
+            // TODO: dont
             // Look for changes in the localization files
-            if localization_watcher.reloaded() {
+            if global_state.localization_watcher.reloaded() {
                 hud_events.push(HudEvent::ChangeLanguage(localized_strings.metadata.clone()));
             }
 
@@ -655,9 +628,9 @@ impl PlayState for SessionState {
                     HudEvent::ChangeLanguage(new_language) => {
                         global_state.settings.language.selected_language =
                             new_language.language_identifier;
-                        localized_strings = load_watched::<VoxygenLocalization>(
+                        let localized_strings = load_watched::<VoxygenLocalization>(
                             &i18n_asset_key(&global_state.settings.language.selected_language),
-                            &mut localization_watcher,
+                            &mut global_state.localization_watcher,
                         )
                         .unwrap();
                         localized_strings.log_missing_entries();
@@ -697,35 +670,34 @@ impl PlayState for SessionState {
                 );
             }
 
-            // Render the session.
-            self.render(global_state.window.renderer_mut());
-
-            // Display the frame on the window.
-            global_state
-                .window
-                .swap_buffers()
-                .expect("Failed to swap window buffers!");
-
-            // Wait for the next tick.
-            clock.tick(Duration::from_millis(
-                1000 / global_state.settings.graphics.max_fps as u64,
-            ));
-
             // Clean things up after the tick.
             self.cleanup();
 
-            current_client_state = self.client.borrow().get_client_state();
-        }
-
-        if let ClientState::Registered = current_client_state {
-            return PlayStateResult::Switch(Box::new(CharSelectionState::new(
+            PlayStateResult::Continue
+        } else if let ClientState::Registered = client_state {
+            PlayStateResult::Switch(Box::new(CharSelectionState::new(
                 global_state,
                 self.client.clone(),
-            )));
+            )))
+        } else {
+            error!("Client not in the expected state, exiting session play state");
+            PlayStateResult::Pop
         }
-
-        PlayStateResult::Pop
     }
 
     fn name(&self) -> &'static str { "Session" }
+
+    /// Render the session to the screen.
+    ///
+    /// This method should be called once per frame.
+    fn render(&mut self, renderer: &mut Renderer) {
+        // Render the screen using the global renderer
+        {
+            let client = self.client.borrow();
+            self.scene
+                .render(renderer, client.state(), client.entity(), client.get_tick());
+        }
+        // Draw the UI to the screen
+        self.hud.render(renderer, self.scene.globals());
+    }
 }
