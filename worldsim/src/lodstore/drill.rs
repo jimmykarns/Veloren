@@ -1,4 +1,4 @@
-use super::delta::Delta;
+use super::delta::DeltaStore;
 
 /*
  traits:
@@ -7,12 +7,12 @@ use super::delta::Delta;
 */
 
 pub trait DrillDownable {
-    type DELTA: Delta;
+    type DELTA: DeltaStore;
     fn drill_down(detail: Self) -> Self::DELTA;
 }
 
 pub trait DrillUpable {
-    type DELTA: Delta;
+    type DELTA: DeltaStore;
     fn drill_up(detail: Self) -> Self::DELTA;
 }
 

@@ -1,7 +1,7 @@
 use super::index::ToOptionUsize;
 use super::lodpos::{two_pow_u, LodPos};
 use super::data::{VecLayer, HashLayer, VecNestLayer, HashNestLayer, DetailStore};
-use super::delta::{VecDelta, VecNestDelta, Delta};
+use super::delta::{VecDelta, VecNestDelta, DeltaStore};
 use vek::Vec3;
 
 pub trait Layer {
@@ -25,19 +25,19 @@ pub trait ParentLayer: Layer {
 ///////////////// data types
 
 impl<T, const L: u8> Layer for VecLayer<T, { L }> {
-    type KEY = (usize);
+    type KEY = usize;
     const LEVEL: u8 = { L };
 }
 impl<T, const L: u8> Layer for HashLayer<T, { L }> {
-    type KEY = (LodPos);
+    type KEY = LodPos;
     const LEVEL: u8 = { L };
 }
 impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> Layer for VecNestLayer<C, T, I, { L }> {
-    type KEY = (usize);
+    type KEY = usize;
     const LEVEL: u8 = { L };
 }
 impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> Layer for HashNestLayer<C, T, I, { L }> {
-    type KEY = (LodPos);
+    type KEY = LodPos;
     const LEVEL: u8 = { L };
 }
 
@@ -67,15 +67,15 @@ impl<C: DetailStore, T, I: ToOptionUsize, const L: u8> ParentLayer
 ///////////////// delta types
 
 impl<T, const L: u8> Layer for VecDelta<T, { L }> {
-    type KEY = (usize);
+    type KEY = usize;
     const LEVEL: u8 = { L };
 }
-impl<D: Delta, T, const L: u8> Layer for VecNestDelta<D, T, { L }> {
-    type KEY = (usize);
+impl<D: DeltaStore, T, const L: u8> Layer for VecNestDelta<D, T, { L }> {
+    type KEY = usize;
     const LEVEL: u8 = { L };
 }
 
-impl<D: Delta, T, const L: u8> ParentLayer for VecNestDelta<D, T, { L }> {
+impl<D: DeltaStore, T, const L: u8> ParentLayer for VecNestDelta<D, T, { L }> {
     type CHILD = D;
     fn child(&self) -> &Self::CHILD {
         &self.child

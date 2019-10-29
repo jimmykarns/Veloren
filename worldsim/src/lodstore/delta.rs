@@ -19,25 +19,32 @@ use std::marker::PhantomData;
     However i belive that most algorithms only change every Value once.
 */
 
-pub trait Delta: Layer {}
+pub trait DeltaStore: Layer {
+    type DETAIL;
+    fn store(&mut self, pos: LodPos, value: Option<Self::DETAIL>);
+}
 
 #[derive(Default, Clone)]
 pub struct VecDelta<T, const L: u8> {
     pub detail: Vec<(LodPos, Option<T>)>,
 }
 #[derive(Default, Clone)]
-pub struct VecNestDelta<D: Delta, T, const L: u8> {
+pub struct VecNestDelta<D: DeltaStore, T, const L: u8> {
     pub detail: Vec<(LodPos, Option<T>)>,
     pub child: D,
 }
 
-pub struct DeltaWriter<'a, C: EntryLayer<'a> + DetailStore, D: EntryLayer<'a> + Delta> {
+pub struct DeltaWriter<'a, C: EntryLayer<'a> + DetailStore, D: EntryLayer<'a> + DeltaStore> {
     pub delta: &'a mut D,
     pub data: &'a mut C,
 }
 
-pub struct VecDataIter<'a, D: Delta> {
+pub struct VecDeltaIter<'a, D: DeltaStore> {
     pub( super ) layer: &'a D,
+}
+
+pub struct VecDeltaIterMut<'a, D: DeltaStore> {
+    pub( super ) layer: &'a mut D,
 }
 
 pub struct DataWriterIter<'a, DT: 'a, CT: 'a> {
@@ -48,14 +55,24 @@ pub struct DataWriterIter<'a, DT: 'a, CT: 'a> {
 
 //#######################################################
 
-impl<'a, C: DetailStore + EntryLayer<'a>, D: Delta + EntryLayer<'a>> DeltaWriter<'a, C, D> {
+impl<'a, C: DetailStore + EntryLayer<'a>, D: DeltaStore + EntryLayer<'a>> DeltaWriter<'a, C, D> {
     pub fn new(delta: &'a mut D, data: &'a mut C) -> Self {
         DeltaWriter { delta, data }
     }
 }
 
-impl<T, const L: u8> Delta for VecDelta<T, { L }> {}
-impl<C: Delta, T, const L: u8> Delta for VecNestDelta<C, T, { L }> {}
+impl<T, const L: u8> DeltaStore for VecDelta<T, { L }> {
+    type DETAIL = T;
+    fn store(&mut self, pos: LodPos, value: Option<Self::DETAIL>) {
+        self.detail.push((pos, value));
+    }
+}
+impl<C: DeltaStore, T, const L: u8> DeltaStore for VecNestDelta<C, T, { L }> {
+    type DETAIL = T;
+    fn store(&mut self, pos: LodPos, value: Option<Self::DETAIL>) {
+        self.detail.push((pos, value));
+    }
+}
 
 //#######################################################
 
@@ -83,10 +100,10 @@ mod tests {
         let mut x = ExampleData::default();
         let mut d = ExampleDelta::default();
         {
-            let w = DeltaWriter::new(&mut d, &mut x);
+            let mut w = DeltaWriter::new(&mut d, &mut x);
             let i = LodPos::xyz(0, 1, 2);
             if false {
-                let y = w.trav(i);
+                let y = w.trav_mut(i);
                 let ttc = y.get().get().get();
                 let _tt = ttc.mat();
             }
@@ -98,9 +115,71 @@ mod tests {
         let mut x = gen_simple_example();
         let mut d = ExampleDelta::default();
         {
-            let w = DeltaWriter::new(&mut d, &mut x);
+            let mut w = DeltaWriter::new(&mut d, &mut x);
             let i = LodPos::xyz(0, 0, 0);
-            assert_eq!(*w.trav(i).get().get().get().mat(), 7_i8);
+            assert_eq!(*w.trav_mut(i).get().get().get().mat(), 7_i8);
+        }
+    }
+
+    #[test]
+    fn mut_first_element() {
+        let mut x = gen_simple_example();
+        let mut d = ExampleDelta::default();
+        //assert_eq!(x.detail_index.len(),1);
+        assert_eq!(d.detail.len(),0);
+        assert_eq!(d.child.detail.len(),0);
+        assert_eq!(d.child.child.detail.len(),0);
+        assert_eq!(d.child.child.child.detail.len(),0);
+        let i = LodPos::xyz(0, 0, 0);
+        {
+            let mut w = DeltaWriter::new(&mut d, &mut x);
+            assert_eq!(*w.trav_mut(i).get().get().get().mat(), 7_i8);
+        }
+        {
+            let mut w = DeltaWriter::new(&mut d, &mut x);
+            w.trav_mut(i).get().get().get().store(123);
+        }
+        { //TODO: this shouldnt be necessary but somehow it is...
+            let mut w = DeltaWriter::new(&mut d, &mut x);
+            assert_eq!(*w.trav_mut(i).get().get().get().mat(), 123_i8);
+            assert_eq!(d.detail.len(),0);
+            assert_eq!(d.child.detail.len(),0);
+            assert_eq!(d.child.child.detail.len(),0);
+            assert_eq!(d.child.child.child.detail.len(),1);
+            //assert_eq!(x.detail_index.len(),1);
+        }
+    }
+
+    #[test]
+    fn mut_multiple_elements() {
+        let mut x = gen_simple_example();
+        let mut d = ExampleDelta::default();
+        let i = LodPos::xyz(0, 0, 0);
+        {
+            let mut w = DeltaWriter::new(&mut d, &mut x);
+            assert_eq!(*w.trav_mut(i).get().get().get().mat(), 7_i8);
+        }
+        {
+            let mut w = DeltaWriter::new(&mut d, &mut x);
+            w.trav_mut(i).get().get().get().store(123);
+        }
+        {
+            let mut w = DeltaWriter::new(&mut d, &mut x);
+            w.trav_mut(LodPos::xyz(0, 0, 1)).get().get().get().store(111);
+        }
+        {
+            let mut w = DeltaWriter::new(&mut d, &mut x);
+            w.trav_mut(LodPos::xyz(0, 0, 2)).get().get().get().store(112);
+        }
+        {
+            let mut w = DeltaWriter::new(&mut d, &mut x);
+            w.trav_mut(LodPos::xyz(0, 0, 3)).get().get().get().store(111);
+        }
+        { //TODO: this shouldnt be necessary but somehow it is...
+            let mut w = DeltaWriter::new(&mut d, &mut x);
+            let i = LodPos::xyz(0, 0, 0);
+            assert_eq!(*w.trav_mut(i).get().get().get().mat(), 123_i8);
+            assert_eq!(x.detail_index.len(),1);
         }
     }
 
@@ -109,9 +188,9 @@ mod tests {
         let mut x = gen_simple_example();
         let mut d = ExampleDelta::default();
         {
-            let w = DeltaWriter::new(&mut d, &mut x);
+            let mut w = DeltaWriter::new(&mut d, &mut x);
             let access = LodPos::xyz(0, 0, 0);
-            b.iter(|| w.trav(access));
+            b.iter(|| w.trav_mut(access));
         }
     }
 
@@ -120,9 +199,9 @@ mod tests {
         let mut x = gen_simple_example();
         let mut d = ExampleDelta::default();
         {
-            let w = DeltaWriter::new(&mut d, &mut x);
+            let mut w = DeltaWriter::new(&mut d, &mut x);
             let access = LodPos::xyz(0, 0, 0);
-            b.iter(|| w.trav(access).get().get().get().mat());
+            b.iter(|| w.trav_mut(access).get().get().get().mat());
         }
     }
 }

@@ -1,7 +1,7 @@
 use super::index::ToOptionUsize;
 use super::lodpos::LodPos;
 use super::data::{HashNestLayer, DetailStore, HashIter, HashIterMut};
-use super::delta::{VecNestDelta, Delta, VecDataIter, DataWriterIter, DeltaWriter};
+use super::delta::{VecNestDelta, DeltaStore, VecDeltaIter, VecDeltaIterMut, DataWriterIter, DeltaWriter};
 use super::traversable::Traversable;
 use std::marker::PhantomData;
 
@@ -40,26 +40,26 @@ for HashNestLayer<C, T, I, { L }>
 
 ///////////////// delta types
 
-impl<'a, D: 'a + Delta, T: 'a, const L: u8> EntryLayer<'a> for VecNestDelta<D, T, { L }> {
-    type TRAV = VecDataIter<'a, VecNestDelta<D, T, { L }>>;
-    type TRAV_MUT = VecDataIter<'a, VecNestDelta<D, T, { L }>>;
+impl<'a, D: 'a + DeltaStore, T: 'a, const L: u8> EntryLayer<'a> for VecNestDelta<D, T, { L }> {
+    type TRAV = VecDeltaIter<'a, VecNestDelta<D, T, { L }>>;
+    type TRAV_MUT = VecDeltaIterMut<'a, VecNestDelta<D, T, { L }>>;
 
     fn trav(&'a self, _pos: LodPos) -> Self::TRAV {
-        VecDataIter { layer: self }
+        VecDeltaIter { layer: self }
     }
     fn trav_mut(&'a mut self, _pos: LodPos) -> Self::TRAV_MUT {
-        VecDataIter { layer: self }
+        VecDeltaIterMut { layer: self }
     }
 }
 
-impl<'a, C: DetailStore + EntryLayer<'a>, D: Delta + EntryLayer<'a>> EntryLayer<'a>
+impl<'a, C: DetailStore + EntryLayer<'a>, D: DeltaStore + EntryLayer<'a>> EntryLayer<'a>
 for DeltaWriter<'a, C, D>
     where
         <<C as EntryLayer<'a>>::TRAV as Traversable>::TRAV_CHILD: Traversable,
         <<D as EntryLayer<'a>>::TRAV as Traversable>::TRAV_CHILD: Traversable,
 {
     type TRAV = DataWriterIter<'a, D::TRAV, C::TRAV>;
-    type TRAV_MUT = DataWriterIter<'a, D::TRAV, C::TRAV>;
+    type TRAV_MUT = DataWriterIter<'a, D::TRAV_MUT, C::TRAV_MUT>;
 
     fn trav(&'a self, pos: LodPos) -> DataWriterIter<D::TRAV, C::TRAV> {
         DataWriterIter {
@@ -69,10 +69,10 @@ for DeltaWriter<'a, C, D>
         }
     }
 
-    fn trav_mut(&'a mut self, pos: LodPos) -> DataWriterIter<D::TRAV, C::TRAV> {
+    fn trav_mut(&'a mut self, pos: LodPos) -> DataWriterIter<D::TRAV_MUT, C::TRAV_MUT> {
         DataWriterIter {
-            delta_iter: self.delta.trav(pos),
-            data_iter: self.data.trav(pos),
+            delta_iter: self.delta.trav_mut(pos),
+            data_iter: self.data.trav_mut(pos),
             _a: PhantomData::<&'a ()>::default(),
         }
     }

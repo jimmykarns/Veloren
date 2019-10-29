@@ -1,7 +1,7 @@
 use super::index::ToOptionUsize;
 use super::lodpos::{multily_with_2_pow_n, relative_to_1d, LodPos};
 use super::data::{DetailStore, IndexStore, HashIter, VecIter, HashIterMut, VecIterMut};
-use super::delta::{Delta, VecDataIter, DataWriterIter};
+use super::delta::{DeltaStore, VecDeltaIter, VecDeltaIterMut, DataWriterIter};
 #[allow(unused_imports)] //not unsued, cargo is just to stupud to detect that
 use super::layer::{Layer, ParentLayer};
 use std::marker::PhantomData;
@@ -123,15 +123,28 @@ impl<'a, L: DetailStore<KEY = usize> + IndexStore> Traversable for VecIterMut<'a
 
 ///////////////// delta types
 
-impl<'a, D: Delta + ParentLayer> Traversable for VecDataIter<'a, D>
+impl<'a, D: DeltaStore + ParentLayer> Traversable for VecDeltaIter<'a, D>
     where
-        D::CHILD: Delta,
+        D::CHILD: DeltaStore,
 {
-    type TRAV_CHILD = VecDataIter<'a, D::CHILD>;
+    type TRAV_CHILD = VecDeltaIter<'a, D::CHILD>;
 
-    fn get(self) -> VecDataIter<'a, D::CHILD> {
-        VecDataIter {
+    fn get(self) -> VecDeltaIter<'a, D::CHILD> {
+        VecDeltaIter {
             layer: self.layer.child(),
+        }
+    }
+}
+
+impl<'a, D: DeltaStore + ParentLayer> Traversable for VecDeltaIterMut<'a, D>
+    where
+        D::CHILD: DeltaStore,
+{
+    type TRAV_CHILD = VecDeltaIterMut<'a, D::CHILD>;
+
+    fn get(self) -> VecDeltaIterMut<'a, D::CHILD> {
+        VecDeltaIterMut {
+            layer: self.layer.child_mut(),
         }
     }
 }

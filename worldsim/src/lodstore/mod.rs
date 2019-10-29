@@ -3,6 +3,7 @@ pub mod lodarea;
 pub mod layer;
 pub mod traversable;
 pub mod materializeable;
+pub mod deltalizeable;
 pub mod entrylayer;
 pub mod data;
 pub mod delta;
