@@ -225,7 +225,6 @@ impl<'a> System<'a> for Sys {
                 // --- Calculate forces on the glider and apply the velocity change in this time step
                 let mut frame = *q; // Rotation quaternion to change from the body frame to the space frame
                 let mut rot = *dq; // Rotation in this time step from angular velocity
-                let frame_v = Quaternion::rotation_from_to_3d(Vec3::unit_y(), vel.0); // Rotation to the direction of the velocity
                 let vf = frame.conjugate() * vel.0; // The character's velocity in the stationary reference frame that has the front of the glider aligned with +y
                 let lift = Vec3::new(0.0, 0.0, LIFT * vf.y * vf.y.abs()); // Calculate lift force from the forwards-velocity
                 let drag = Vec3::from(DRAG) * vf.map(|v| -v * v.abs()); // Quadratic drag along each axis
@@ -236,15 +235,19 @@ impl<'a> System<'a> for Sys {
                 let deltatheta = my * ANG_INP[0] * dt.0; // Pitch change in this time step, forward = positive = pitch down
                 let deltachi = mx * ANG_INP[1] * dt.0; // Roll change in this time step, positive = roll right
                 rot = Slerp::slerp(rot, Quaternion::identity(), ANG_DRAG * dt.0); // Angular velocity decay
-                rot = Quaternion::rotation_3d(deltachi, frame * Vec3::unit_y()) * rot; // Apply roll change
+                if deltachi != 0.0 {
+                    rot = Quaternion::rotation_3d(deltachi, frame * Vec3::unit_y()) * rot; // Apply roll change
+                }
                 if deltatheta != 0.0 {
                     rot = Quaternion::rotation_3d(deltatheta, frame * -Vec3::unit_x()) * rot; // Apply pitch change
                 }
+                let frame_v = Quaternion::rotation_from_to_3d(Vec3::unit_y(), vel.0); // Rotation to the direction of the velocity
                 frame = Slerp::slerp(frame, frame_v, ANG_SPRING_K * dt.0); // Spring back towards facing forwards
                 *dq = rot.normalized();
                 frame = rot * frame;
                 *q = frame.normalized();
                 ori.0 = frame * ori.0; // Update the orientation vector so we are facing the right way when we land
+                println!("C: {}", ori.0);
                 ori.0.z = 0.0; // Make sure we are horizontal when we land
             }
 
