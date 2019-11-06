@@ -1,6 +1,7 @@
 #![allow(incomplete_features)]
 #![feature(const_generics, test)]
 #![feature(associated_type_bounds)]
+#![feature(generic_associated_types)]
 
 extern crate serde_derive;
 #[macro_use]

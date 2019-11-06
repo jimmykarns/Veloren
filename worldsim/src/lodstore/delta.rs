@@ -7,7 +7,6 @@ use super::entrylayer::EntryLayer;
 use super::traversable::Traversable;
 #[allow(unused_imports)]
 use super::materializeable::Materializeable;
-use std::marker::PhantomData;
 /*
     A LodDelta applies a change to a Lod
     The rules for LodDeltas are strict in order to make them as simple as possible.
@@ -34,7 +33,7 @@ pub struct VecNestDelta<D: DeltaStore, T, const L: u8> {
     pub child: D,
 }
 
-pub struct DeltaWriter<'a, C: EntryLayer<'a> + DetailStore, D: EntryLayer<'a> + DeltaStore> {
+pub struct DeltaWriter<'a, C: EntryLayer + DetailStore, D: EntryLayer + DeltaStore> {
     pub delta: &'a mut D,
     pub data: &'a mut C,
 }
@@ -47,15 +46,14 @@ pub struct VecDeltaIterMut<'a, D: DeltaStore> {
     pub( super ) layer: &'a mut D,
 }
 
-pub struct DataWriterIter<'a, DT: 'a, CT: 'a> {
+pub struct DataWriterIter<DT, CT> {
     pub( super ) delta_iter: DT,
     pub( super ) data_iter: CT,
-    pub( super ) _a: PhantomData<&'a ()>,
 }
 
 //#######################################################
 
-impl<'a, C: DetailStore + EntryLayer<'a>, D: DeltaStore + EntryLayer<'a>> DeltaWriter<'a, C, D> {
+impl<'a, C: DetailStore + EntryLayer, D: DeltaStore + EntryLayer> DeltaWriter<'a, C, D> {
     pub fn new(delta: &'a mut D, data: &'a mut C) -> Self {
         DeltaWriter { delta, data }
     }
@@ -77,7 +75,7 @@ impl<C: DeltaStore, T, const L: u8> DeltaStore for VecNestDelta<C, T, { L }> {
 //#######################################################
 
 #[cfg(test)]
-mod tests {
+mod stests {
     use crate::lodstore::data::tests::gen_simple_example;
     use crate::lodstore::data::tests::ExampleData;
     use crate::lodstore::delta::*;
@@ -189,8 +187,7 @@ mod tests {
         let mut d = ExampleDelta::default();
         {
             let mut w = DeltaWriter::new(&mut d, &mut x);
-            let access = LodPos::xyz(0, 0, 0);
-            b.iter(|| w.trav_mut(access));
+            //b.iter(|| w.trav_mut(LodPos::xyz(0, 0, 0)));
         }
     }
 
@@ -200,8 +197,75 @@ mod tests {
         let mut d = ExampleDelta::default();
         {
             let mut w = DeltaWriter::new(&mut d, &mut x);
-            let access = LodPos::xyz(0, 0, 0);
-            b.iter(|| w.trav_mut(access).get().get().get().mat());
+            //b.iter(|| w.trav_mut(LodPos::xyz(0, 0, 0)).get().get().get().mat());
         }
     }
+
+    #[bench]
+    fn bench_iter_3(b: &mut Bencher) {
+        let mut x = gen_simple_example();
+        let mut d = ExampleDelta::default();
+        {
+            let mut w = DeltaWriter::new(&mut d, &mut x);
+            //b.iter(|| w.trav_mut(LodPos::xyz(0, 0, 0)).get().get().get());
+            w.trav_mut(LodPos::xyz(0, 0, 0));
+            w.trav_mut(LodPos::xyz(0, 0, 0));
+        }
+    }
+    fn ddd<'a,'b:'a, D>() {
+
+    }
+
+    #[bench]
+    fn bench_trav(b: &mut Bencher) {
+        let mut x = gen_simple_example();
+        let mut d = ExampleDelta::default();
+        {
+            let mut w = DeltaWriter::new(&mut d, &mut x);
+            //b.iter(|| {w.trav_mut_xxx(LodPos::xyz(0, 0, 0));});
+        }
+    }
+/*
+    pub struct ThisWorks<'a> {
+        pub ddd: &'a mut u64,
+    }
+
+    impl<'a> ThisWorks<'a> {
+        fn reff<'b>(&'b mut self) -> &'b mut u64 {
+            self.ddd
+        }
+    }
+
+    pub struct ThisDoestn<'a> {
+        pub ddd: &'a mut u64,
+    }
+
+    impl<'a> ThisDoestn<'a> {
+        fn reff<'b>(&'b mut self) -> &'a mut u64 where 'a: 'b {
+            self.ddd
+        }
+    }
+
+    pub struct ThisDoestnNeither<'a> {
+        pub ddd: &'a mut u64,
+    }
+
+    impl<'a> ThisDoestnNeither<'a> {
+        fn reff<'b: 'a>(&'b mut self) -> &'a mut u64 {
+            self.ddd
+        }
+    }
+
+    #[bench]
+    fn bench_travss(b: &mut Bencher) {
+        let mut u: u64 = 1;
+        let mut d = ThisWorks{ddd: &mut u};
+        {
+            b.iter(|| *d.ddd = *d.ddd + 1_u64);
+            b.iter(|| {d.reff();});
+            d.reff();
+            d.reff();
+        }
+    }
+*/
 }

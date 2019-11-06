@@ -71,7 +71,7 @@ impl<'a, L: DetailStore<KEY = usize>> Materializeable<'a> for VecIterMut<'a, L> 
 
 ///////////////// delta types
 
-impl<'a, DT: Deltalizeable, CT: Materializeable<'a>> Materializeable<'a> for DataWriterIter<'a, DT, CT> {
+impl<'a, DT: Deltalizeable, CT: Materializeable<'a>> Materializeable<'a> for DataWriterIter<DT, CT> {
 type MAT_CHILD = CT::MAT_CHILD;
 
 fn mat(self) -> &'a CT::MAT_CHILD {

@@ -4,7 +4,6 @@ use super::data::{DetailStore, IndexStore, HashIter, VecIter, HashIterMut, VecIt
 use super::delta::{DeltaStore, VecDeltaIter, VecDeltaIterMut, DataWriterIter};
 #[allow(unused_imports)] //not unsued, cargo is just to stupud to detect that
 use super::layer::{Layer, ParentLayer};
-use std::marker::PhantomData;
 
 pub trait Traversable {
     type TRAV_CHILD;
@@ -149,14 +148,13 @@ impl<'a, D: DeltaStore + ParentLayer> Traversable for VecDeltaIterMut<'a, D>
     }
 }
 
-impl<'a, DT: Traversable, CT: Traversable> Traversable for DataWriterIter<'a, DT, CT> {
-    type TRAV_CHILD = DataWriterIter<'a, DT::TRAV_CHILD, CT::TRAV_CHILD>;
+impl<DT: Traversable, CT: Traversable> Traversable for DataWriterIter<DT, CT> {
+    type TRAV_CHILD = DataWriterIter<DT::TRAV_CHILD, CT::TRAV_CHILD>;
 
-    fn get(self) -> DataWriterIter<'a, DT::TRAV_CHILD, CT::TRAV_CHILD> {
+    fn get(self) -> DataWriterIter<DT::TRAV_CHILD, CT::TRAV_CHILD> {
         DataWriterIter {
             delta_iter: self.delta_iter.get(),
             data_iter: self.data_iter.get(),
-            _a: PhantomData::<&'a ()>::default(),
         }
     }
 }
