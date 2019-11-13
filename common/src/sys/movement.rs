@@ -247,8 +247,9 @@ impl<'a> System<'a> for Sys {
                 frame = rot * frame;
                 *q = frame.normalized();
                 ori.0 = frame * ori.0; // Update the orientation vector so we are facing the right way when we land
-                println!("C: {}", ori.0);
+                dbg!(ori.0);
                 ori.0.z = 0.0; // Make sure we are horizontal when we land
+                ori.0.normalize();
             }
 
             // Climb
