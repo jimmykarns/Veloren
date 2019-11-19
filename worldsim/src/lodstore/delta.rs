@@ -33,7 +33,7 @@ pub struct VecNestDelta<D: DeltaStore, T, const L: u8> {
     pub child: D,
 }
 
-pub struct DeltaWriter<'a, C: EntryLayer + DetailStore, D: EntryLayer + DeltaStore> {
+pub struct DeltaWriter<'a, C: DetailStore, D: DeltaStore> {
     pub delta: &'a mut D,
     pub data: &'a mut C,
 }
@@ -53,7 +53,7 @@ pub struct DataWriterIter<DT, CT> {
 
 //#######################################################
 
-impl<'a, C: DetailStore + EntryLayer, D: DeltaStore + EntryLayer> DeltaWriter<'a, C, D> {
+impl<'a, C: DetailStore, D: DeltaStore> DeltaWriter<'a, C, D> {
     pub fn new(delta: &'a mut D, data: &'a mut C) -> Self {
         DeltaWriter { delta, data }
     }
@@ -187,7 +187,7 @@ mod stests {
         let mut d = ExampleDelta::default();
         {
             let mut w = DeltaWriter::new(&mut d, &mut x);
-            //b.iter(|| w.trav_mut(LodPos::xyz(0, 0, 0)));
+            b.iter(|| {w.trav_mut(LodPos::xyz(0, 0, 0));});
         }
     }
 
@@ -197,7 +197,7 @@ mod stests {
         let mut d = ExampleDelta::default();
         {
             let mut w = DeltaWriter::new(&mut d, &mut x);
-            //b.iter(|| w.trav_mut(LodPos::xyz(0, 0, 0)).get().get().get().mat());
+            b.iter(|| {w.trav_mut(LodPos::xyz(0, 0, 0)).get().get().get().mat();});
         }
     }
 
@@ -222,7 +222,7 @@ mod stests {
         let mut d = ExampleDelta::default();
         {
             let mut w = DeltaWriter::new(&mut d, &mut x);
-            //b.iter(|| {w.trav_mut_xxx(LodPos::xyz(0, 0, 0));});
+            b.iter(|| {w.trav_mut(LodPos::xyz(0, 0, 0));});
         }
     }
 /*

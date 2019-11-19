@@ -313,4 +313,28 @@ pub mod tests {
         }
         b.iter(|| x.trav(access).get().get().get().mat());
     }
+
+/*
+    pub struct MyIterMut<'a, C> {
+        pub( super ) layer: &'a mut C,
+    }
+    #[derive(Default, Clone)]
+    pub struct Layer<C> {
+        pub child: C,
+    }
+    pub trait EntryPoint {
+        type TRAV_MUT<'a>;
+        fn trav_mut<'a>(&'a mut self, pos: LodPos) -> Self::TRAV_MUT;
+    }
+    impl<C> EntryPoint
+    for Layer<C>
+    {
+        type TRAV_MUT<'a> = MyIterMut<'a, Layer<C>>;
+
+        fn trav_mut<'a>(&'a mut self, pos: u8) -> Self::TRAV_MUT {
+            MyIterMut {
+                layer: self,
+            }
+        }
+    }*/
 }
