@@ -1,7 +1,7 @@
+use super::data::{DetailStore, HashLayer, HashNestLayer, VecLayer, VecNestLayer};
+use super::delta::{DeltaStore, VecDelta, VecNestDelta};
 use super::index::ToOptionUsize;
 use super::lodpos::{two_pow_u, LodPos};
-use super::data::{VecLayer, HashLayer, VecNestLayer, HashNestLayer, DetailStore};
-use super::delta::{VecDelta, VecNestDelta, DeltaStore};
 use vek::Vec3;
 
 pub trait Layer {

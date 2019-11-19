@@ -1,5 +1,5 @@
-use super::lodpos::{LodPos};
 use super::delta::{DeltaStore, VecDeltaIterMut};
+use super::lodpos::LodPos;
 
 pub trait Deltalizeable {
     type DELTA: DeltaStore;

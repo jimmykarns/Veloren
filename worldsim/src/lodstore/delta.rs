@@ -1,12 +1,12 @@
-use super::data::{DetailStore};
-use super::lodpos::LodPos;
-use super::layer::{Layer};
+use super::data::DetailStore;
 #[allow(unused_imports)] //not unsued, cargo is just to stupud to detect that
 use super::entrylayer::EntryLayer;
-#[allow(unused_imports)]
-use super::traversable::Traversable;
+use super::layer::Layer;
+use super::lodpos::LodPos;
 #[allow(unused_imports)]
 use super::materializeable::Materializeable;
+#[allow(unused_imports)]
+use super::traversable::Traversable;
 /*
     A LodDelta applies a change to a Lod
     The rules for LodDeltas are strict in order to make them as simple as possible.
@@ -39,16 +39,16 @@ pub struct DeltaWriter<'a, C: DetailStore, D: DeltaStore> {
 }
 
 pub struct VecDeltaIter<'a, D: DeltaStore> {
-    pub( super ) layer: &'a D,
+    pub(super) layer: &'a D,
 }
 
 pub struct VecDeltaIterMut<'a, D: DeltaStore> {
-    pub( super ) layer: &'a mut D,
+    pub(super) layer: &'a mut D,
 }
 
 pub struct DataWriterIter<DT, CT> {
-    pub( super ) delta_iter: DT,
-    pub( super ) data_iter: CT,
+    pub(super) delta_iter: DT,
+    pub(super) data_iter: CT,
 }
 
 //#######################################################
@@ -124,26 +124,20 @@ mod stests {
         let mut x = gen_simple_example();
         let mut d = ExampleDelta::default();
         //assert_eq!(x.detail_index.len(),1);
-        assert_eq!(d.detail.len(),0);
-        assert_eq!(d.child.detail.len(),0);
-        assert_eq!(d.child.child.detail.len(),0);
-        assert_eq!(d.child.child.child.detail.len(),0);
+        assert_eq!(d.detail.len(), 0);
+        assert_eq!(d.child.detail.len(), 0);
+        assert_eq!(d.child.child.detail.len(), 0);
+        assert_eq!(d.child.child.child.detail.len(), 0);
         let i = LodPos::xyz(0, 0, 0);
         {
             let mut w = DeltaWriter::new(&mut d, &mut x);
             assert_eq!(*w.trav_mut(i).get().get().get().mat(), 7_i8);
-        }
-        {
-            let mut w = DeltaWriter::new(&mut d, &mut x);
             w.trav_mut(i).get().get().get().store(123);
-        }
-        { //TODO: this shouldnt be necessary but somehow it is...
-            let mut w = DeltaWriter::new(&mut d, &mut x);
             assert_eq!(*w.trav_mut(i).get().get().get().mat(), 123_i8);
-            assert_eq!(d.detail.len(),0);
-            assert_eq!(d.child.detail.len(),0);
-            assert_eq!(d.child.child.detail.len(),0);
-            assert_eq!(d.child.child.child.detail.len(),1);
+            assert_eq!(d.detail.len(), 0);
+            assert_eq!(d.child.detail.len(), 0);
+            assert_eq!(d.child.child.detail.len(), 0);
+            assert_eq!(d.child.child.child.detail.len(), 1);
             //assert_eq!(x.detail_index.len(),1);
         }
     }
@@ -156,28 +150,25 @@ mod stests {
         {
             let mut w = DeltaWriter::new(&mut d, &mut x);
             assert_eq!(*w.trav_mut(i).get().get().get().mat(), 7_i8);
-        }
-        {
-            let mut w = DeltaWriter::new(&mut d, &mut x);
             w.trav_mut(i).get().get().get().store(123);
-        }
-        {
-            let mut w = DeltaWriter::new(&mut d, &mut x);
-            w.trav_mut(LodPos::xyz(0, 0, 1)).get().get().get().store(111);
-        }
-        {
-            let mut w = DeltaWriter::new(&mut d, &mut x);
-            w.trav_mut(LodPos::xyz(0, 0, 2)).get().get().get().store(112);
-        }
-        {
-            let mut w = DeltaWriter::new(&mut d, &mut x);
-            w.trav_mut(LodPos::xyz(0, 0, 3)).get().get().get().store(111);
-        }
-        { //TODO: this shouldnt be necessary but somehow it is...
-            let mut w = DeltaWriter::new(&mut d, &mut x);
+            w.trav_mut(LodPos::xyz(0, 0, 1))
+                .get()
+                .get()
+                .get()
+                .store(111);
+            w.trav_mut(LodPos::xyz(0, 0, 2))
+                .get()
+                .get()
+                .get()
+                .store(112);
+            w.trav_mut(LodPos::xyz(0, 0, 3))
+                .get()
+                .get()
+                .get()
+                .store(111);
             let i = LodPos::xyz(0, 0, 0);
             assert_eq!(*w.trav_mut(i).get().get().get().mat(), 123_i8);
-            assert_eq!(x.detail_index.len(),1);
+            assert_eq!(x.detail_index.len(), 1);
         }
     }
 
@@ -187,7 +178,9 @@ mod stests {
         let mut d = ExampleDelta::default();
         {
             let mut w = DeltaWriter::new(&mut d, &mut x);
-            b.iter(|| {w.trav_mut(LodPos::xyz(0, 0, 0));});
+            b.iter(|| {
+                w.trav_mut(LodPos::xyz(0, 0, 0));
+            });
         }
     }
 
@@ -197,7 +190,9 @@ mod stests {
         let mut d = ExampleDelta::default();
         {
             let mut w = DeltaWriter::new(&mut d, &mut x);
-            b.iter(|| {w.trav_mut(LodPos::xyz(0, 0, 0)).get().get().get().mat();});
+            b.iter(|| {
+                w.trav_mut(LodPos::xyz(0, 0, 0)).get().get().get().mat();
+            });
         }
     }
 
@@ -207,13 +202,10 @@ mod stests {
         let mut d = ExampleDelta::default();
         {
             let mut w = DeltaWriter::new(&mut d, &mut x);
-            //b.iter(|| w.trav_mut(LodPos::xyz(0, 0, 0)).get().get().get());
-            w.trav_mut(LodPos::xyz(0, 0, 0));
-            w.trav_mut(LodPos::xyz(0, 0, 0));
+            b.iter(|| {
+                w.trav_mut(LodPos::xyz(0, 0, 0)).get().get().get();
+            });
         }
-    }
-    fn ddd<'a,'b:'a, D>() {
-
     }
 
     #[bench]
@@ -222,50 +214,9 @@ mod stests {
         let mut d = ExampleDelta::default();
         {
             let mut w = DeltaWriter::new(&mut d, &mut x);
-            b.iter(|| {w.trav_mut(LodPos::xyz(0, 0, 0));});
+            b.iter(|| {
+                w.trav_mut(LodPos::xyz(0, 0, 0));
+            });
         }
     }
-/*
-    pub struct ThisWorks<'a> {
-        pub ddd: &'a mut u64,
-    }
-
-    impl<'a> ThisWorks<'a> {
-        fn reff<'b>(&'b mut self) -> &'b mut u64 {
-            self.ddd
-        }
-    }
-
-    pub struct ThisDoestn<'a> {
-        pub ddd: &'a mut u64,
-    }
-
-    impl<'a> ThisDoestn<'a> {
-        fn reff<'b>(&'b mut self) -> &'a mut u64 where 'a: 'b {
-            self.ddd
-        }
-    }
-
-    pub struct ThisDoestnNeither<'a> {
-        pub ddd: &'a mut u64,
-    }
-
-    impl<'a> ThisDoestnNeither<'a> {
-        fn reff<'b: 'a>(&'b mut self) -> &'a mut u64 {
-            self.ddd
-        }
-    }
-
-    #[bench]
-    fn bench_travss(b: &mut Bencher) {
-        let mut u: u64 = 1;
-        let mut d = ThisWorks{ddd: &mut u};
-        {
-            b.iter(|| *d.ddd = *d.ddd + 1_u64);
-            b.iter(|| {d.reff();});
-            d.reff();
-            d.reff();
-        }
-    }
-*/
 }

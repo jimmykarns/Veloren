@@ -1,9 +1,9 @@
+use super::data::{DetailStore, HashIter, HashIterMut, IndexStore, VecIter, VecIterMut};
+use super::delta::{DataWriterIter, DeltaStore, VecDeltaIter, VecDeltaIterMut};
 use super::index::ToOptionUsize;
-use super::lodpos::{multily_with_2_pow_n, relative_to_1d, LodPos};
-use super::data::{DetailStore, IndexStore, HashIter, VecIter, HashIterMut, VecIterMut};
-use super::delta::{DeltaStore, VecDeltaIter, VecDeltaIterMut, DataWriterIter};
 #[allow(unused_imports)] //not unsued, cargo is just to stupud to detect that
 use super::layer::{Layer, ParentLayer};
+use super::lodpos::{multily_with_2_pow_n, relative_to_1d, LodPos};
 
 pub trait Traversable {
     type TRAV_CHILD;
@@ -13,8 +13,8 @@ pub trait Traversable {
 ///////////////// data types
 
 impl<'a, L: DetailStore<KEY = LodPos> + IndexStore> Traversable for HashIter<'a, L>
-    where
-        L::CHILD: DetailStore,
+where
+    L::CHILD: DetailStore,
 {
     type TRAV_CHILD = VecIter<'a, L::CHILD>;
 
@@ -40,8 +40,8 @@ impl<'a, L: DetailStore<KEY = LodPos> + IndexStore> Traversable for HashIter<'a,
 }
 
 impl<'a, L: DetailStore<KEY = LodPos> + IndexStore> Traversable for HashIterMut<'a, L>
-    where
-        L::CHILD: DetailStore,
+where
+    L::CHILD: DetailStore,
 {
     type TRAV_CHILD = VecIterMut<'a, L::CHILD>;
 
@@ -67,8 +67,8 @@ impl<'a, L: DetailStore<KEY = LodPos> + IndexStore> Traversable for HashIterMut<
 }
 
 impl<'a, L: DetailStore<KEY = usize> + IndexStore> Traversable for VecIter<'a, L>
-    where
-        L::CHILD: DetailStore,
+where
+    L::CHILD: DetailStore,
 {
     type TRAV_CHILD = VecIter<'a, L::CHILD>;
 
@@ -94,8 +94,8 @@ impl<'a, L: DetailStore<KEY = usize> + IndexStore> Traversable for VecIter<'a, L
 }
 
 impl<'a, L: DetailStore<KEY = usize> + IndexStore> Traversable for VecIterMut<'a, L>
-    where
-        L::CHILD: DetailStore,
+where
+    L::CHILD: DetailStore,
 {
     type TRAV_CHILD = VecIterMut<'a, L::CHILD>;
 
@@ -123,8 +123,8 @@ impl<'a, L: DetailStore<KEY = usize> + IndexStore> Traversable for VecIterMut<'a
 ///////////////// delta types
 
 impl<'a, D: DeltaStore + ParentLayer> Traversable for VecDeltaIter<'a, D>
-    where
-        D::CHILD: DeltaStore,
+where
+    D::CHILD: DeltaStore,
 {
     type TRAV_CHILD = VecDeltaIter<'a, D::CHILD>;
 
@@ -136,8 +136,8 @@ impl<'a, D: DeltaStore + ParentLayer> Traversable for VecDeltaIter<'a, D>
 }
 
 impl<'a, D: DeltaStore + ParentLayer> Traversable for VecDeltaIterMut<'a, D>
-    where
-        D::CHILD: DeltaStore,
+where
+    D::CHILD: DeltaStore,
 {
     type TRAV_CHILD = VecDeltaIterMut<'a, D::CHILD>;
 

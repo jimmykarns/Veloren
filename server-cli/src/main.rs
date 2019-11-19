@@ -56,10 +56,10 @@ fn main() {
     let (server_tx, server_rx) = mpsc::channel::<ServerMsg>();
 
     let mut region_manager = RegionManager::new(region_manager_tx, server_rx);
-    let mut job_manager: Arc<JobManager> = Arc::new(JobManager::new());
+    let job_manager: Arc<JobManager> = Arc::new(JobManager::new());
     let mut server =
         worldsim::server::Server::new(server_tx, region_manager_rx, job_manager.clone());
-    let mut region = Region::new((0, 0), job_manager.clone());
+    let _region = Region::new((0, 0), job_manager.clone());
 
     job_manager.repeat(move || region_manager.work());
     job_manager.repeat(move || server.work());
