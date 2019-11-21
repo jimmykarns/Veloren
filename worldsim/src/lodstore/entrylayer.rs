@@ -50,14 +50,14 @@ impl<D: DeltaStore, T, const L: u8> VecNestDelta<D, T, { L }> {
 }
 
 impl<D: DeltaStore, C: DetailStore, T, I: ToOptionUsize, const L: u8>
-    DeltaWriter<'_, HashNestLayer<C, T, I, { L }>, VecNestDelta<D, T, { L }>>
+    DeltaWriter<'_, T, HashNestLayer<C, T, I, { L }>, VecNestDelta<D, T, { L }>>
 {
     pub fn trav<'a>(
         &'a self,
         pos: LodPos,
     ) -> DataWriterIter<
-        VecDeltaIter<'a, VecNestDelta<D, T, { L }>>,
         HashIter<'a, HashNestLayer<C, T, I, { L }>>,
+        VecDeltaIter<'a, VecNestDelta<D, T, { L }>>,
     > {
         DataWriterIter {
             delta_iter: self.delta.trav(pos),
@@ -69,8 +69,8 @@ impl<D: DeltaStore, C: DetailStore, T, I: ToOptionUsize, const L: u8>
         &'a mut self,
         pos: LodPos,
     ) -> DataWriterIter<
-        VecDeltaIterMut<'a, VecNestDelta<D, T, { L }>>,
         HashIterMut<'a, HashNestLayer<C, T, I, { L }>>,
+        VecDeltaIterMut<'a, VecNestDelta<D, T, { L }>>,
     > {
         DataWriterIter {
             delta_iter: self.delta.trav_mut(pos),

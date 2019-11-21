@@ -148,13 +148,13 @@ where
     }
 }
 
-impl<DT: Traversable, CT: Traversable> Traversable for DataWriterIter<DT, CT> {
-    type TRAV_CHILD = DataWriterIter<DT::TRAV_CHILD, CT::TRAV_CHILD>;
+impl<CT: Traversable, DT: Traversable> Traversable for DataWriterIter<CT, DT> {
+    type TRAV_CHILD = DataWriterIter<CT::TRAV_CHILD, DT::TRAV_CHILD>;
 
-    fn get(self) -> DataWriterIter<DT::TRAV_CHILD, CT::TRAV_CHILD> {
+    fn get(self) -> DataWriterIter<CT::TRAV_CHILD, DT::TRAV_CHILD> {
         DataWriterIter {
-            delta_iter: self.delta_iter.get(),
             data_iter: self.data_iter.get(),
+            delta_iter: self.delta_iter.get(),
         }
     }
 }
