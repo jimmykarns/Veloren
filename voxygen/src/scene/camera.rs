@@ -96,16 +96,25 @@ impl Camera {
             .max(0.0)
         };
 
-        let view_mat = Mat4::<f32>::identity()
+        let view_mat = self.headset.as_ref().map(|s| {
+            let poses = s.system().unwrap().device_to_absolute_tracking_pose(openvr::TrackingUniverseOrigin::Standing, 0.0);
+            let m = poses[0].device_to_absolute_tracking();
+            Mat4::<f32>::from_row_arrays([
+                m[0], m[1], m[2],
+                [0.0, 0.0, 0.0, 1.0]
+            ])
+        }).unwrap_or(Mat4::<f32>::identity()
             * Mat4::translation_3d(-Vec3::unit_z() * dist)
             * Mat4::rotation_z(self.ori.z)
             * Mat4::rotation_x(self.ori.y)
             * Mat4::rotation_y(self.ori.x)
             * Mat4::rotation_3d(PI / 2.0, -Vec4::unit_x())
-            * Mat4::translation_3d(-self.focus);
+            * Mat4::translation_3d(-self.focus));
+        
+        //println!("{:?}", view_mat);
 
         //let proj_mat = Mat4::perspective_rh_no(self.fov, self.aspect, NEAR_PLANE, FAR_PLANE);
-        let proj_mat = self.headset.as_ref().map(|s| Mat4::from_row_arrays(s.system().unwrap().projection_matrix(openvr::Eye::Left, 0.0, 100.0)))
+        let proj_mat = self.headset.as_ref().map(|s| Mat4::from_row_arrays(s.system().unwrap().projection_matrix(openvr::Eye::Left, NEAR_PLANE, FAR_PLANE)))
                         .unwrap_or(Mat4::perspective_rh_no(self.fov, self.aspect, NEAR_PLANE, FAR_PLANE));
 
         // TODO: Make this more efficient.
