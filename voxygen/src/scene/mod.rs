@@ -72,7 +72,7 @@ impl Scene {
             shadows: renderer
                 .create_consts(&[Shadow::default(); MAX_SHADOW_COUNT])
                 .unwrap(),
-            camera: Camera::new(resolution.x / resolution.y, CameraMode::ThirdPerson),
+            camera: Camera::new(resolution.x / resolution.y, CameraMode::ThirdPerson, true),
 
             skybox: Skybox {
                 model: renderer.create_model(&create_skybox_mesh()).unwrap(),

@@ -59,7 +59,7 @@ impl Scene {
             globals: renderer.create_consts(&[Globals::default()]).unwrap(),
             lights: renderer.create_consts(&[Light::default(); 32]).unwrap(),
             shadows: renderer.create_consts(&[Shadow::default(); 32]).unwrap(),
-            camera: Camera::new(resolution.x / resolution.y, CameraMode::ThirdPerson),
+            camera: Camera::new(resolution.x / resolution.y, CameraMode::ThirdPerson, false),
 
             skybox: Skybox {
                 model: renderer.create_model(&create_skybox_mesh()).unwrap(),

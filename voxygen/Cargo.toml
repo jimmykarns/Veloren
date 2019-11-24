@@ -63,6 +63,7 @@ crossbeam = "=0.7.2"
 hashbrown = { version = "0.6.2", features = ["serde", "nightly"] }
 chrono = "0.4.9"
 rust-argon2 = "0.5"
+openvr = "0.6"
 
 [target.'cfg(windows)'.build-dependencies]
 winres = "0.1"

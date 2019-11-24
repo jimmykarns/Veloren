@@ -4,6 +4,8 @@ use frustum_query::frustum::Frustum;
 use std::f32::consts::PI;
 use vek::*;
 
+use openvr;
+
 const NEAR_PLANE: f32 = 0.5;
 const FAR_PLANE: f32 = 100000.0;
 
@@ -35,11 +37,18 @@ pub struct Camera {
     mode: CameraMode,
 
     last_time: Option<f64>,
+
+    headset: Option<openvr::Context>,
+    //system: Option<openvr::System>,
 }
 
 impl Camera {
     /// Create a new `Camera` with default parameters.
-    pub fn new(aspect: f32, mode: CameraMode) -> Self {
+    #[allow(unsafe_code)]
+    pub fn new(aspect: f32, mode: CameraMode, vr: bool) -> Self {
+        let headset: Option<openvr::Context> = if vr { unsafe { openvr::init(openvr::ApplicationType::Scene).ok() } } else { None };
+        //let system = headset.map(|h| h.system().unwrap());
+
         Self {
             tgt_focus: Vec3::unit_z() * 10.0,
             focus: Vec3::unit_z() * 10.0,
@@ -51,6 +60,9 @@ impl Camera {
             mode,
 
             last_time: None,
+
+            //system,
+            headset,
         }
     }
 
@@ -92,7 +104,9 @@ impl Camera {
             * Mat4::rotation_3d(PI / 2.0, -Vec4::unit_x())
             * Mat4::translation_3d(-self.focus);
 
-        let proj_mat = Mat4::perspective_rh_no(self.fov, self.aspect, NEAR_PLANE, FAR_PLANE);
+        //let proj_mat = Mat4::perspective_rh_no(self.fov, self.aspect, NEAR_PLANE, FAR_PLANE);
+        let proj_mat = self.headset.as_ref().map(|s| Mat4::from_row_arrays(s.system().unwrap().projection_matrix(openvr::Eye::Left, 0.0, 100.0)))
+                        .unwrap_or(Mat4::perspective_rh_no(self.fov, self.aspect, NEAR_PLANE, FAR_PLANE));
 
         // TODO: Make this more efficient.
         let cam_pos = Vec3::from(view_mat.inverted() * Vec4::unit_w());
@@ -253,5 +267,12 @@ impl Camera {
     /// Get the mode of the camera
     pub fn get_mode(&self) -> CameraMode {
         self.mode
+    }
+}
+
+impl Drop for Camera {
+    #[allow(unsafe_code)]
+    fn drop(&mut self) {
+        unsafe { self.headset.as_ref().map(|s| s.shutdown()) };
     }
 }
