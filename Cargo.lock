@@ -533,6 +533,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "clipboard_macos"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "145a7f9e9b89453bc0a5e32d166456405d389cea5b578f57f1274b1397588a95"
+dependencies = [
+ "objc",
+ "objc-foundation",
+ "objc_id",
+]
+
+[[package]]
+name = "clipboard_wayland"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "88fa1b449e43a33bc4155e712e7239d67269e8fb9df13c135cdfa8a710c17422"
+dependencies = [
+ "smithay-clipboard 0.3.7",
+]
+
+[[package]]
+name = "clipboard_x11"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "137cbd60c42327a8d63e710cee5a4d6a1ac41cdc90449ea2c2c63bd5e186290a"
+dependencies = [
+ "xcb",
+]
+
+[[package]]
 name = "cloudabi"
 version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -675,7 +704,7 @@ dependencies = [
  "objc",
  "objc-foundation",
  "objc_id",
- "smithay-clipboard",
+ "smithay-clipboard 0.4.0",
  "wayland-client 0.23.6",
  "x11-clipboard",
 ]
@@ -1969,6 +1998,33 @@ dependencies = [
  "tokio-threadpool",
  "tokio-timer",
  "want",
+]
+
+[[package]]
+name = "iced_core"
+version = "0.2.1"
+source = "git+https://github.com/hecrj/iced#b5d842f877145c78f5d595a87cc1927bb6f5b86a"
+
+[[package]]
+name = "iced_futures"
+version = "0.1.2"
+source = "git+https://github.com/hecrj/iced#b5d842f877145c78f5d595a87cc1927bb6f5b86a"
+dependencies = [
+ "futures 0.3.5",
+ "log",
+ "wasm-bindgen-futures",
+]
+
+[[package]]
+name = "iced_native"
+version = "0.2.2"
+source = "git+https://github.com/hecrj/iced#b5d842f877145c78f5d595a87cc1927bb6f5b86a"
+dependencies = [
+ "iced_core",
+ "iced_futures",
+ "num-traits",
+ "twox-hash",
+ "unicode-segmentation",
 ]
 
 [[package]]
@@ -3777,6 +3833,16 @@ dependencies = [
 
 [[package]]
 name = "smithay-clipboard"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a59486e68b5596f664deedf01c46297f4af60379adae20175357a814d40f69e"
+dependencies = [
+ "nix 0.14.1",
+ "smithay-client-toolkit 0.6.6",
+]
+
+[[package]]
+name = "smithay-clipboard"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "917e8ec7f535cd1a6cbf749c8866c24d67c548a80ac48c8e88a182eab5c07bd1"
@@ -4295,6 +4361,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "44834418e2c5b16f47bedf35c28e148db099187dd5feee6367fb2525863af4f1"
 
 [[package]]
+name = "twox-hash"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bfd5b7557925ce778ff9b9ef90e3ade34c524b5ff10e239c69a42d546d2af56"
+dependencies = [
+ "rand 0.7.3",
+]
+
+[[package]]
 name = "unicode-bidi"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4311,6 +4386,12 @@ checksum = "5479532badd04e128284890390c1e876ef7a993d0570b3597ae43dfa1d59afa4"
 dependencies = [
  "smallvec 1.4.0",
 ]
+
+[[package]]
+name = "unicode-segmentation"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e83e153d1053cbb5a118eeff7fd5be06ed99153f00dbcd8ae310c5fb2b22edc0"
 
 [[package]]
 name = "unicode-width"
@@ -4560,6 +4641,7 @@ dependencies = [
  "glutin",
  "guillotiere",
  "hashbrown",
+ "iced_native",
  "image",
  "msgbox",
  "num 0.2.1",
@@ -4582,6 +4664,7 @@ dependencies = [
  "veloren-server",
  "veloren-voxygen-anim",
  "veloren-world",
+ "window_clipboard",
  "winit",
  "winres",
 ]
@@ -4714,6 +4797,18 @@ dependencies = [
  "quote 1.0.7",
  "syn 1.0.31",
  "wasm-bindgen-shared",
+]
+
+[[package]]
+name = "wasm-bindgen-futures"
+version = "0.4.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64487204d863f109eb77e8462189d111f27cb5712cc9fdb3461297a76963a2f6"
+dependencies = [
+ "cfg-if",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -4933,6 +5028,19 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "window_clipboard"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edcfde4a2b330a44ce91aaa3a1634d492b7ac32ebdde8316f141009f953fa152"
+dependencies = [
+ "clipboard-win",
+ "clipboard_macos",
+ "clipboard_wayland",
+ "clipboard_x11",
+ "raw-window-handle",
+]
 
 [[package]]
 name = "winit"

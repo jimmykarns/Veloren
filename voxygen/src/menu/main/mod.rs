@@ -57,6 +57,10 @@ impl PlayState for MainMenuState {
                     Event::Ui(event) => {
                         self.main_menu_ui.handle_event(event);
                     },
+                    // Pass events to iced ui.
+                    Event::IcedUi(event) => {
+                        self.main_menu_ui.handle_iced_event(event);
+                    },
                     // Ignore all other events.
                     _ => {},
                 }

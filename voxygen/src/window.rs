@@ -178,6 +178,8 @@ pub enum Event {
     InputUpdate(GameInput, bool),
     /// Event that the ui uses.
     Ui(ui::Event),
+    /// Event that the iced ui uses.
+    IcedUi(ui::ice::Event),
     /// The view distance has changed.
     ViewDistanceChanged(u32),
     /// Game settings have changed.
@@ -555,6 +557,12 @@ impl Window {
             // Get events for ui.
             if let Some(event) = ui::Event::try_from(event.clone(), window) {
                 events.push(Event::Ui(event));
+            }
+            // iced ui events
+            if let winit::Event::WindowEvent { event, .. } = event.clone() {
+                if let Some(event) = ui::ice::window_event(event) {
+                    events.push(Event::IcedUi(event));
+                }
             }
 
             match event {
@@ -1041,4 +1049,6 @@ impl Window {
     pub fn set_keybinding_mode(&mut self, game_input: GameInput) {
         self.remapping_keybindings = Some(game_input);
     }
+
+    pub fn window(&self) -> &winit::Window { self.window.window() }
 }
