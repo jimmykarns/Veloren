@@ -39,6 +39,9 @@ lazy_static = { version = "1.4.0", optional = true }
 # Singleplayer
 server = { package = "veloren-server", path = "../server", optional = true }
 
+# Modding
+mun_runtime = { path = "/home/forest/Documents/Github/mun/crates/mun_runtime"}
+
 # Utility
 glsl-include = "0.3.1"
 failure = "0.1.6"

@@ -6,12 +6,13 @@ use common::comp::item::Tool;
 use std::f32::consts::PI;
 use vek::*;
 
+use mun_runtime::{invoke_fn, RetryResultExt, RuntimeBuilder};
+
 pub struct JumpAnimation;
 
 impl Animation for JumpAnimation {
     type Skeleton = CharacterSkeleton;
     type Dependency = (Option<Tool>, f64);
-
     fn update_skeleton(
         skeleton: &Self::Skeleton,
         (_active_tool_kind, _global_time): Self::Dependency,
@@ -25,10 +26,16 @@ impl Animation for JumpAnimation {
         let wave_stop = (anim_time as f32 * 4.5).min(PI / 2.0).sin();
         let wave_stop_alt = (anim_time as f32 * 5.0).min(PI / 2.0).sin();
 
+        let mut runtime = RuntimeBuilder::new("voxygen/src/anim/character/test.so")
+            .spawn()
+            .expect("Failed to spawn Runtime");
+        runtime.update();
+        let neck_offset: f64 = invoke_fn!(runtime, "jump").wait();
+
         next.head.offset = Vec3::new(
             0.0 + skeleton_attr.neck_right,
             -3.0 + skeleton_attr.neck_forward,
-            skeleton_attr.neck_height + 21.0,
+            skeleton_attr.neck_height + neck_offset as f32,
         );
         next.head.ori = Quaternion::rotation_x(0.25 + wave_stop * 0.1 + wave_slow * 0.04);
         next.head.scale = Vec3::one() * skeleton_attr.head_scale;
