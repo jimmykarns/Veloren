@@ -7,6 +7,7 @@ members = [
 	"chat-cli",
 	"server",
 	"server-cli",
+	"server-gui",
 	"voxygen",
 	"world",
 ]
@@ -14,10 +15,10 @@ members = [
 # default profile for devs, fast to compile, okay enough to run, no debug information
 [profile.dev]
 opt-level = 2
-overflow-checks = true 
+overflow-checks = true
 debug-assertions = true
 panic = "abort"
-debug = false 
+debug = false
 codegen-units = 8
 lto = false
 incremental = true
@@ -33,6 +34,8 @@ opt-level = 2
 [profile.dev.package."veloren-server"]
 opt-level = 2
 [profile.dev.package."veloren-server-cli"]
+opt-level = 2
+[profile.dev.package."veloren-server-gui"]
 opt-level = 2
 [profile.dev.package."veloren-voxygen"]
 opt-level = 2
