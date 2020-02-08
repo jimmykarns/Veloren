@@ -707,7 +707,7 @@ impl Hud {
                 // Background
                 Image::new(self.imgs.enemy_health_bg)
                     .w_h(84.0 * BARSIZE, 10.0 * BARSIZE)
-                    .x_y(0.0, MANA_BAR_Y + 6.5) //-25.5)
+                    .x_y(0.0, MANA_BAR_Y + 6.5)
                     .color(Some(Color::Rgba(0.1, 0.1, 0.1, 0.8)))
                     .position_ingame(ingame_pos)
                     .set(back_id, ui_widgets);
@@ -738,7 +738,7 @@ impl Hud {
                 )
                 .x_y(
                     ((3.5 + (energy_percentage / 100.0 * 36.5)) - 36.45) * BARSIZE,
-                    MANA_BAR_Y, //-32.0,
+                    MANA_BAR_Y,
                 )
                 .position_ingame(ingame_pos)
                 .set(mana_bar_id, ui_widgets);
