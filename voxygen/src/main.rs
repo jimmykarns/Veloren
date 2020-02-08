@@ -117,6 +117,9 @@ fn main() {
         default_hook(panic_info);
     }));
 
+    // Create window
+    let (window, event_loop) = Window::new(&settings).expect("Failed to create window!");
+
     // Setup audio
     let mut audio = if settings.audio.audio_on {
         AudioFrontend::new(
@@ -158,9 +161,6 @@ fn main() {
         .unwrap()
     });
     localized_strings.log_missing_entries();
-
-    // Create window
-    let (window, event_loop) = Window::new(&settings).expect("Failed to create window!");
 
     let global_state = GlobalState {
         audio,

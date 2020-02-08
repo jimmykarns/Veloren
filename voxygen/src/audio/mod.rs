@@ -252,10 +252,16 @@ impl AudioFrontend {
 /// Returns the default audio device.
 /// Does not return rodio Device struct in case our audio backend changes.
 pub fn get_default_device() -> String {
-    rodio::default_output_device()
-        .expect("No audio output devices detected.")
-        .name()
-        .expect("Unable to get device name")
+    // TODO: Remove when issue is resolved
+    // Start cpal event loop on a separate thread
+    // See: https://github.com/RustAudio/cpal/pull/348
+    let child = std::thread::spawn(move || {
+        rodio::default_output_device()
+            .expect("No audio output devices detected.")
+            .name()
+            .expect("Unable to get device name")
+    });
+    child.join().unwrap()
 }
 
 /// Returns a vec of the audio devices available.
