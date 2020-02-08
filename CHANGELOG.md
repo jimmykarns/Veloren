@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed /give_exp ignoring player argument
 - Extend run sfx to small animals to prevent sneak attacks by geese.
 - Decreased clientside latency of ServerEvent mediated effects (e.g. projectiles, inventory operations, etc)
+- Updated winit 0.19 -> 0.22
 
 ### Removed
 
