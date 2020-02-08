@@ -52,14 +52,6 @@ impl SessionState {
             .camera_mut()
             .set_fov_deg(global_state.settings.graphics.fov);
         let hud = Hud::new(global_state, &client.borrow());
-        {
-            let my_entity = client.borrow().entity();
-            client
-                .borrow_mut()
-                .state_mut()
-                .ecs_mut()
-                .insert(MyEntity(my_entity));
-        }
         Self {
             scene,
             client,
@@ -131,6 +123,17 @@ impl PlayState for SessionState {
 
         let client_state = self.client.borrow().get_client_state();
         if let ClientState::Pending | ClientState::Character = client_state {
+            // Update MyEntity
+            // Note: Alternatively, the client could emit an event when the entity changes
+            // which may or may not be more elegant
+            {
+                let my_entity = self.client.borrow().entity();
+                self.client
+                    .borrow_mut()
+                    .state_mut()
+                    .ecs_mut()
+                    .insert(MyEntity(my_entity));
+            }
             // Compute camera data
             self.scene
                 .camera_mut()
