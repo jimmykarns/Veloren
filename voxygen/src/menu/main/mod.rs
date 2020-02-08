@@ -1,17 +1,10 @@
 mod client_init;
 mod ui;
-// TODO: make sure turning off singleplayer feature still works (also make sure
-// all singleplayer stuff is still hidden with it off)
 
 use super::char_selection::CharSelectionState;
 #[cfg(feature = "singleplayer")]
 use crate::singleplayer::Singleplayer;
-use crate::{
-    i18n::{i18n_asset_key, VoxygenLocalization},
-    render::Renderer,
-    window::Event,
-    Direction, GlobalState, PlayState, PlayStateResult,
-};
+use crate::{render::Renderer, window::Event, Direction, GlobalState, PlayState, PlayStateResult};
 use client_init::{ClientInit, Error as InitError, Msg as InitMsg};
 use common::{assets::load_expect, comp};
 use log::{error, warn};
