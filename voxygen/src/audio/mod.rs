@@ -37,29 +37,35 @@ pub struct AudioFrontend {
 impl AudioFrontend {
     /// Construct with given device
     pub fn new(device: String, max_sfx_channels: usize) -> Self {
-        let mut sfx_channels = Vec::with_capacity(max_sfx_channels);
-        let audio_device = get_device_raw(&device);
+        // TODO: Remove when issue is resolved
+        // Start cpal event loop on a separate thread
+        // See: https://github.com/RustAudio/cpal/pull/348
+        let child = std::thread::spawn(move || {
+            let mut sfx_channels = Vec::with_capacity(max_sfx_channels);
+            let audio_device = get_device_raw(&device);
 
-        if let Some(audio_device) = &audio_device {
-            for _ in 0..max_sfx_channels {
-                sfx_channels.push(SfxChannel::new(&audio_device));
+            if let Some(audio_device) = &audio_device {
+                for _ in 0..max_sfx_channels {
+                    sfx_channels.push(SfxChannel::new(&audio_device));
+                }
             }
-        }
 
-        Self {
-            device: device.clone(),
-            device_list: list_devices(),
-            audio_device,
-            sound_cache: SoundCache::new(),
-            music_channels: Vec::new(),
-            sfx_channels,
-            sfx_volume: 1.0,
-            music_volume: 1.0,
-            listener_pos: Vec3::zero(),
-            listener_ori: Vec3::zero(),
-            listener_ear_left: Vec3::zero(),
-            listener_ear_right: Vec3::zero(),
-        }
+            Self {
+                device: device.clone(),
+                device_list: list_devices(),
+                audio_device,
+                sound_cache: SoundCache::new(),
+                music_channels: Vec::new(),
+                sfx_channels,
+                sfx_volume: 1.0,
+                music_volume: 1.0,
+                listener_pos: Vec3::zero(),
+                listener_ori: Vec3::zero(),
+                listener_ear_left: Vec3::zero(),
+                listener_ear_right: Vec3::zero(),
+            }
+        });
+        child.join().unwrap()
     }
 
     /// Construct in `no-audio` mode for debugging
@@ -231,8 +237,15 @@ impl AudioFrontend {
 
     // TODO: figure out how badly this will break things when it is called
     pub fn set_device(&mut self, name: String) {
-        self.device = name.clone();
-        self.audio_device = get_device_raw(&name);
+        let mut this = std::mem::replace(self, AudioFrontend::no_audio());
+        // TODO: Remove when issue is resolved
+        // Start cpal event loop on a separate thread
+        // See: https://github.com/RustAudio/cpal/pull/348
+        let child = std::thread::spawn(move || {
+            this.audio_device = get_device_raw(&name);
+            this
+        });
+        *self = child.join().unwrap();
     }
 }
 
@@ -256,9 +269,15 @@ pub fn list_devices() -> Vec<String> {
 
 /// Returns vec of devices
 fn list_devices_raw() -> Vec<Device> {
-    rodio::output_devices()
-        .expect("Unable to get output devices")
-        .collect()
+    // TODO: Remove when issue is resolved
+    // Start cpal event loop on a separate thread
+    // See: https://github.com/RustAudio/cpal/pull/348
+    let child = std::thread::spawn(move || {
+        rodio::output_devices()
+            .expect("Unable to get output devices")
+            .collect()
+    });
+    child.join().unwrap()
 }
 
 fn get_device_raw(device: &str) -> Option<Device> {
