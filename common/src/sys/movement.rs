@@ -34,10 +34,10 @@ const CLIMB_COST: i32 = 5;
 // Glider constants
 const MASS: f32 = 20.0;
 const LIFT: f32 = 4.0; // This must be less than 3DRAG[2]^(1/3)(DRAG[0]/2)^(2/3) to conserve energy
-const DRAG: [f32; 3] = [1.0, 3.5, 10.0]; // Drag coefficients (forwards/back, left/right, up/down)
-const ANG_INP: [f32; 2] = [0.75, 1.0]; // Angle changes from user input in a unit time step (pitch and roll)
+const DRAG: [f32; 3] = [0.1, 3.5, 10.0]; // Drag coefficients (forwards/back, left/right, up/down)
+const ANG_INP: [f32; 2] = [0.75, 0.035]; // Angle changes from user input in a unit time step (pitch and roll)
 const ANG_DRAG: f32 = 10.0; // The interpolation factor for angular drag in a time step (will be multiplied by dt)
-const ANG_SPRING_K: f32 = 1.1; // "" for the glider tending to return to facing forwards
+const ANG_SPRING_K: f32 = 1.0; // "" for the glider tending to return to facing forwards
 
 pub const MOVEMENT_THRESHOLD_VEL: f32 = 3.0;
 
@@ -236,12 +236,18 @@ impl<'a> System<'a> for Sys {
                 let deltachi = mx * ANG_INP[1] * dt.0; // Roll change in this time step, positive = roll right
                 rot = Slerp::slerp(rot, Quaternion::identity(), ANG_DRAG * dt.0); // Angular velocity decay
                 if deltachi != 0.0 {
-                    rot = Quaternion::rotation_3d(deltachi, frame * Vec3::unit_y()) * rot; // Apply roll change
+                    rot = Quaternion::rotation_3d(deltachi * vel.0.magnitude(), frame * (Vec3::unit_y() * 2.5 - Vec3::unit_z()).normalized()) * rot; // Apply roll change
                 }
                 if deltatheta != 0.0 {
                     rot = Quaternion::rotation_3d(deltatheta, frame * -Vec3::unit_x()) * rot; // Apply pitch change
                 }
-                let frame_v = Quaternion::rotation_from_to_3d(Vec3::unit_y(), vel.0); // Rotation to the direction of the velocity
+                let frame_v = if vel.0.magnitude_squared() < 0.001 {
+                    frame
+                } else {
+                    Quaternion::rotation_z(-vel.0.x.atan2(vel.0.y))
+                    * Quaternion::rotation_x(std::f32::consts::PI + Vec2::<f32>::from(vel.0).magnitude().atan2(vel.0.z))
+                };
+                //let frame_v = Quaternion::rotation_from_to_3d(Vec3::unit_y(), vel.0.try_normalized().unwrap_or(Vec3::unit_y())); // Rotation to the direction of the velocity
                 frame = Slerp::slerp(frame, frame_v, ANG_SPRING_K * dt.0); // Spring back towards facing forwards
                 *dq = rot.normalized();
                 frame = rot * frame;
