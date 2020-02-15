@@ -3,7 +3,7 @@ use crate::{
     comp::{
         self, item, projectile, ActionState, ActionState::*, Body, CharacterState, ControlEvent,
         Controller, ControllerInputs, Energy, EnergySource, HealthChange, HealthSource, ItemKind,
-        Mounting, MovementState, MovementState::*, PhysicsState, Projectile, Stats, Vel, Ori,
+        Mounting, MovementState, MovementState::*, Ori, PhysicsState, Projectile, Stats, Vel,
     },
     event::{Emitter, EventBus, LocalEvent, ServerEvent},
     state::DeltaTime,

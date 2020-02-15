@@ -33,11 +33,11 @@ const CLIMB_COST: i32 = 5;
 
 // Glider constants
 const MASS: f32 = 20.0;
-const LIFT: f32 = 4.0; // This must be less than 3DRAG[2]^(1/3)(DRAG[0]/2)^(2/3) to conserve energy
-const DRAG: [f32; 3] = [0.1, 3.5, 10.0]; // Drag coefficients (forwards/back, left/right, up/down)
+const LIFT: f32 = 0.0; // This must be less than 3DRAG[2]^(1/3)(DRAG[0]/2)^(2/3) to conserve energy
+const DRAG: [f32; 3] = [4.0, 0.2, 10.0]; // Drag coefficients (forwards/back, left/right, up/down)
 const ANG_INP: [f32; 2] = [0.75, 0.035]; // Angle changes from user input in a unit time step (pitch and roll)
 const ANG_DRAG: f32 = 10.0; // The interpolation factor for angular drag in a time step (will be multiplied by dt)
-const ANG_SPRING_K: f32 = 1.0; // "" for the glider tending to return to facing forwards
+const ANG_SPRING_K: f32 = 3.0; // "" for the glider tending to return to facing forwards
 
 pub const MOVEMENT_THRESHOLD_VEL: f32 = 3.0;
 
@@ -164,7 +164,9 @@ impl<'a> System<'a> for Sys {
                         {
                             BASE_HUMANOID_CLIMB_ACCEL
                         },
-                        (false, Glide { .. }) if vel.0.magnitude_squared() < GLIDE_SPEED.powf(2.0) => {
+                        (false, Glide { .. })
+                            if vel.0.magnitude_squared() < GLIDE_SPEED.powf(2.0) =>
+                        {
                             GLIDE_ACCEL
                         },
                         (false, Fall) | (false, Jump)
@@ -216,27 +218,46 @@ impl<'a> System<'a> for Sys {
                 ori.0 = vek::ops::Slerp::slerp(
                     ori.0,
                     ori_dir.into(),
-                    if physics.on_ground { 9.0 } else if character.movement.is_glide() { 0.0 } else { 2.0 } * dt.0,
+                    if physics.on_ground {
+                        9.0
+                    } else if character.movement.is_glide() {
+                        0.0
+                    } else {
+                        2.0
+                    } * dt.0,
                 );
             }
 
             // Glide
             if let Glide { oriq: q, rotq: dq } = &mut character.movement {
-                // --- Calculate forces on the glider and apply the velocity change in this time step
+                // --- Calculate forces on the glider and apply the velocity change in this time
+                // step
                 let mut frame = *q; // Rotation quaternion to change from the body frame to the space frame
                 let mut rot = *dq; // Rotation in this time step from angular velocity
                 let vf = frame.conjugate() * vel.0; // The character's velocity in the stationary reference frame that has the front of the glider aligned with +y
-                let lift = Vec3::new(0.0, 0.0, LIFT * vf.y * vf.y.abs()); // Calculate lift force from the forwards-velocity
+                let lift = Vec3::new(0.0, 0.0, LIFT * Vec2::<f32>::from(vf).magnitude()); // Calculate lift force from the forwards-velocity
+
+                let drag = Vec3::new(Vec3::unit_x(), Vec3::unit_y(), Vec3::unit_z())
+                    .map2(Vec3::from(DRAG), |unit, drag: f32| {
+                        vf.dot(unit).max(vf.dot(-unit)) * drag
+                    })
+                    .map2(vf, |drag: f32, vf| drag * -vf.signum());
+
                 let drag = Vec3::from(DRAG) * vf.map(|v| -v * v.abs()); // Quadratic drag along each axis
-                let acc = frame * (lift + drag) / MASS; // Acceleration rotated back into the space frame
-                vel.0 += dt.0 * acc;
+                let acc = frame * ((lift + drag) / MASS); // Acceleration rotated back into the space frame
+                vel.0 = vel
+                    .0
+                    .map2(dt.0 * acc, |v, dv| v + dv.abs().min(v.abs()) * dv.signum());
                 // --- Handle rotation changes from user input
                 let (mx, my) = inputs.control_dir.into_tuple();
                 let deltatheta = my * ANG_INP[0] * dt.0; // Pitch change in this time step, forward = positive = pitch down
                 let deltachi = mx * ANG_INP[1] * dt.0; // Roll change in this time step, positive = roll right
                 rot = Slerp::slerp(rot, Quaternion::identity(), ANG_DRAG * dt.0); // Angular velocity decay
                 if deltachi != 0.0 {
-                    rot = Quaternion::rotation_3d(deltachi * vel.0.magnitude(), frame * (Vec3::unit_y() * 2.5 - Vec3::unit_z()).normalized()) * rot; // Apply roll change
+                    rot = Quaternion::rotation_3d(
+                        deltachi * vel.0.magnitude(),
+                        frame * (Vec3::unit_y() * 2.5 - Vec3::unit_z()).normalized(),
+                    ) * rot; // Apply roll change
                 }
                 if deltatheta != 0.0 {
                     rot = Quaternion::rotation_3d(deltatheta, frame * -Vec3::unit_x()) * rot; // Apply pitch change
@@ -245,9 +266,16 @@ impl<'a> System<'a> for Sys {
                     frame
                 } else {
                     Quaternion::rotation_z(-vel.0.x.atan2(vel.0.y))
-                    * Quaternion::rotation_x(std::f32::consts::PI + Vec2::<f32>::from(vel.0).magnitude().atan2(vel.0.z))
+                    /*
+                    * Quaternion::rotation_x(
+                        std::f32::consts::PI
+                            + Vec2::<f32>::from(vel.0).magnitude().atan2(vel.0.z),
+                    )
+                    */
                 };
-                //let frame_v = Quaternion::rotation_from_to_3d(Vec3::unit_y(), vel.0.try_normalized().unwrap_or(Vec3::unit_y())); // Rotation to the direction of the velocity
+                //let frame_v = Quaternion::rotation_from_to_3d(Vec3::unit_y(),
+                // vel.0.try_normalized().unwrap_or(Vec3::unit_y())); // Rotation to the
+                // direction of the velocity
                 frame = Slerp::slerp(frame, frame_v, ANG_SPRING_K * dt.0); // Spring back towards facing forwards
                 *dq = rot.normalized();
                 frame = rot * frame;

@@ -17,7 +17,7 @@ const BOUYANCY: f32 = 0.0;
 // is 0.01, and the speed is 1.0, then after 1/60th of a second the speed will
 // be 0.99. after 1 second the speed will be 0.54, which is 0.99 ^ 60.
 const FRIC_GROUND: f32 = 0.15;
-const FRIC_AIR: f32 = 0.0125;
+const FRIC_AIR: f32 = 0.001; //0.0125;
 const FRIC_FLUID: f32 = 0.2;
 
 // Integrates forces, calculates the new velocity based off of the old velocity
@@ -30,7 +30,10 @@ fn integrate_forces(dt: f32, mut lv: Vec3<f32>, grav: f32, damp: f32) -> Vec3<f3
     // (and hence exponential as a function of time)
     let linear_damp = (1.0 - damp.min(1.0)).powf(dt * 60.0);
 
-    lv.z = (lv.z - grav * dt).max(-80.0);
+    // Limit max speed
+    lv = lv.try_normalized().unwrap_or(lv) * lv.magnitude().min(250.0);
+
+    lv.z = (lv.z - grav * dt); //.max(-80.0);
     lv * linear_damp
 }
 

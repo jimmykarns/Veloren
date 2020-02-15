@@ -413,7 +413,8 @@ impl FigureMgr {
 
                     //let time_since_movement_change =
                     //    state.last_movement_change.elapsed().as_secs_f64();
-                    //let time_since_action_change = state.last_action_change.elapsed().as_secs_f64();
+                    //let time_since_action_change =
+                    // state.last_action_change.elapsed().as_secs_f64();
 
                     let mut quat_out = None;
 
@@ -1608,9 +1609,11 @@ impl<S: Skeleton> FigureState<S> {
         // TODO: what are the interpolated ori values used for if not here???
         let mat = Mat4::<f32>::identity()
             * Mat4::translation_3d(self.pos - glide_shift)
-            * if let Some(quat) = oriq { Mat4::from(quat) } else {
+            * if let Some(quat) = oriq {
+                Mat4::from(quat)
+            } else {
                 Mat4::rotation_z(-ori.x.atan2(ori.y))
-              * Mat4::rotation_x(ori.z.atan2(Vec2::from(ori).magnitude()))
+                    * Mat4::rotation_x(ori.z.atan2(Vec2::from(ori).magnitude()))
             }
             * Mat4::translation_3d(glide_shift)
             * Mat4::scaling_3d(Vec3::from(0.8 * scale));

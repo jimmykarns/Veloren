@@ -12,7 +12,10 @@ pub enum MovementState {
     Fall,
     Swim,
     Climb,
-    Glide { oriq: Quaternion<f32>, rotq: Quaternion<f32> },
+    Glide {
+        oriq: Quaternion<f32>,
+        rotq: Quaternion<f32>,
+    },
     //Swim,
 }
 
@@ -28,7 +31,7 @@ impl MovementState {
     pub fn start_glide(&mut self, ori: Vec3<f32>) {
         *self = Self::Glide {
             oriq: Quaternion::rotation_from_to_3d(Vec3::unit_y(), ori),
-            rotq: Quaternion::identity()
+            rotq: Quaternion::identity(),
         }
     }
 }
