@@ -936,7 +936,12 @@ impl Window {
     pub fn needs_refresh_resize(&mut self) { self.needs_refresh_resize = true; }
 
     pub fn logical_size(&self) -> Vec2<f64> {
-        let (w, h) = self.window.window().inner_size().into();
+        let (w, h) = self
+            .window
+            .window()
+            .inner_size()
+            .to_logical::<f64>(self.window.window().scale_factor())
+            .into();
         Vec2::new(w, h)
     }
 
