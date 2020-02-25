@@ -3450,6 +3450,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26412eb97c6b088a6997e05f69403a802a92d520de2f8e63c2b65f9e0f47c4e8"
 
 [[package]]
+name = "rhai"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae3998391bcf75b26ba218824ac6581a471b7298ae5b17ac0baab0b2c6783938"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "ring"
 version = "0.16.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4582,6 +4591,7 @@ dependencies = [
  "msgbox",
  "num 0.2.1",
  "rand 0.7.3",
+ "rhai",
  "rodio",
  "ron",
  "serde",

@@ -179,6 +179,7 @@ impl FigureMgr {
         let time = state.get_time();
         let tick = scene_data.tick;
         let ecs = state.ecs();
+        let mut rhai_engine = crate::anim::quadruped_small::idle::AnimationRhaiEngine::new();
         let view_distance = scene_data.view_distance;
         let dt = state.get_delta_time();
         let frustum = camera.frustum();
@@ -793,9 +794,11 @@ impl FigureMgr {
                     ) {
                         // Standing
                         (true, false, false) => {
-                            anim::quadruped_small::IdleAnimation::update_skeleton(
+                            //anim::quadruped_small::IdleAnimation::update_skeleton(
+                            <&anim::quadruped_small::idle::RhaiIdleAnimation>::update_skeleton(
                                 &QuadrupedSmallSkeleton::new(),
-                                time,
+                                //time,
+                                (time, &mut rhai_engine),
                                 state.state_time,
                                 &mut state_animation_rate,
                                 skeleton_attr,
@@ -819,7 +822,6 @@ impl FigureMgr {
                             &mut state_animation_rate,
                             skeleton_attr,
                         ),
-
                         // TODO!
                         _ => state.skeleton_mut().clone(),
                     };

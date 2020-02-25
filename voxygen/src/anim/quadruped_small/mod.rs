@@ -66,6 +66,7 @@ impl Skeleton for QuadrupedSmallSkeleton {
     }
 }
 
+#[derive(Clone)]
 pub struct SkeletonAttr {
     head: (f32, f32),
     chest: (f32, f32),
