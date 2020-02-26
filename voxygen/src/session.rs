@@ -462,7 +462,6 @@ impl PlayState for SessionState {
                 global_state.clock.get_last_delta(),
             );
 
-            // TODO: dont
             // Look for changes in the localization files
             if global_state.localization_watcher.reloaded() {
                 hud_events.push(HudEvent::ChangeLanguage(localized_strings.metadata.clone()));

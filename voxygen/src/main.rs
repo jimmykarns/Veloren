@@ -14,7 +14,7 @@ use veloren_voxygen::{
 };
 
 use common::{
-    assets::{load_watched, watch},
+    assets::{load, load_expect, load_watched, watch},
     clock::Clock,
 };
 use log::{debug, error, warn};
