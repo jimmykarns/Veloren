@@ -8,7 +8,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     let anim_time = 2.0;
     let mut rate = 1.0;
 
-    c.bench_function("rust idle animation", |b| {
+    /*c.bench_function("rust idle animation", |b| {
         b.iter(|| {
             quadruped_small::idle::IdleAnimation::update_skeleton(
                 black_box(&skeleton),
@@ -18,7 +18,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 black_box(&attr),
             )
         })
-    });
+    });*/
 
     let mut rhai_engine = quadruped_small::idle::AnimationRhaiEngine::new();
     c.bench_function("rhai idle animation", |b| {
