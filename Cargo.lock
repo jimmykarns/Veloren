@@ -4894,7 +4894,7 @@ dependencies = [
 [[package]]
 name = "winit"
 version = "0.21.0"
-source = "git+https://github.com/filnet/winit.git?rev=b16ff93cc91cac481cd70c976c3f75fa70871bbb#b16ff93cc91cac481cd70c976c3f75fa70871bbb"
+source = "git+https://github.com/Imberflur/winit.git?rev=7174687391a0dba80ae223f35738ade893250df9#7174687391a0dba80ae223f35738ade893250df9"
 dependencies = [
  "android_glue",
  "bitflags",

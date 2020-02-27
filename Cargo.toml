@@ -72,4 +72,4 @@ debug = 1
 
 # waiting on https://github.com/rust-windowing/winit/pull/1461
 [patch.crates-io]
-winit = { git = "https://github.com/filnet/winit.git", rev = "b16ff93cc91cac481cd70c976c3f75fa70871bbb" }
+winit = { git = "https://github.com/Imberflur/winit.git", rev = "7174687391a0dba80ae223f35738ade893250df9" }
