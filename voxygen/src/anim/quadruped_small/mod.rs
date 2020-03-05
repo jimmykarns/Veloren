@@ -10,7 +10,7 @@ use crate::render::FigureBoneData;
 use common::comp::{self};
 use vek::Vec3;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct QuadrupedSmallSkeleton {
     head: Bone,
     chest: Bone,
@@ -66,7 +66,7 @@ impl Skeleton for QuadrupedSmallSkeleton {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SkeletonAttr {
     head: (f32, f32),
     chest: (f32, f32),

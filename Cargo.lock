@@ -2101,6 +2101,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7777a24a1ce5de49fcdde84ec46efa487c3af49d5b6e6e0a50367cc5c1096182"
 
 [[package]]
+name = "internment"
+version = "0.3.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5438c3249b8ab4f83a198e7d12acf57dc022b14e569b9a5ddd732976aaa0565f"
+dependencies = [
+ "lazy_static",
+ "serde",
+ "state",
+ "tinyset",
+]
+
+[[package]]
 name = "io-kit-sys"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2197,6 +2209,15 @@ name = "lazycell"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b294d6fa9ee409a054354afc4352b0b9ef7ca222c69b8812cbea9e7d2bf3783f"
+
+[[package]]
+name = "leon"
+version = "0.1.0"
+source = "git+https://github.com/zesterer/leon.git#897b1ec84e09f55d52e6e24bfc7bff5dcd2a6314"
+dependencies = [
+ "internment",
+ "parze",
+]
 
 [[package]]
 name = "lewton"
@@ -2927,6 +2948,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "parze"
+version = "0.1.0"
+source = "git+https://github.com/zesterer/parze-new.git#e649de3d9ac0a704d32c94a292080a494ca5ebb7"
+dependencies = [
+ "smallbox",
+]
+
+[[package]]
 name = "peeking_take_while"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3430,7 +3459,7 @@ dependencies = [
  "aho-corasick",
  "memchr",
  "regex-syntax",
- "thread_local",
+ "thread_local 1.0.1",
 ]
 
 [[package]]
@@ -3792,6 +3821,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 
 [[package]]
+name = "smallbox"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa0eec6425219a55511a35afac416a2eecc62f5fa1bec14f9b97de0caa7daebe"
+
+[[package]]
 name = "smallvec"
 version = "0.6.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3886,6 +3921,15 @@ name = "stable_deref_trait"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dba1a27d3efae4351c8051072d619e3ade2820635c3958d826bfea39d59b54c8"
+
+[[package]]
+name = "state"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7345c971d1ef21ffdbd103a75990a15eb03604fc8b8852ca8cb418ee1a099028"
+dependencies = [
+ "thread_local 0.3.3",
+]
 
 [[package]]
 name = "static_assertions"
@@ -4050,6 +4094,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "thread-id"
+version = "3.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7fbf4c9d56b320106cd64fd024dadfa0be7cb4706725fc44a7d7ce952d820c1"
+dependencies = [
+ "libc",
+ "redox_syscall",
+ "winapi 0.3.8",
+]
+
+[[package]]
+name = "thread_local"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c85048c6260d17cf486ceae3282d9fb6b90be220bf5b28c400f5485ffc29f0c7"
+dependencies = [
+ "thread-id",
+ "unreachable",
+]
+
+[[package]]
 name = "thread_local"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4100,6 +4165,16 @@ dependencies = [
  "chunked_transfer",
  "log",
  "url 2.1.1",
+]
+
+[[package]]
+name = "tinyset"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bac0bf3948997bdc80f4c01587c7aae16ee1e51a2171d9b30de029b40733ce33"
+dependencies = [
+ "itertools 0.8.2",
+ "rand 0.7.3",
 ]
 
 [[package]]
@@ -4356,6 +4431,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "826e7639553986605ec5979c7dd957c7895e93eabed50ab2ffa7f6128a75097c"
 
 [[package]]
+name = "unreachable"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f2ae5ddb18e1c92664717616dd9549dde73f539f01bd7b77c2edb2446bdff91"
+dependencies = [
+ "void",
+]
+
+[[package]]
 name = "untrusted"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4587,6 +4671,7 @@ dependencies = [
  "guillotiere",
  "hashbrown",
  "image",
+ "leon",
  "log",
  "msgbox",
  "num 0.2.1",
