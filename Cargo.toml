@@ -70,6 +70,6 @@ inherits =  'release'
 debug = 1
 
 
-# waiting on https://github.com/rust-windowing/winit/pull/1461
+# waiting on winit version 0.22
 [patch.crates-io]
-winit = { git = "https://github.com/Imberflur/winit.git", rev = "7174687391a0dba80ae223f35738ade893250df9" }
+winit = { git = "https://github.com/Imberflur/winit.git", rev = "48b7a7f46382695a95297590385866c0df070f74" }
