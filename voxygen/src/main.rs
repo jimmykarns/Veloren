@@ -5,20 +5,19 @@ use veloren_voxygen::{
     audio::{self, AudioFrontend},
     i18n::{self, i18n_asset_key, VoxygenLocalization},
     logging,
-    menu::main::MainMenuState,
     meta::Meta,
-    render::Renderer,
+    run,
     settings::Settings,
     window::Window,
-    Direction, GlobalState, PlayState, PlayStateResult,
+    GlobalState,
 };
 
 use common::{
-    assets::{load, load_expect, load_watched, watch},
+    assets::{load_watched, watch},
     clock::Clock,
 };
-use log::{debug, error, warn};
-use std::{mem, panic, str::FromStr};
+use log::{error, warn};
+use std::{panic, str::FromStr};
 
 fn main() {
     // Initialize logging.

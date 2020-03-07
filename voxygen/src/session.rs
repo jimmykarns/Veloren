@@ -408,9 +408,7 @@ impl PlayState for SessionState {
             self.inputs.look_dir = cam_dir;
 
             // Runs if either in a multiplayer server or the singleplayer server is unpaused
-            if global_state.singleplayer.is_none()
-                || !global_state.singleplayer.as_ref().unwrap().is_paused()
-            {
+            if !global_state.paused() {
                 // Perform an in-game tick.
                 match self.tick(global_state.clock.get_avg_delta()) {
                     Ok(TickAction::Continue) => {}, // Do nothing
@@ -652,9 +650,7 @@ impl PlayState for SessionState {
             }
 
             // Runs if either in a multiplayer server or the singleplayer server is unpaused
-            if global_state.singleplayer.is_none()
-                || !global_state.singleplayer.as_ref().unwrap().is_paused()
-            {
+            if !global_state.paused() {
                 let client = self.client.borrow();
                 let scene_data = SceneData {
                     state: client.state(),

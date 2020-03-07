@@ -12,7 +12,6 @@ use ui::{Event as MainMenuEvent, MainMenuUi};
 
 pub struct MainMenuState {
     main_menu_ui: MainMenuUi,
-    title_music_channel: Option<usize>,
     // Used for client creation.
     client_init: Option<ClientInit>,
 }
@@ -22,7 +21,6 @@ impl MainMenuState {
     pub fn new(global_state: &mut GlobalState) -> Self {
         Self {
             main_menu_ui: MainMenuUi::new(global_state),
-            title_music_channel: None,
             client_init: None,
         }
     }
