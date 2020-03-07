@@ -8,7 +8,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     let anim_time = 2.0;
     let mut rate = 1.0;
 
-    /*c.bench_function("rust idle animation", |b| {
+    /* c.bench_function("rust idle animation", |b| {
         b.iter(|| {
             quadruped_small::idle::IdleAnimation::update_skeleton(
                 black_box(&skeleton),
@@ -18,7 +18,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 black_box(&attr),
             )
         })
-    });*/
+    });
 
     let mut rhai_engine = quadruped_small::idle::AnimationRhaiEngine::new();
     c.bench_function("rhai idle animation", |b| {
@@ -26,6 +26,19 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             <&quadruped_small::idle::RhaiIdleAnimation>::update_skeleton(
                 black_box(&skeleton),
                 black_box((global_time, &mut rhai_engine)),
+                black_box(anim_time),
+                black_box(&mut rate),
+                black_box(&attr),
+            )
+        })
+    });*/
+
+    let leon_ast = quadruped_small::idle::LeonAst::new();
+    c.bench_function("leon idle animation", |b| {
+        b.iter(|| {
+            <&quadruped_small::idle::LeonIdleAnimation>::update_skeleton(
+                black_box(&skeleton),
+                black_box((global_time, &leon_ast)),
                 black_box(anim_time),
                 black_box(&mut rate),
                 black_box(&attr),
