@@ -39,6 +39,8 @@ impl AudioFrontend {
     pub fn new(device: String, max_sfx_channels: usize) -> Self {
         // TODO: Remove when issue is resolved
         // Start cpal event loop on a separate thread
+        // This avoids an issue where winit and cpal clash on windows if they are ran in
+        // the same thread
         // See: https://github.com/RustAudio/cpal/pull/348
         let child = std::thread::spawn(move || {
             let mut sfx_channels = Vec::with_capacity(max_sfx_channels);
@@ -240,6 +242,8 @@ impl AudioFrontend {
         let mut this = std::mem::replace(self, AudioFrontend::no_audio());
         // TODO: Remove when issue is resolved
         // Start cpal event loop on a separate thread
+        // This avoids an issue where winit and cpal clash on windows if they are ran in
+        // the same thread
         // See: https://github.com/RustAudio/cpal/pull/348
         let child = std::thread::spawn(move || {
             this.audio_device = get_device_raw(&name);
@@ -254,6 +258,8 @@ impl AudioFrontend {
 pub fn get_default_device() -> String {
     // TODO: Remove when issue is resolved
     // Start cpal event loop on a separate thread
+    // This avoids an issue where winit and cpal clash on windows if they are ran in
+    // the same thread
     // See: https://github.com/RustAudio/cpal/pull/348
     let child = std::thread::spawn(move || {
         rodio::default_output_device()
@@ -277,6 +283,8 @@ pub fn list_devices() -> Vec<String> {
 fn list_devices_raw() -> Vec<Device> {
     // TODO: Remove when issue is resolved
     // Start cpal event loop on a separate thread
+    // This avoids an issue where winit and cpal clash on windows if they are ran in
+    // the same thread
     // See: https://github.com/RustAudio/cpal/pull/348
     let child = std::thread::spawn(move || {
         rodio::output_devices()
