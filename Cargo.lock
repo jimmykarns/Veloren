@@ -1619,9 +1619,9 @@ dependencies = [
 
 [[package]]
 name = "glutin"
-version = "0.23.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf22d4e90c55d9be9f2ad52410e7a2c0d7e9c99d93a13df73a672e7ef4e8c7f7"
+checksum = "611023dea5047f3e9047aecb9e361852dcfd0881129daf5d110106ca2b14f3f3"
 dependencies = [
  "android_glue",
  "cgl 0.3.2",
@@ -1641,7 +1641,7 @@ dependencies = [
  "parking_lot 0.10.0",
  "wayland-client 0.23.6",
  "winapi 0.3.8",
- "winit 0.21.0",
+ "winit 0.22.0",
 ]
 
 [[package]]
@@ -2647,13 +2647,13 @@ dependencies = [
 
 [[package]]
 name = "old_school_gfx_glutin_ext"
-version = "0.23.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7cf32ddfed46b511150abb23d3193d38ec71ffafa561e6c2d82ad06eb51072e"
+checksum = "a0557cea37cc48d238c938ded2873a6cc772704ee1eb01e832b43c2dd99624bc"
 dependencies = [
  "gfx_core",
  "gfx_device_gl",
- "glutin 0.23.0",
+ "glutin 0.24.0",
 ]
 
 [[package]]
@@ -4507,7 +4507,7 @@ dependencies = [
  "gilrs",
  "git2",
  "glsl-include",
- "glutin 0.23.0",
+ "glutin 0.24.0",
  "guillotiere",
  "hashbrown",
  "image",
@@ -4529,7 +4529,7 @@ dependencies = [
  "veloren-common",
  "veloren-server",
  "veloren-world",
- "winit 0.21.0",
+ "winit 0.22.0",
  "winres",
 ]
 
@@ -4893,8 +4893,9 @@ dependencies = [
 
 [[package]]
 name = "winit"
-version = "0.21.0"
-source = "git+https://github.com/Imberflur/winit.git?rev=48b7a7f46382695a95297590385866c0df070f74#48b7a7f46382695a95297590385866c0df070f74"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02e9092b71b48ad6a0d98835a786308d10760cc09369d02e4a166608327f1f26"
 dependencies = [
  "android_glue",
  "bitflags",

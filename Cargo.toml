@@ -68,8 +68,3 @@ debug = false
 [profile.releasedebuginfo]
 inherits =  'release'
 debug = 1
-
-
-# waiting on winit version 0.22
-[patch.crates-io]
-winit = { git = "https://github.com/Imberflur/winit.git", rev = "48b7a7f46382695a95297590385866c0df070f74" }
