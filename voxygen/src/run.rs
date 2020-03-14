@@ -21,6 +21,9 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
     // See: https://github.com/rust-windowing/winit/issues/1418
     let mut polled_twice = false;
 
+    let mut timer = std::time::Instant::now();
+    let mut handle_time = 0.0;
+
     event_loop.run(move |event, _, control_flow| {
         // Continously run loop since we handle sleeping
         *control_flow = winit::event_loop::ControlFlow::Poll;
@@ -33,13 +36,23 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
         match event {
             winit::event::Event::MainEventsCleared => {
                 if polled_twice {
+                    println!(
+                        "Time outside voxygen cleared: {} us",
+                        timer.elapsed().as_nanos() as f32 / 1000.0 - handle_time / 1000.0
+                    );
                     handle_main_events_cleared(&mut states, control_flow, &mut global_state);
+                    timer = std::time::Instant::now();
+                    handle_time = 0.0;
                 }
                 polled_twice = !polled_twice;
             },
-            winit::event::Event::WindowEvent { event, .. } => global_state
-                .window
-                .handle_window_event(event, &mut global_state.settings),
+            winit::event::Event::WindowEvent { event, .. } => {
+                let start = std::time::Instant::now();
+                global_state
+                    .window
+                    .handle_window_event(event, &mut global_state.settings);
+                handle_time += start.elapsed().as_nanos() as f32;
+            },
             winit::event::Event::DeviceEvent { event, .. } => {
                 global_state.window.handle_device_event(event)
             },
