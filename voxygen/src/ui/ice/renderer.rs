@@ -1,3 +1,4 @@
+mod background_container;
 mod column;
 mod image;
 mod row;
@@ -7,7 +8,7 @@ use super::{
         cache::Cache,
         graphic::{self, Graphic, TexId},
     },
-    widget,
+    widget, Rotation,
 };
 use crate::{
     render::{
@@ -56,10 +57,14 @@ pub enum Primitive {
         primitives: Vec<Primitive>,
     },
     Image {
-        handle: widget::image::Handle,
+        handle: (widget::image::Handle, Rotation),
         bounds: iced::Rectangle,
     },
 }
+
+// Optimization idea inspired by what I think iced wgpu renderer may be doing
+// Could have layers of things which don't intersect and thus can be reordered
+// arbitrarily
 
 pub struct IcedRenderer {
     //image_map: Map<(Image, Rotation)>,
@@ -256,7 +261,7 @@ impl IcedRenderer {
                 // let color =
                 //    srgba_to_linear(color.unwrap_or(conrod_core::color::WHITE).to_fsa().
                 // into());
-                let color = Rgba::from([1.0, 0.0, 1.0, 0.5]);
+                let color = Rgba::from([1.0, 1.0, 1.0, 1.0]);
 
                 let resolution = Vec2::new(
                     (gl_aabr.size().w * self.half_res.x).round() as u16,

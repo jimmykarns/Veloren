@@ -131,6 +131,21 @@ impl GraphicCache {
         self.textures.get(id.0).expect("Invalid TexId used")
     }
 
+    pub fn get_graphic_dims(&self, (id, rot): (Id, Rotation)) -> Option<(u32, u32)> {
+        use image::GenericImageView;
+        self.get_graphic(id)
+            .and_then(|graphic| match graphic {
+                Graphic::Image(image) => Some(image.dimensions()),
+                _ => None,
+            })
+            .and_then(|(w, h)| match rot {
+                Rotation::None | Rotation::Cw180 => Some((w, h)),
+                Rotation::Cw90 | Rotation::Cw270 => Some((h, w)),
+                // TODO: need dims for these?
+                Rotation::SourceNorth | Rotation::TargetNorth => None,
+            })
+    }
+
     pub fn clear_cache(&mut self, renderer: &mut Renderer) {
         self.cache_map.clear();
 

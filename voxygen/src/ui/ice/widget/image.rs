@@ -1,17 +1,18 @@
-use super::super::super::graphic::{self, Rotation};
-use iced::{layout, Element, Hasher, Layout, Length, Point, Size, Widget};
+use super::super::graphic;
+use iced::{layout, Element, Hasher, Layout, Length, Point, Widget};
 use std::hash::Hash;
 
 // TODO: consider iced's approach to images and caching image data
 // Also `Graphic` might be a better name for this is it wasn't already in use
 // elsewhere
 
-pub type Handle = (graphic::Id, Rotation);
+pub type Handle = graphic::Id;
 
 pub struct Image {
     handle: Handle,
     width: Length,
     height: Length,
+    fix_aspect_ratio: bool,
 }
 
 impl Image {
@@ -22,6 +23,7 @@ impl Image {
             handle,
             width,
             height,
+            fix_aspect_ratio: false,
         }
     }
 
@@ -32,6 +34,11 @@ impl Image {
 
     pub fn height(mut self, height: Length) -> Self {
         self.height = height;
+        self
+    }
+
+    pub fn fix_aspect_ratio(mut self) -> Self {
+        self.fix_aspect_ratio = true;
         self
     }
 }
@@ -68,6 +75,7 @@ where
 }
 
 pub trait Renderer: iced::Renderer {
+    fn dimensions(&self, handle: Handle) -> (u32, u32);
     fn draw(&mut self, handle: Handle, layout: Layout<'_>) -> Self::Output;
 }
 

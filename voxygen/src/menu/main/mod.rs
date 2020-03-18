@@ -61,6 +61,9 @@ impl PlayState for MainMenuState {
                     Event::IcedUi(event) => {
                         self.main_menu_ui.handle_iced_event(event);
                     },
+                    Event::InputUpdate(crate::window::GameInput::Jump, true) => {
+                        self.main_menu_ui.show_iced ^= true;
+                    },
                     // Ignore all other events.
                     _ => {},
                 }

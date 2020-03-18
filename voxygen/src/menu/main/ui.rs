@@ -179,16 +179,17 @@ impl IcedState {
     pub fn view(&mut self) -> Element<Message> {
         use iced::Length;
 
-        let image1 = ui::ice::Image::new((self.imgs.bg, ui::Rotation::None));
-        let image2 = ui::ice::Image::new((self.imgs.bg, ui::Rotation::None));
-        let image3 = ui::ice::Image::new((self.imgs.bg, ui::Rotation::None));
+        let image1 = ui::ice::Image::new(self.imgs.bg);
+        let image2 = ui::ice::Image::new(self.imgs.bg);
+        let image3 = ui::ice::Image::new(self.imgs.bg);
 
-        Row::with_children(vec![image1.into(), image2.into(), image3.into()])
+        let content = Row::with_children(vec![image1.into(), image2.into(), image3.into()])
             .width(Length::Fill)
             .height(Length::Fill)
             .spacing(20)
-            .padding(20)
-            .into()
+            .padding(20);
+
+        ui::ice::BackgroundContainer::new(self.imgs.bg, content).into()
     }
 
     pub fn update(message: Message) {
@@ -217,6 +218,7 @@ pub struct MainMenuUi {
     bg_img_id: conrod_core::image::Id,
     voxygen_i18n: std::sync::Arc<VoxygenLocalization>,
     fonts: ConrodVoxygenFonts,
+    pub show_iced: bool,
 }
 
 impl MainMenuUi {
@@ -291,6 +293,7 @@ impl MainMenuUi {
             bg_img_id,
             voxygen_i18n,
             fonts,
+            show_iced: false,
         }
     }
 
@@ -884,6 +887,8 @@ impl MainMenuUi {
 
     pub fn render(&self, renderer: &mut Renderer) {
         self.ui.render(renderer, None);
-        self.ice_ui.render(renderer);
+        if self.show_iced {
+            self.ice_ui.render(renderer);
+        }
     }
 }
