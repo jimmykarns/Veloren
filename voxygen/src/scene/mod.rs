@@ -311,6 +311,21 @@ impl Scene {
             CameraMode::Freefly => {},
         };
 
+        // If Agent set Camera automatically
+        if ecs
+            .read_storage::<comp::Agent>()
+            .get(scene_data.player_entity)
+            .is_some()
+        {
+            let player_ori = ecs
+                .read_storage::<crate::ecs::comp::Interpolated>()
+                .get(scene_data.player_entity)
+                .map_or(Vec3::zero(), |inter| {
+                    Vec3::new(inter.ori.x, 0.35, inter.ori.z)
+                });
+            self.camera.set_orientation(player_ori);
+        }
+
         // Tick camera for interpolation.
         self.camera.update(
             scene_data.state.get_time(),

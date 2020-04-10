@@ -174,6 +174,7 @@ impl ControlSettings {
             GameInput::Select => KeyMouse::Key(VirtualKeyCode::Y),
             GameInput::AcceptGroupInvite => KeyMouse::Key(VirtualKeyCode::U),
             GameInput::DeclineGroupInvite => KeyMouse::Key(VirtualKeyCode::I),
+            GameInput::ToggleAgent => KeyMouse::Key(VirtualKeyCode::F9),
         }
     }
 }
@@ -244,6 +245,7 @@ impl Default for ControlSettings {
             GameInput::Select,
             GameInput::AcceptGroupInvite,
             GameInput::DeclineGroupInvite,
+            GameInput::ToggleAgent,
         ];
         for game_input in game_inputs {
             new_settings.insert_binding(game_input, ControlSettings::default_binding(game_input));

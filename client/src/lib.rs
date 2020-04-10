@@ -764,6 +764,18 @@ impl Client {
                 .send(ClientMsg::ControllerInputs(inputs))?;
         }
 
+        // Auto respawn! TODO: Only if agent?
+        if self
+            .state
+            .ecs()
+            .read_storage::<comp::Stats>()
+            .get(self.entity)
+            .map(|x| x.is_dead)
+            .unwrap_or(false)
+        {
+            self.respawn();
+        }
+
         // 2) Build up a list of events for this frame, to be passed to the frontend.
         let mut frontend_events = Vec::new();
 

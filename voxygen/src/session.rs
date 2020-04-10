@@ -566,6 +566,31 @@ impl PlayState for SessionState {
                             client.decline_group_invite();
                         }
                     },
+                    Event::InputUpdate(GameInput::ToggleAgent, state) => {
+                        if state {
+                            let client = self.client.borrow();
+                            if client
+                                .state()
+                                .read_storage::<comp::Agent>()
+                                .get(client.entity())
+                                .is_some()
+                            {
+                                client
+                                    .state()
+                                    .ecs()
+                                    .write_storage::<comp::Agent>()
+                                    .remove(client.entity())
+                                    .expect(":/");
+                            } else {
+                                client
+                                    .state()
+                                    .ecs()
+                                    .write_storage::<comp::Agent>()
+                                    .insert(client.entity(), comp::Agent::default())
+                                    .expect(":/");
+                            }
+                        }
+                    },
                     Event::AnalogGameInput(input) => match input {
                         AnalogGameInput::MovementX(v) => {
                             self.key_state.analog_matrix.x = v;

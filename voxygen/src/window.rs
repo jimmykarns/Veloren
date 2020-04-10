@@ -74,6 +74,7 @@ pub enum GameInput {
     Select,
     AcceptGroupInvite,
     DeclineGroupInvite,
+    ToggleAgent,
 }
 
 impl GameInput {
@@ -135,6 +136,7 @@ impl GameInput {
             GameInput::Select => "gameinput.select",
             GameInput::AcceptGroupInvite => "gameinput.acceptgroupinvite",
             GameInput::DeclineGroupInvite => "gameinput.declinegroupinvite",
+            GameInput::ToggleAgent => "gameinput.toggleagent",
         }
     }
 
@@ -190,6 +192,7 @@ impl GameInput {
             GameInput::Slot9,
             GameInput::Slot10,
             GameInput::SwapLoadout,
+            GameInput::ToggleAgent,
         ]
         .iter()
         .copied()
