@@ -24,6 +24,7 @@ use common::{
     outcome::Outcome,
     state::{DeltaTime, State},
     terrain::{BlockKind, TerrainChunk},
+    util::Dir,
     vol::ReadVol,
 };
 use comp::item::Reagent;
@@ -277,12 +278,6 @@ impl Scene {
             _ => 1_f32,
         };
 
-        // Add the analog input to camera
-        self.camera
-            .rotate_by(Vec3::from([self.camera_input_state.x, 0.0, 0.0]));
-        self.camera
-            .rotate_by(Vec3::from([0.0, self.camera_input_state.y, 0.0]));
-
         // Alter camera position to match player.
         let tilt = self.camera.get_orientation().y;
         let dist = self.camera.get_distance();
@@ -311,6 +306,12 @@ impl Scene {
             CameraMode::Freefly => {},
         };
 
+        // Add the analog input to camera
+        self.camera
+            .rotate_by(Vec3::from([self.camera_input_state.x, 0.0, 0.0]));
+        self.camera
+            .rotate_by(Vec3::from([0.0, self.camera_input_state.y, 0.0]));
+
         // If Agent set Camera automatically
         if ecs
             .read_storage::<comp::Agent>()
@@ -320,10 +321,15 @@ impl Scene {
             let player_ori = ecs
                 .read_storage::<crate::ecs::comp::Interpolated>()
                 .get(scene_data.player_entity)
-                .map_or(Vec3::zero(), |inter| {
-                    Vec3::new(inter.ori.x, 0.35, inter.ori.z)
-                });
-            self.camera.set_orientation(player_ori);
+                .map_or(Dir::default(), |inter| inter.ori);
+
+            self.camera.set_orientation(Vec3::new(
+                player_ori.x.atan2(player_ori.y),
+                player_ori
+                    .y
+                    .atan2(Vec2::from(*player_ori).magnitude()).clamped(0.12, 0.5),
+                player_ori.z.atan2(Vec2::from(*player_ori).magnitude()),
+            ));
         }
 
         // Tick camera for interpolation.
