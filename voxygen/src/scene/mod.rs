@@ -327,7 +327,8 @@ impl Scene {
                 player_ori.x.atan2(player_ori.y),
                 player_ori
                     .y
-                    .atan2(Vec2::from(*player_ori).magnitude()).clamped(0.12, 0.5),
+                    .atan2(Vec2::from(*player_ori).magnitude())
+                    .clamped(0.25, 0.5),
                 player_ori.z.atan2(Vec2::from(*player_ori).magnitude()),
             ));
         }
