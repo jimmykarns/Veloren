@@ -136,7 +136,13 @@ impl GraphicCache {
         self.get_graphic(id)
             .and_then(|graphic| match graphic {
                 Graphic::Image(image) => Some(image.dimensions()),
-                _ => None,
+                Graphic::Voxel(segment, _, _) => {
+                    use common::vol::SizedVol;
+                    let size = segment.size();
+                    // TODO: HACK because they can be rotated arbitrarily, remove
+                    Some((size.x, size.z))
+                },
+                Graphic::Blank => None,
             })
             .and_then(|(w, h)| match rot {
                 Rotation::None | Rotation::Cw180 => Some((w, h)),

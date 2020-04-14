@@ -3,6 +3,7 @@ use super::{
     IcedRenderer, Primitive,
 };
 use iced::MouseCursor;
+use vek::Rgba;
 
 impl image::Renderer for IcedRenderer {
     fn dimensions(&self, handle: image::Handle) -> (u32, u32) {
@@ -13,11 +14,17 @@ impl image::Renderer for IcedRenderer {
             .unwrap()
     }
 
-    fn draw(&mut self, handle: image::Handle, layout: iced::Layout<'_>) -> Self::Output {
+    fn draw(
+        &mut self,
+        handle: image::Handle,
+        color: Rgba<u8>,
+        layout: iced::Layout<'_>,
+    ) -> Self::Output {
         (
             Primitive::Image {
                 handle: (handle, Rotation::None),
                 bounds: layout.bounds(),
+                color,
             },
             MouseCursor::OutOfBounds,
         )

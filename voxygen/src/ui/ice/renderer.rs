@@ -1,5 +1,6 @@
 mod background_container;
 mod column;
+mod container;
 mod image;
 mod row;
 
@@ -16,6 +17,7 @@ use crate::{
     },
     Error,
 };
+use common::util::srgba_to_linear;
 //use log::warn;
 use std::ops::Range;
 use vek::*;
@@ -59,6 +61,7 @@ pub enum Primitive {
     Image {
         handle: (widget::image::Handle, Rotation),
         bounds: iced::Rectangle,
+        color: Rgba<u8>,
     },
 }
 
@@ -246,7 +249,11 @@ impl IcedRenderer {
                     .into_iter()
                     .for_each(|p| self.draw_primitive(p, renderer));
             },
-            Primitive::Image { handle, bounds } => {
+            Primitive::Image {
+                handle,
+                bounds,
+                color,
+            } => {
                 let (graphic_id, rotation) = handle;
                 let gl_aabr = self.gl_aabr(bounds);
 
@@ -257,11 +264,7 @@ impl IcedRenderer {
                     _ => {},
                 }
 
-                // TODO provide color with the image
-                // let color =
-                //    srgba_to_linear(color.unwrap_or(conrod_core::color::WHITE).to_fsa().
-                // into());
-                let color = Rgba::from([1.0, 1.0, 1.0, 1.0]);
+                let color = srgba_to_linear(color.map(|e| e as f32 / 255.0));
 
                 let resolution = Vec2::new(
                     (gl_aabr.size().w * self.half_res.x).round() as u16,
@@ -364,6 +367,7 @@ impl IcedRenderer {
 // offsets from the center of the sceen to pixels
 #[inline(always)]
 fn align(res: Vec2<u16>) -> Vec2<f32> {
+    // TODO: does this logic still apply in iced's coordinate system?
     // If the resolution is odd then the center of the screen will be within the
     // middle of a pixel so we need to offset by 0.5 pixels to be on the edge of
     // a pixel

@@ -1,5 +1,6 @@
 use iced::{layout, Element, Hasher, Layout, Length, Point, Size, Widget};
 use std::u32;
+use vek::Rgba;
 
 // Note: it might be more efficient to make this generic over the content type
 
@@ -14,6 +15,7 @@ pub struct BackgroundContainer<'a, M, R: self::Renderer> {
     background: super::image::Handle,
     fix_aspect_ratio: bool,
     content: Element<'a, M, R>,
+    color: Rgba<u8>,
 }
 
 impl<'a, M, R> BackgroundContainer<'a, M, R>
@@ -29,6 +31,7 @@ where
             background,
             fix_aspect_ratio: false,
             content: content.into(),
+            color: Rgba::broadcast(255),
         }
     }
 
@@ -37,7 +40,7 @@ where
         self
     }
 
-    pub fn heigth(mut self, height: Length) -> Self {
+    pub fn height(mut self, height: Length) -> Self {
         self.height = height;
         self
     }
@@ -54,6 +57,11 @@ where
 
     pub fn fix_aspect_ratio(mut self) -> Self {
         self.fix_aspect_ratio = true;
+        self
+    }
+
+    pub fn color(mut self, color: Rgba<u8>) -> Self {
+        self.color = color;
         self
     }
 }
@@ -75,7 +83,7 @@ where
             .height(self.height);
 
         let (size, content) = if self.fix_aspect_ratio {
-            let (w, h) = super::image::Renderer::dimensions(renderer, self.background);
+            let (w, h) = renderer.dimensions(self.background);
             // To fix the aspect ratio we have to have a separate layout from the content
             // because we can't force the content to have a specific aspect ratio
             let aspect_ratio = w as f32 / h as f32;
@@ -128,7 +136,9 @@ where
             layout,
             cursor_position,
             self.background,
+            self.color,
             &self.content,
+            layout.children().next().unwrap(),
         )
     }
 
@@ -142,7 +152,9 @@ pub trait Renderer: iced::Renderer + super::image::Renderer {
         layout: Layout<'_>,
         cursor_position: Point,
         background: super::image::Handle,
+        color: Rgba<u8>,
         content: &Element<'_, M, Self>,
+        content_layout: Layout<'_>,
     ) -> Self::Output;
 }
 

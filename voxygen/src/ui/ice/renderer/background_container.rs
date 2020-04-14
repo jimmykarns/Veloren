@@ -11,11 +11,13 @@ impl background_container::Renderer for IcedRenderer {
         layout: Layout<'_>,
         cursor_position: Point,
         background: image::Handle,
+        color: vek::Rgba<u8>,
         content: &Element<'_, M, Self>,
+        content_layout: Layout<'_>,
     ) -> Self::Output {
-        let image_primitive = image::Renderer::draw(self, background, layout).0;
+        let image_primitive = image::Renderer::draw(self, background, color, layout).0;
         let (content_primitive, mouse_cursor) =
-            content.draw(self, defaults, layout, cursor_position);
+            content.draw(self, defaults, content_layout, cursor_position);
         (
             Primitive::Group {
                 primitives: vec![image_primitive, content_primitive],
