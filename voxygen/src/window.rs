@@ -301,8 +301,8 @@ impl fmt::Display for KeyMouse {
     }
 }
 
-pub struct Window<'a> {
-    renderer: Renderer<'a>,
+pub struct Window {
+    renderer: Renderer,
     window: winit::window::Window,
     cursor_grabbed: bool,
     pub pan_sensitivity: u32,
@@ -322,7 +322,7 @@ pub struct Window<'a> {
     mouse_emulation_vec: Vec2<f32>,
 }
 
-impl<'a> Window<'a> {
+impl Window {
     pub fn new(settings: &Settings) -> Result<(Window, EventLoop), Error> {
         let event_loop = EventLoop::new();
 
@@ -505,7 +505,7 @@ impl<'a> Window<'a> {
 
     pub fn renderer(&self) -> &Renderer { &self.renderer }
 
-    pub fn renderer_mut(&mut self) -> &mut Renderer<'a> { &mut self.renderer }
+    pub fn renderer_mut(&mut self) -> &mut Renderer { &mut self.renderer }
 
     pub fn fetch_events(&mut self) -> Vec<Event> {
         self.events.append(&mut self.supplement_events);
