@@ -1,48 +1,42 @@
 [package]
 name = "veloren-voxygen"
 version = "0.5.0"
-authors = ["Joshua Barretto <joshua.s.barretto@gmail.com>", "Imbris <imbrisf@gmail.com>"]
+authors = [
+    "Joshua Barretto <joshua.s.barretto@gmail.com>",
+    "Imbris <imbrisf@gmail.com>"
+]
 edition = "2018"
 default-run = "veloren-voxygen"
+
 # Cargo thinks it should build the voxygen binary even when a specific bench is specified for building
 # Uncomment below and comment out default-run if you want to avoid this
 # autobins = false
-
 [features]
-gl = ["gfx_device_gl"]
 singleplayer = ["server"]
-
-default = ["gl", "singleplayer", "msgbox"]
+default = ["singleplayer", "msgbox"]
 
 [dependencies]
 common = { package = "veloren-common", path = "../common" }
 client = { package = "veloren-client", path = "../client" }
-
 # Graphics
-gfx = "0.18.2"
-gfx_device_gl = { version = "0.16.2", optional = true }
-old_school_gfx_glutin_ext = "0.24"
-glutin = "0.24.0"
+wgpu = "0.5.0"
+shaderc = "0.6.2"
+zerocopy = "0.3.0"
 winit = { version = "0.22.0", features = ["serde"] }
 conrod_core = { git = "https://gitlab.com/veloren/conrod.git" }
 conrod_winit = { git = "https://gitlab.com/veloren/conrod.git" }
 euc = "0.3.0"
-
 # ECS
 specs = "0.15.1"
 specs-idvs = { git = "https://gitlab.com/veloren/specs-idvs.git" }
-
 # Mathematics
 vek = { version = "0.9.9", features = ["serde"] }
-
 # Controller
 gilrs = { version = "0.7", features = ["serde"] }
-
 # Singleplayer
 server = { package = "veloren-server", path = "../server", optional = true }
-
 # Utility
-glsl-include = "0.3.1"
+futures = "0.3.4"
 failure = "0.1.6"
 log = "0.4.8"
 dot_vox = "4.0.0"
@@ -58,7 +52,10 @@ num = "0.2.0"
 backtrace = "0.3.40"
 rand = "0.7.2"
 treeculler = { git = "https://gitlab.com/yusdacra/treeculler.git" }
-rodio = { version = "0.10", default-features = false, features = ["wav", "vorbis"] }
+rodio = { version = "0.10", default-features = false, features = [
+    "wav",
+    "vorbis"
+] }
 cpal = "0.10"
 crossbeam = "=0.7.2"
 hashbrown = { version = "0.6.2", features = ["rayon", "serde", "nightly"] }

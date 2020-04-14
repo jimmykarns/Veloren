@@ -34,7 +34,8 @@ impl Cache {
                 .scale_tolerance(SCALE_TOLERANCE)
                 .position_tolerance(POSITION_TOLERANCE)
                 .build(),
-            glyph_cache_tex: renderer.create_dynamic_texture(glyph_cache_dims.map(|e| e as u16))?,
+            glyph_cache_tex: renderer
+                .create_dynamic_texture(glyph_cache_dims.x as u32, glyph_cache_dims.y as u32),
             graphic_cache: GraphicCache::new(renderer),
         })
     }
@@ -73,7 +74,8 @@ impl Cache {
             .scale_tolerance(SCALE_TOLERANCE)
             .position_tolerance(POSITION_TOLERANCE)
             .build();
-        self.glyph_cache_tex = renderer.create_dynamic_texture(cache_dims.map(|e| e as u16))?;
+        self.glyph_cache_tex =
+            renderer.create_dynamic_texture(cache_dims.x as u32, cache_dims.y as u32);
         Ok(())
     }
 }

@@ -1,4 +1,4 @@
-uniform sampler2D src_color;
+layout (set = 1, binding = 1) uniform sampler2D src_color;
 
 const float FXAA_SCALE = 1.25;
 

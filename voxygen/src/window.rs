@@ -1,13 +1,7 @@
-use crate::{
-    controller::*,
-    render::{Renderer, WinColorFmt, WinDepthFmt},
-    settings::Settings,
-    ui, Error,
-};
+use crate::{controller::*, render::Renderer, settings::Settings, ui, Error};
 use gilrs::{EventType, Gilrs};
 use hashbrown::HashMap;
 use log::{error, warn};
-use old_school_gfx_glutin_ext::{ContextBuilderExt, WindowInitExt, WindowUpdateExt};
 use serde_derive::{Deserialize, Serialize};
 use std::fmt;
 use vek::*;
@@ -307,9 +301,9 @@ impl fmt::Display for KeyMouse {
     }
 }
 
-pub struct Window {
-    renderer: Renderer,
-    window: glutin::ContextWrapper<glutin::PossiblyCurrent, winit::window::Window>,
+pub struct Window<'a> {
+    renderer: Renderer<'a>,
+    window: winit::window::Window,
     cursor_grabbed: bool,
     pub pan_sensitivity: u32,
     pub zoom_sensitivity: u32,
@@ -328,28 +322,25 @@ pub struct Window {
     mouse_emulation_vec: Vec2<f32>,
 }
 
-impl Window {
+impl<'a> Window<'a> {
     pub fn new(settings: &Settings) -> Result<(Window, EventLoop), Error> {
         let event_loop = EventLoop::new();
 
         let size = settings.graphics.window_size;
 
-        let win_builder = glutin::window::WindowBuilder::new()
+        let window = winit::window::WindowBuilder::new()
             .with_title("Veloren")
-            .with_inner_size(glutin::dpi::LogicalSize::new(
-                size[0] as f64,
-                size[1] as f64,
-            ))
-            .with_maximized(true);
+            .with_inner_size(winit::dpi::LogicalSize::new(size[0] as f64, size[1] as f64))
+            .with_maximized(true)
+            .build(&event_loop)
+            .unwrap();
 
-        let (window, device, factory, win_color_view, win_depth_view) =
-            glutin::ContextBuilder::new()
-                .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGl, (3, 2)))
-                .with_vsync(false)
-                .with_gfx_color_depth::<WinColorFmt, WinDepthFmt>()
-                .build_windowed(win_builder, &event_loop)
-                .map_err(|err| Error::BackendError(Box::new(err)))?
-                .init_gfx::<WinColorFmt, WinDepthFmt>();
+        let renderer = Renderer::new(
+            &window,
+            settings.graphics.aa_mode,
+            settings.graphics.cloud_mode,
+            settings.graphics.fluid_mode,
+        );
 
         let mut map: HashMap<_, Vec<_>> = HashMap::new();
         map.entry(settings.controls.primary)
@@ -485,15 +476,7 @@ impl Window {
         let controller_settings = ControllerSettings::from(&settings.controller);
 
         let mut this = Self {
-            renderer: Renderer::new(
-                device,
-                factory,
-                win_color_view,
-                win_depth_view,
-                settings.graphics.aa_mode,
-                settings.graphics.cloud_mode,
-                settings.graphics.fluid_mode,
-            )?,
+            renderer,
             window,
             cursor_grabbed: false,
             pan_sensitivity: settings.gameplay.pan_sensitivity,
@@ -518,15 +501,11 @@ impl Window {
         Ok((this, event_loop))
     }
 
-    pub fn window(
-        &self,
-    ) -> &glutin::ContextWrapper<glutin::PossiblyCurrent, winit::window::Window> {
-        &self.window
-    }
+    pub fn window(&self) -> &winit::window::Window { &self.window }
 
     pub fn renderer(&self) -> &Renderer { &self.renderer }
 
-    pub fn renderer_mut(&mut self) -> &mut Renderer { &mut self.renderer }
+    pub fn renderer_mut(&mut self) -> &mut Renderer<'a> { &mut self.renderer }
 
     pub fn fetch_events(&mut self) -> Vec<Event> {
         self.events.append(&mut self.supplement_events);
@@ -761,13 +740,13 @@ impl Window {
             DeviceEvent::MouseWheel { delta, .. } if self.cursor_grabbed && self.focused => {
                 self.events.push(Event::Zoom({
                     let y = match delta {
-                        glutin::event::MouseScrollDelta::LineDelta(_x, y) => y,
+                        winit::event::MouseScrollDelta::LineDelta(_x, y) => y,
                         // TODO: Check to see if there is a better way to find the "line
                         // height" than just hardcoding 16.0 pixels.  Alternately we could
                         // get rid of this and have the user set zoom sensitivity, since
                         // it's unlikely people would expect a configuration file to work
                         // across operating systems.
-                        glutin::event::MouseScrollDelta::PixelDelta(pos) => (pos.y / 16.0) as f32,
+                        winit::event::MouseScrollDelta::PixelDelta(pos) => (pos.y / 16.0) as f32,
                     };
                     y * (self.zoom_sensitivity as f32 / 100.0)
                         * if self.zoom_inversion { -1.0 } else { 1.0 }
@@ -790,14 +769,14 @@ impl Window {
 
         match event {
             WindowEvent::CloseRequested => self.events.push(Event::Close),
-            WindowEvent::Resized(winit::dpi::PhysicalSize { width, height }) => {
-                let (mut color_view, mut depth_view) = self.renderer.win_views_mut();
-                self.window.update_gfx(&mut color_view, &mut depth_view);
-                self.renderer.on_resize().unwrap();
+            WindowEvent::Resized(size) => {
+                self.renderer.on_resize(size);
                 // TODO: update users of this event with the fact that it is now the physical
                 // size
-                self.events
-                    .push(Event::Resize(Vec2::new(width as u32, height as u32)));
+                self.events.push(Event::Resize(Vec2::new(
+                    size.width as u32,
+                    size.height as u32,
+                )));
             },
             WindowEvent::ReceivedCharacter(c) => self.events.push(Event::Char(c)),
             WindowEvent::MouseInput { button, state, .. } => {
@@ -864,7 +843,7 @@ impl Window {
                 self.focused = state;
                 self.events.push(Event::Focused(state));
             },
-            glutin::event::WindowEvent::CursorMoved { position, .. } => {
+            WindowEvent::CursorMoved { position, .. } => {
                 cursor_position = Some(position);
             },
             _ => {},
@@ -886,31 +865,24 @@ impl Window {
     /// Moves cursor by an offset
     pub fn offset_cursor(&self, d: Vec2<f32>) {
         if d != Vec2::zero() {
-            if let Err(err) =
-                self.window
-                    .window()
-                    .set_cursor_position(winit::dpi::LogicalPosition::new(
-                        d.x as f64 + self.cursor_position.x,
-                        d.y as f64 + self.cursor_position.y,
-                    ))
+            if let Err(err) = self
+                .window
+                .set_cursor_position(winit::dpi::LogicalPosition::new(
+                    d.x as f64 + self.cursor_position.x,
+                    d.y as f64 + self.cursor_position.y,
+                ))
             {
                 error!("Error setting cursor position: {:?}", err);
             }
         }
     }
 
-    pub fn swap_buffers(&self) -> Result<(), Error> {
-        self.window
-            .swap_buffers()
-            .map_err(|err| Error::BackendError(Box::new(err)))
-    }
-
     pub fn is_cursor_grabbed(&self) -> bool { self.cursor_grabbed }
 
     pub fn grab_cursor(&mut self, grab: bool) {
         self.cursor_grabbed = grab;
-        self.window.window().set_cursor_visible(!grab);
-        let _ = self.window.window().set_cursor_grab(grab);
+        self.window.set_cursor_visible(!grab);
+        let _ = self.window.set_cursor_grab(grab);
     }
 
     pub fn toggle_fullscreen(&mut self, settings: &mut Settings) {
@@ -922,14 +894,14 @@ impl Window {
     pub fn is_fullscreen(&self) -> bool { self.fullscreen }
 
     pub fn fullscreen(&mut self, fullscreen: bool) {
-        let window = self.window.window();
         self.fullscreen = fullscreen;
         if fullscreen {
-            window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(
-                window.current_monitor(),
-            )));
+            self.window
+                .set_fullscreen(Some(winit::window::Fullscreen::Borderless(
+                    self.window.current_monitor(),
+                )));
         } else {
-            window.set_fullscreen(None);
+            self.window.set_fullscreen(None);
         }
     }
 
@@ -938,20 +910,17 @@ impl Window {
     pub fn logical_size(&self) -> Vec2<f64> {
         let (w, h) = self
             .window
-            .window()
             .inner_size()
-            .to_logical::<f64>(self.window.window().scale_factor())
+            .to_logical::<f64>(self.window.scale_factor())
             .into();
         Vec2::new(w, h)
     }
 
     pub fn set_size(&mut self, new_size: Vec2<u16>) {
-        self.window
-            .window()
-            .set_inner_size(glutin::dpi::LogicalSize::new(
-                new_size.x as f64,
-                new_size.y as f64,
-            ));
+        self.window.set_inner_size(winit::dpi::LogicalSize::new(
+            new_size.x as f64,
+            new_size.y as f64,
+        ));
     }
 
     pub fn send_event(&mut self, event: Event) { self.events.push(event) }
@@ -959,35 +928,28 @@ impl Window {
     pub fn send_supplement_event(&mut self, event: Event) { self.supplement_events.push(event) }
 
     pub fn take_screenshot(&mut self, settings: &Settings) {
-        match self.renderer.create_screenshot() {
-            Ok(img) => {
-                let mut path = settings.screenshots_path.clone();
+        let img = self.renderer.create_screenshot();
+        let mut path = settings.screenshots_path.clone();
 
-                std::thread::spawn(move || {
-                    use std::time::SystemTime;
-                    // Check if folder exists and create it if it does not
-                    if !path.exists() {
-                        if let Err(err) = std::fs::create_dir_all(&path) {
-                            warn!("Couldn't create folder for screenshot: {:?}", err);
-                        }
-                    }
-                    path.push(format!(
-                        "screenshot_{}.png",
-                        SystemTime::now()
-                            .duration_since(SystemTime::UNIX_EPOCH)
-                            .map(|d| d.as_millis())
-                            .unwrap_or(0)
-                    ));
-                    if let Err(err) = img.save(&path) {
-                        warn!("Couldn't save screenshot: {:?}", err);
-                    }
-                });
-            },
-            Err(err) => error!(
-                "Couldn't create screenshot due to renderer error: {:?}",
-                err
-            ),
-        }
+        std::thread::spawn(move || {
+            use std::time::SystemTime;
+            // Check if folder exists and create it if it does not
+            if !path.exists() {
+                if let Err(err) = std::fs::create_dir_all(&path) {
+                    warn!("Couldn't create folder for screenshot: {:?}", err);
+                }
+            }
+            path.push(format!(
+                "screenshot_{}.png",
+                SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .map(|d| d.as_millis())
+                    .unwrap_or(0)
+            ));
+            if let Err(err) = img.save(&path) {
+                warn!("Couldn't save screenshot: {:?}", err);
+            }
+        });
     }
 
     fn is_pressed(

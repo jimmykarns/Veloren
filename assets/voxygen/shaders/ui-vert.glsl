@@ -1,23 +1,23 @@
-#version 330 core
+#version 450 core
 
 #include <globals.glsl>
 
-in vec2 v_pos;
-in vec2 v_uv;
-in vec2 v_center;
-in vec4 v_color;
-in uint v_mode;
+layout(location=0) in vec2 v_pos;
+layout(location=1) in vec2 v_uv;
+layout(location=2) in vec2 v_center;
+layout(location=3) in vec4 v_color;
+layout(location=4) in uint v_mode;
 
-layout (std140)
+layout (set = 1, binding = 0,std140)
 uniform u_locals {
 	vec4 w_pos;
 };
 
-uniform sampler2D u_tex;
+layout (set = 1, binding = 2) uniform sampler2D u_tex;
 
-out vec2 f_uv;
-flat out uint f_mode;
-out vec4 f_color;
+layout(location=0) out vec2 f_uv;
+layout(location=1) flat out uint f_mode;
+layout(location=2) out vec4 f_color;
 
 void main() {
     f_color = v_color;

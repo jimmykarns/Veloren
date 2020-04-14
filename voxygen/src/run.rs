@@ -145,13 +145,8 @@ fn handle_main_events_cleared(
     }
 
     if let Some(last) = states.last_mut() {
-        global_state.window.renderer_mut().clear();
         last.render(global_state.window.renderer_mut());
         // Finish the frame.
         global_state.window.renderer_mut().flush();
-        global_state
-            .window
-            .swap_buffers()
-            .expect("Failed to swap window buffers!");
     }
 }

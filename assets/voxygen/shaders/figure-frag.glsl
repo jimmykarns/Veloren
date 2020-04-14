@@ -1,12 +1,12 @@
-#version 330 core
+#version 450 core
 
 #include <globals.glsl>
 
-in vec3 f_pos;
-in vec3 f_col;
-flat in vec3 f_norm;
+layout(location=0) in vec3 f_pos;
+layout(location=1) in vec3 f_col;
+layout(location=2) flat in vec3 f_norm;
 
-layout (std140)
+layout (set = 3, binding = 0,std140)
 uniform u_locals {
 	mat4 model_mat;
 	vec4 model_col;
@@ -16,16 +16,15 @@ struct BoneData {
 	mat4 bone_mat;
 };
 
-layout (std140)
+layout (set = 3, binding = 1,std140)
 uniform u_bones {
 	BoneData bones[16];
 };
 
 #include <sky.glsl>
 #include <light.glsl>
-#include <srgb.glsl>
 
-out vec4 tgt_color;
+layout(location=0) out vec4 tgt_color;
 
 void main() {
 	vec3 light, diffuse_light, ambient_light;

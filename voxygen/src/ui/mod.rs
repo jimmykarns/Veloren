@@ -22,8 +22,8 @@ pub use widgets::{
 
 use crate::{
     render::{
-        create_ui_quad, create_ui_tri, Consts, DynamicModel, Globals, Mesh, RenderError, Renderer,
-        UiLocals, UiMode, UiPipeline,
+        create_ui_quad, create_ui_tri, Consts, DynamicModel, Globals, Mesh, Renderer, UiLocals,
+        UiMode, UiPipeline,
     },
     window::Window,
     Error,
@@ -52,11 +52,6 @@ use std::{
     time::Duration,
 };
 use vek::*;
-
-#[derive(Debug)]
-pub enum UiError {
-    RenderError(RenderError),
-}
 
 enum DrawKind {
     Image(TexId),
@@ -102,7 +97,7 @@ pub struct Ui {
     // Draw commands for the next render
     draw_commands: Vec<DrawCommand>,
     // Model for drawing the ui
-    model: DynamicModel<UiPipeline>,
+    model: DynamicModel,
     // Consts for default ui drawing position (ie the interface)
     interface_locals: Consts<UiLocals>,
     default_globals: Consts<Globals>,
@@ -138,9 +133,9 @@ impl Ui {
             image_map: Map::new(),
             cache: Cache::new(renderer)?,
             draw_commands: Vec::new(),
-            model: renderer.create_dynamic_model(100)?,
-            interface_locals: renderer.create_consts(&[UiLocals::default()])?,
-            default_globals: renderer.create_consts(&[Globals::default()])?,
+            model: renderer.create_dynamic_model(100),
+            interface_locals: renderer.create_consts(&[UiLocals::default()]),
+            default_globals: renderer.create_consts(&[Globals::default()]),
             ingame_locals: Vec::new(),
             window_resized: None,
             need_cache_resize: false,
@@ -583,14 +578,11 @@ impl Ui {
 
                             let new_data = data
                                 .iter()
-                                .map(|x| [255, 255, 255, *x])
-                                .collect::<Vec<[u8; 4]>>();
+                                .map(|x| std::iter::repeat(255).take(3).chain(std::iter::once(*x)))
+                                .flatten()
+                                .collect::<Vec<u8>>();
 
-                            if let Err(err) =
-                                renderer.update_texture(cache_tex, offset, size, &new_data)
-                            {
-                                warn!("Failed to update texture: {:?}", err);
-                            }
+                            renderer.update_texture(cache_tex, offset, size, &new_data);
                         })
                         .unwrap();
 
@@ -710,15 +702,13 @@ impl Ui {
                                 // Push new position command
                                 let world_pos = Vec4::from_point(parameters.pos);
                                 if self.ingame_locals.len() > ingame_local_index {
-                                    renderer
-                                        .update_consts(
-                                            &mut self.ingame_locals[ingame_local_index],
-                                            &[world_pos.into()],
-                                        )
-                                        .unwrap();
+                                    renderer.update_consts(
+                                        &mut self.ingame_locals[ingame_local_index],
+                                        &[world_pos.into()],
+                                    );
                                 } else {
                                     self.ingame_locals
-                                        .push(renderer.create_consts(&[world_pos.into()]).unwrap());
+                                        .push(renderer.create_consts(&[world_pos.into()]));
                                 }
                                 self.draw_commands
                                     .push(DrawCommand::WorldPos(Some(ingame_local_index)));
@@ -763,13 +753,11 @@ impl Ui {
 
         // Create a larger dynamic model if the mesh is larger than the current model
         // size.
-        if self.model.vbuf.len() < mesh.vertices().len() {
-            self.model = renderer
-                .create_dynamic_model(mesh.vertices().len() * 4 / 3)
-                .unwrap();
+        if self.model.len() < mesh.vertices().len() {
+            self.model = renderer.create_dynamic_model(mesh.vertices().len() * 4 / 3);
         }
         // Update model with new mesh.
-        renderer.update_model(&self.model, &mesh, 0).unwrap();
+        renderer.update_model(&mut self.model, &mesh, 0);
 
         // Handle window resizing.
         if let Some(new_dims) = self.window_resized.take() {

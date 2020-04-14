@@ -94,7 +94,16 @@ impl Camera {
             .max(0.0)
         };
 
-        self.dependents.view_mat = Mat4::<f32>::identity()
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        let opengl_to_wgpu_matrix: Mat4<f32> = Mat4::new(
+            1.0, 0.0, 0.0, 0.0,
+            0.0, -1.0, 0.0, 0.0,
+            0.0, 0.0, 0.5, 0.0,
+            0.0, 0.0, 0.5, 1.0,
+        );
+
+        self.dependents.view_mat = opengl_to_wgpu_matrix
+            * Mat4::<f32>::identity()
             * Mat4::translation_3d(-Vec3::unit_z() * dist)
             * Mat4::rotation_z(self.ori.z)
             * Mat4::rotation_x(self.ori.y)
@@ -102,8 +111,8 @@ impl Camera {
             * Mat4::rotation_3d(PI / 2.0, -Vec4::unit_x())
             * Mat4::translation_3d(-self.focus);
 
-        self.dependents.proj_mat =
-            Mat4::perspective_rh_no(self.fov, self.aspect, NEAR_PLANE, FAR_PLANE);
+        self.dependents.proj_mat = opengl_to_wgpu_matrix
+            * Mat4::perspective_rh_no(self.fov, self.aspect, NEAR_PLANE, FAR_PLANE);
 
         // TODO: Make this more efficient.
         self.dependents.cam_pos = Vec3::from(self.dependents.view_mat.inverted() * Vec4::unit_w());

@@ -36,12 +36,12 @@ const SHADOW_DIST_RADIUS: f32 = 8.0;
 const SHADOW_MAX_DIST: f32 = 96.0; // The distance beyond which shadows may not be visible
 
 struct Skybox {
-    model: Model<SkyboxPipeline>,
+    model: Model,
     locals: Consts<SkyboxLocals>,
 }
 
 struct PostProcess {
-    model: Model<PostProcessPipeline>,
+    model: Model,
     locals: Consts<PostProcessLocals>,
 }
 
@@ -78,25 +78,19 @@ impl Scene {
         let resolution = renderer.get_resolution().map(|e| e as f32);
 
         Self {
-            globals: renderer.create_consts(&[Globals::default()]).unwrap(),
-            lights: renderer
-                .create_consts(&[Light::default(); MAX_LIGHT_COUNT])
-                .unwrap(),
-            shadows: renderer
-                .create_consts(&[Shadow::default(); MAX_SHADOW_COUNT])
-                .unwrap(),
+            globals: renderer.create_consts(&[Globals::default()]),
+            lights: renderer.create_consts(&[Light::default(); MAX_LIGHT_COUNT]),
+            shadows: renderer.create_consts(&[Shadow::default(); MAX_SHADOW_COUNT]),
             camera: Camera::new(resolution.x / resolution.y, CameraMode::ThirdPerson),
             camera_input_state: Vec2::zero(),
 
             skybox: Skybox {
-                model: renderer.create_model(&create_skybox_mesh()).unwrap(),
-                locals: renderer.create_consts(&[SkyboxLocals::default()]).unwrap(),
+                model: renderer.create_model(&create_skybox_mesh()),
+                locals: renderer.create_consts(&[SkyboxLocals::default()]),
             },
             postprocess: PostProcess {
-                model: renderer.create_model(&create_pp_mesh()).unwrap(),
-                locals: renderer
-                    .create_consts(&[PostProcessLocals::default()])
-                    .unwrap(),
+                model: renderer.create_model(&create_pp_mesh()),
+                locals: renderer.create_consts(&[PostProcessLocals::default()]),
             },
             terrain: Terrain::new(renderer),
             loaded_distance: 0.0,
@@ -274,9 +268,7 @@ impl Scene {
             .collect::<Vec<_>>();
         lights.sort_by_key(|light| light.get_pos().distance_squared(player_pos) as i32);
         lights.truncate(MAX_LIGHT_COUNT);
-        renderer
-            .update_consts(&mut self.lights, &lights)
-            .expect("Failed to update light constants");
+        renderer.update_consts(&mut self.lights, &lights);
 
         // Update shadow constants
         let mut shadows = (
@@ -306,33 +298,29 @@ impl Scene {
             .collect::<Vec<_>>();
         shadows.sort_by_key(|shadow| shadow.get_pos().distance_squared(player_pos) as i32);
         shadows.truncate(MAX_SHADOW_COUNT);
-        renderer
-            .update_consts(&mut self.shadows, &shadows)
-            .expect("Failed to update light constants");
+        renderer.update_consts(&mut self.shadows, &shadows);
 
         // Update global constants.
-        renderer
-            .update_consts(&mut self.globals, &[Globals::new(
-                view_mat,
-                proj_mat,
-                cam_pos,
-                self.camera.get_focus_pos(),
-                self.loaded_distance,
-                scene_data.state.get_time_of_day(),
-                scene_data.state.get_time(),
-                renderer.get_resolution(),
-                lights.len(),
-                shadows.len(),
-                scene_data
-                    .state
-                    .terrain()
-                    .get(cam_pos.map(|e| e.floor() as i32))
-                    .map(|b| b.kind())
-                    .unwrap_or(BlockKind::Air),
-                self.select_pos,
-                gamma,
-            )])
-            .expect("Failed to update global constants");
+        renderer.update_consts(&mut self.globals, &[Globals::new(
+            view_mat,
+            proj_mat,
+            cam_pos,
+            self.camera.get_focus_pos(),
+            self.loaded_distance,
+            scene_data.state.get_time_of_day(),
+            scene_data.state.get_time(),
+            renderer.get_resolution(),
+            lights.len(),
+            shadows.len(),
+            scene_data
+                .state
+                .terrain()
+                .get(cam_pos.map(|e| e.floor() as i32))
+                .map(|b| b.kind())
+                .unwrap_or(BlockKind::Air),
+            self.select_pos,
+            gamma,
+        )]);
 
         // Maintain the terrain.
         self.terrain.maintain(

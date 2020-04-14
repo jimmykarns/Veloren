@@ -1,4 +1,3 @@
-use crate::render::RenderError;
 use client;
 use std::fmt::Debug;
 
@@ -10,14 +9,14 @@ pub enum Error {
     /// A miscellaneous error relating to a backend dependency.
     BackendError(Box<dyn Debug>),
     /// An error relating the rendering subsystem.
-    RenderError(RenderError),
+    //RenderError(RenderError),
     /// A miscellaneous error with an unknown or unspecified source.
     Other(failure::Error),
 }
 
-impl From<RenderError> for Error {
-    fn from(err: RenderError) -> Self { Error::RenderError(err) }
-}
+// impl From<RenderError> for Error {
+//     fn from(err: RenderError) -> Self { Error::RenderError(err) }
+// }
 
 impl From<client::Error> for Error {
     fn from(err: client::Error) -> Self { Error::ClientError(err) }

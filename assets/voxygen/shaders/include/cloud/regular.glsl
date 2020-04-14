@@ -1,3 +1,4 @@
+layout(set = 0, binding = 1) 
 uniform sampler2D t_noise;
 
 const float CLOUD_AVG_HEIGHT = 1025.0;

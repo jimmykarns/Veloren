@@ -1,13 +1,13 @@
-#version 330 core
+#version 450 core
 
 #include <globals.glsl>
 
-in vec3 f_pos;
-flat in vec3 f_norm;
-in vec3 f_col;
-in float f_light;
+layout(location=0) in vec3 f_pos;
+layout(location=1) flat in vec3 f_norm;
+layout(location=2) in vec3 f_col;
+layout(location=3) in float f_light;
 
-out vec4 tgt_color;
+layout(location=0) out vec4 tgt_color;
 
 #include <sky.glsl>
 #include <light.glsl>

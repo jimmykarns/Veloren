@@ -1,34 +1,55 @@
-use super::{gfx_backend, RenderError};
-use gfx::{
-    self,
-    buffer::Role,
-    memory::{Bind, Usage},
-    Factory,
-};
+use zerocopy::AsBytes;
 
 /// Represents a mesh that has been sent to the GPU.
-pub struct Instances<T: Copy + gfx::traits::Pod> {
-    pub ibuf: gfx::handle::Buffer<gfx_backend::Resources, T>,
+pub struct Instances<T: Copy + AsBytes> {
+    pub ibuf: wgpu::Buffer,
+    pub len: usize,
+    t: std::marker::PhantomData<T>,
 }
 
-impl<T: Copy + gfx::traits::Pod> Instances<T> {
-    pub fn new(factory: &mut gfx_backend::Factory, len: usize) -> Result<Self, RenderError> {
-        Ok(Self {
-            ibuf: factory
-                .create_buffer(len, Role::Vertex, Usage::Dynamic, Bind::TRANSFER_DST)
-                .map_err(|err| RenderError::BufferCreationError(err))?,
-        })
+impl<T: Copy + AsBytes> Instances<T> {
+    pub fn new(device: &mut wgpu::Device, len: usize) -> Self {
+        let instance_buffer = device
+            .create_buffer_mapped(&wgpu::BufferDescriptor {
+                label: None,
+                size: len as wgpu::BufferAddress,
+                usage: wgpu::BufferUsage::VERTEX | wgpu::BufferUsage::COPY_DST,
+            })
+            .finish();
+
+        Self {
+            ibuf: instance_buffer,
+            len,
+            t: std::marker::PhantomData::default(),
+        }
     }
 
-    pub fn count(&self) -> usize { self.ibuf.len() }
+    pub fn count(&self) -> usize { self.len }
 
-    pub fn update(
-        &mut self,
-        encoder: &mut gfx::Encoder<gfx_backend::Resources, gfx_backend::CommandBuffer>,
-        instances: &[T],
-    ) -> Result<(), RenderError> {
-        encoder
-            .update_buffer(&self.ibuf, instances, 0)
-            .map_err(|err| RenderError::UpdateError(err))
+    pub fn update(&mut self, device: &mut wgpu::Device, queue: &mut wgpu::Queue, vals: &[T]) {
+        let mut encoder =
+            device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+
+        let staging_buffer = device.create_buffer_with_data(
+            vals.iter()
+                .map(|v| v.as_bytes())
+                .flatten()
+                .map(|v| *v)
+                .collect::<Vec<u8>>()
+                .as_slice(),
+            wgpu::BufferUsage::COPY_SRC,
+        );
+
+        encoder.copy_buffer_to_buffer(
+            &staging_buffer,
+            0,
+            &self.ibuf,
+            0,
+            std::mem::size_of_val(vals) as wgpu::BufferAddress,
+        );
+
+        self.len = vals.len();
+
+        queue.submit(&[encoder.finish()]);
     }
 }

@@ -44,7 +44,7 @@ pub struct FigureModelCache<Skel = anim::character::CharacterSkeleton>
 where
     Skel: Skeleton,
 {
-    models: HashMap<FigureKey, ((Model<FigurePipeline>, Skel::Attr), u64)>,
+    models: HashMap<FigureKey, ((Model, Skel::Attr), u64)>,
     manifest_indicator: ReloadIndicator,
 }
 
@@ -64,7 +64,7 @@ impl<Skel: Skeleton> FigureModelCache<Skel> {
         tick: u64,
         camera_mode: CameraMode,
         character_state: Option<&CharacterState>,
-    ) -> &(Model<FigurePipeline>, Skel::Attr)
+    ) -> &(Model, Skel::Attr)
     where
         for<'a> &'a common::comp::Body: std::convert::TryInto<Skel::Attr>,
         Skel::Attr: Default,
@@ -563,7 +563,7 @@ impl<Skel: Skeleton> FigureModelCache<Skel> {
                                 mesh.push_mesh_map(bone_mesh, |vert| vert.with_bone_idx(i as u8))
                             });
 
-                        (renderer.create_model(&mesh).unwrap(), skeleton_attr)
+                        (renderer.create_model(&mesh), skeleton_attr)
                     },
                     tick,
                 ))

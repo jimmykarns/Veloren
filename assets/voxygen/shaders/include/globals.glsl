@@ -1,4 +1,4 @@
-layout (std140)
+layout(set = 0, binding = 0, std140) 
 uniform u_globals {
 	mat4 view_mat;
 	mat4 proj_mat;

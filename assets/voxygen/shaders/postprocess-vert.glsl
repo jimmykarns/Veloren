@@ -1,15 +1,15 @@
-#version 330 core
+#version 450 core
 
 #include <globals.glsl>
 
-in vec2 v_pos;
+layout(location=0) in vec2 v_pos;
 
-layout (std140)
+layout (set = 1, binding = 0,std140)
 uniform u_locals {
 	vec4 nul;
 };
 
-out vec2 f_pos;
+layout(location=0) out vec2 f_pos;
 
 void main() {
 	f_pos = v_pos;

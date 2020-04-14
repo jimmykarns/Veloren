@@ -43,7 +43,7 @@ use common::{assets::watch, clock::Clock};
 pub struct GlobalState {
     pub settings: Settings,
     pub meta: Meta,
-    pub window: Window,
+    pub window: Window<'static>,
     pub audio: AudioFrontend,
     pub info_message: Option<String>,
     pub clock: Clock,

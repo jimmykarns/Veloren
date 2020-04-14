@@ -1,5 +1,4 @@
 pub mod consts;
-mod error;
 pub mod instances;
 pub mod mesh;
 pub mod model;
@@ -11,7 +10,6 @@ mod util;
 // Reexports
 pub use self::{
     consts::Consts,
-    error::RenderError,
     instances::Instances,
     mesh::{Mesh, Quad, Tri},
     model::{DynamicModel, Model},
@@ -30,14 +28,12 @@ pub use self::{
         },
         Globals, Light, Shadow,
     },
-    renderer::{Renderer, TgtColorFmt, TgtDepthFmt, WinColorFmt, WinDepthFmt},
+    renderer::Renderer,
     texture::Texture,
 };
+use zerocopy::AsBytes;
 
-#[cfg(feature = "gl")]
-use gfx_device_gl as gfx_backend;
-
-use gfx;
+pub const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth24PlusStencil8;
 
 /// Used to represent a specific rendering configuration.
 ///
@@ -51,7 +47,7 @@ use gfx;
 /// - `SkyboxPipeline`
 /// - `FigurePipeline`
 pub trait Pipeline {
-    type Vertex: Clone + gfx::traits::Pod + gfx::pso::buffer::Structure<gfx::format::Format>;
+    type Vertex: Clone + AsBytes;
 }
 
 use serde_derive::{Deserialize, Serialize};

@@ -251,7 +251,7 @@ impl GraphicCache {
             }
         } else {
             // Create a texture just for this
-            let texture = renderer.create_dynamic_texture(dims).unwrap();
+            let texture = renderer.create_dynamic_texture(dims.x as u32, dims.y as u32);
             let index = self.textures.len();
             self.textures.push(texture);
             CacheLoc::Texture { index }
@@ -310,14 +310,10 @@ fn create_atlas_texture(renderer: &mut Renderer) -> (SimpleAtlasAllocator, Textu
 
     let max_texture_size = renderer.max_texture_size();
 
-    let size = Vec2::new(w, h).map(|e| {
-        (e * GRAPHIC_CACHE_RELATIVE_SIZE)
-            .max(512)
-            .min(max_texture_size as u16)
-    });
+    let size = Vec2::new(w, h).map(|e| (e * GRAPHIC_CACHE_RELATIVE_SIZE).max(512).min(2048 as u16));
 
     let atlas = SimpleAtlasAllocator::new(size2(i32::from(size.x), i32::from(size.y)));
-    let texture = renderer.create_dynamic_texture(size).unwrap();
+    let texture = renderer.create_dynamic_texture(size.x as u32, size.y as u32);
     (atlas, texture)
 }
 
@@ -332,12 +328,5 @@ fn aabr_from_alloc_rect(rect: guillotiere::Rectangle) -> Aabr<u16> {
 fn upload_image(renderer: &mut Renderer, aabr: Aabr<u16>, tex: &Texture, image: &RgbaImage) {
     let offset = aabr.min.into_array();
     let size = aabr.size().into_array();
-    if let Err(err) = renderer.update_texture(
-        tex,
-        offset,
-        size,
-        &image.pixels().map(|p| p.0).collect::<Vec<[u8; 4]>>(),
-    ) {
-        warn!("Failed to update texture: {:?}", err);
-    }
+    renderer.update_texture(tex, offset, size, &*image);
 }

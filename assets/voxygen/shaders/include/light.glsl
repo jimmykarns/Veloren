@@ -3,7 +3,7 @@ struct Light {
 	vec4 light_col;
 };
 
-layout (std140)
+layout(set = 1, binding = 0, std140) 
 uniform u_lights {
 	Light lights[32];
 };
@@ -12,7 +12,7 @@ struct Shadow {
 	vec4 shadow_pos_radius;
 };
 
-layout (std140)
+layout(set = 2, binding = 0, std140) 
 uniform u_shadows {
 	Shadow shadows[24];
 };

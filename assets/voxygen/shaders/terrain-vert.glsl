@@ -1,21 +1,21 @@
-#version 330 core
+#version 450 core
 
 #include <globals.glsl>
 #include <srgb.glsl>
 
-in uint v_pos_norm;
-in uint v_col_light;
+layout(location=0) in uint v_pos_norm;
+layout(location=1) in uint v_col_light;
 
-layout (std140)
+layout (set = 3, binding = 0,std140)
 uniform u_locals {
 	vec3 model_offs;
 	float load_time;
 };
 
-out vec3 f_pos;
-flat out uint f_pos_norm;
-out vec3 f_col;
-out float f_light;
+layout(location=0) out vec3 f_pos;
+layout(location=1) flat out uint f_pos_norm;
+layout(location=2) out vec3 f_col;
+layout(location=3) out float f_light;
 
 void main() {
 	f_pos = vec3((uvec3(v_pos_norm) >> uvec3(0, 8, 16)) & uvec3(0xFFu, 0xFFu, 0x1FFFu)) + model_offs;

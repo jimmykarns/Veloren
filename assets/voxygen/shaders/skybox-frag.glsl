@@ -1,16 +1,16 @@
-#version 330 core
+#version 450 core
 
 #include <globals.glsl>
 #include <sky.glsl>
 
-in vec3 f_pos;
+layout(location=0) in vec3 f_pos;
 
-layout (std140)
+layout (set = 1, binding = 0,std140)
 uniform u_locals {
 	vec4 nul;
 };
 
-out vec4 tgt_color;
+layout(location=0) out vec4 tgt_color;
 
 void main() {
 	vec4 _clouds;

@@ -1,22 +1,22 @@
-#version 330 core
+#version 450 core
 
 #include <globals.glsl>
 #include <srgb.glsl>
 
-in vec3 v_pos;
-in vec3 v_norm;
-in vec3 v_col;
-in vec4 inst_mat0;
-in vec4 inst_mat1;
-in vec4 inst_mat2;
-in vec4 inst_mat3;
-in vec3 inst_col;
-in float inst_wind_sway;
+layout(location=0) in vec3 v_pos;
+layout(location=1) in vec3 v_norm;
+layout(location=2) in vec3 v_col;
+layout(location=3) in vec4 inst_mat0;
+layout(location=4) in vec4 inst_mat1;
+layout(location=5) in vec4 inst_mat2;
+layout(location=6) in vec4 inst_mat3;
+layout(location=7) in vec3 inst_col;
+layout(location=8) in float inst_wind_sway;
 
-out vec3 f_pos;
-flat out vec3 f_norm;
-out vec3 f_col;
-out float f_light;
+layout(location=0) out vec3 f_pos;
+layout(location=1) flat out vec3 f_norm;
+layout(location=2) out vec3 f_col;
+layout(location=3) out float f_light;
 
 const float SCALE = 1.0 / 11.0;
 

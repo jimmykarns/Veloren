@@ -1,19 +1,19 @@
-#version 330 core
+#version 450 core
 
 #include <globals.glsl>
 
-in vec2 f_uv;
-in vec4 f_color;
-flat in uint f_mode;
+layout(location=0) in vec2 f_uv;
+layout(location=1) in vec4 f_color;
+layout(location=2) flat in uint f_mode;
 
-layout (std140)
+layout (set = 1, binding = 0,std140)
 uniform u_locals {
 	vec4 w_pos;
 };
 
-uniform sampler2D u_tex;
+layout (set = 1, binding = 2) uniform sampler2D u_tex;
 
-out vec4 tgt_color;
+layout(location=0) out vec4 tgt_color;
 
 void main() {
     // Text

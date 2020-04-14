@@ -8,35 +8,26 @@ pub mod ui;
 
 use super::util::arr_to_mat;
 use common::terrain::BlockKind;
-use gfx::{self, gfx_constant_struct_meta, gfx_defines, gfx_impl_struct_meta};
 use vek::*;
+use zerocopy::AsBytes;
 
-gfx_defines! {
-    constant Globals {
-        view_mat: [[f32; 4]; 4] = "view_mat",
-        proj_mat: [[f32; 4]; 4] = "proj_mat",
-        all_mat: [[f32; 4]; 4] = "all_mat",
-        cam_pos: [f32; 4] = "cam_pos",
-        focus_pos: [f32; 4] = "focus_pos",
-        // TODO: Fix whatever alignment issue requires these uniforms to be aligned.
-        view_distance: [f32; 4] = "view_distance",
-        time_of_day: [f32; 4] = "time_of_day", // TODO: Make this f64.
-        tick: [f32; 4] = "tick",
-        screen_res: [f32; 4] = "screen_res",
-        light_shadow_count: [u32; 4] = "light_shadow_count",
-        medium: [u32; 4] = "medium",
-        select_pos: [i32; 4] = "select_pos",
-        gamma: [f32; 4] = "gamma",
-    }
-
-    constant Light {
-        pos: [f32; 4] = "light_pos",
-        col: [f32; 4] = "light_col",
-    }
-
-    constant Shadow {
-        pos_radius: [f32; 4] = "shadow_pos_radius",
-    }
+#[repr(C)]
+#[derive(Copy, Clone, Debug, AsBytes)]
+pub struct Globals {
+    view_mat: [[f32; 4]; 4],
+    proj_mat: [[f32; 4]; 4],
+    all_mat: [[f32; 4]; 4],
+    cam_pos: [f32; 4],
+    focus_pos: [f32; 4],
+    // TODO: Fix whatever alignment issue requires these uniforms to be aligned.
+    view_distance: [f32; 4],
+    time_of_day: [f32; 4], // TODO: Make this f64.
+    tick: [f32; 4],
+    screen_res: [f32; 4],
+    light_shadow_count: [u32; 4],
+    medium: [u32; 4],
+    select_pos: [i32; 4],
+    gamma: [f32; 4],
 }
 
 impl Globals {
@@ -97,6 +88,13 @@ impl Default for Globals {
     }
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug, AsBytes)]
+pub struct Light {
+    pos: [f32; 4],
+    col: [f32; 4],
+}
+
 impl Light {
     pub fn new(pos: Vec3<f32>, col: Rgb<f32>, strength: f32) -> Self {
         Self {
@@ -110,6 +108,12 @@ impl Light {
 
 impl Default for Light {
     fn default() -> Self { Self::new(Vec3::zero(), Rgb::zero(), 0.0) }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, AsBytes)]
+pub struct Shadow {
+    pos_radius: [f32; 4],
 }
 
 impl Shadow {
@@ -126,4 +130,59 @@ impl Shadow {
 
 impl Default for Shadow {
     fn default() -> Self { Self::new(Vec3::zero(), 0.0) }
+}
+
+pub struct GlobalsLayouts {
+    pub globals: wgpu::BindGroupLayout,
+    pub light: wgpu::BindGroupLayout,
+    pub shadow: wgpu::BindGroupLayout,
+}
+
+impl GlobalsLayouts {
+    pub fn new(device: &wgpu::Device) -> Self {
+        let globals = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("Globals layout"),
+            bindings: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::UniformBuffer { dynamic: false },
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler { comparison: false },
+                },
+            ],
+        });
+        let light = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("Light layout"),
+            bindings: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::UniformBuffer { dynamic: false },
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler { comparison: false },
+                },
+            ],
+        });
+        let shadow = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("Shadow layout"),
+            bindings: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                ty: wgpu::BindingType::UniformBuffer { dynamic: false },
+            }],
+        });
+
+        Self {
+            globals,
+            light,
+            shadow,
+        }
+    }
 }

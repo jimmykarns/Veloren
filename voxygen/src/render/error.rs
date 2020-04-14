@@ -1,3 +1,5 @@
+// Unused
+
 /// Used to represent one of many possible errors that may be omitted by the
 /// rendering subsystem.
 #[derive(Debug)]

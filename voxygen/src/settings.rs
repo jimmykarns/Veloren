@@ -6,11 +6,11 @@ use crate::{
     window::KeyMouse,
 };
 use directories::{ProjectDirs, UserDirs};
-use glutin::event::{MouseButton, VirtualKeyCode};
 use hashbrown::{HashMap, HashSet};
 use log::warn;
 use serde_derive::{Deserialize, Serialize};
 use std::{fs, io::prelude::*, path::PathBuf};
+use winit::event::{MouseButton, VirtualKeyCode};
 
 /// `ControlSettings` contains keybindings.
 #[derive(Clone, Debug, Serialize, Deserialize)]

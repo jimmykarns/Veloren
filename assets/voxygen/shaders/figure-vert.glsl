@@ -1,13 +1,13 @@
-#version 330 core
+#version 450 core
 
 #include <globals.glsl>
 
-in vec3 v_pos;
-in vec3 v_norm;
-in vec3 v_col;
-in uint v_bone_idx;
+layout(location=0) in vec3 v_pos;
+layout(location=1) in vec3 v_norm;
+layout(location=2) in vec3 v_col;
+layout(location=3) in uint v_bone_idx;
 
-layout (std140)
+layout (set = 3, binding = 0,std140)
 uniform u_locals {
 	mat4 model_mat;
 	vec4 model_col;
@@ -17,14 +17,14 @@ struct BoneData {
 	mat4 bone_mat;
 };
 
-layout (std140)
+layout (set = 3, binding = 1,std140)
 uniform u_bones {
 	BoneData bones[16];
 };
 
-out vec3 f_pos;
-out vec3 f_col;
-flat out vec3 f_norm;
+layout(location=0) out vec3 f_pos;
+layout(location=1) out vec3 f_col;
+layout(location=2) flat out vec3 f_norm;
 
 void main() {
 	// Pre-calculate bone matrix

@@ -41,12 +41,12 @@ impl ReadVol for VoidVol {
 }
 
 struct Skybox {
-    model: Model<SkyboxPipeline>,
+    model: Model,
     locals: Consts<SkyboxLocals>,
 }
 
 struct PostProcess {
-    model: Model<PostProcessPipeline>,
+    model: Model,
     locals: Consts<PostProcessLocals>,
 }
 
@@ -58,7 +58,7 @@ pub struct Scene {
 
     skybox: Skybox,
     postprocess: PostProcess,
-    backdrop: Option<(Model<FigurePipeline>, FigureState<FixtureSkeleton>)>,
+    backdrop: Option<(Model, FigureState<FixtureSkeleton>)>,
 
     figure_model_cache: FigureModelCache,
     figure_state: FigureState<CharacterSkeleton>,
@@ -85,29 +85,25 @@ impl Scene {
         camera.set_orientation(Vec3::new(0.0, 0.0, 0.0));
 
         Self {
-            globals: renderer.create_consts(&[Globals::default()]).unwrap(),
-            lights: renderer.create_consts(&[Light::default(); 32]).unwrap(),
-            shadows: renderer.create_consts(&[Shadow::default(); 32]).unwrap(),
+            globals: renderer.create_consts(&[Globals::default()]),
+            lights: renderer.create_consts(&[Light::default(); 32]),
+            shadows: renderer.create_consts(&[Shadow::default(); 32]),
             camera,
 
             skybox: Skybox {
-                model: renderer.create_model(&create_skybox_mesh()).unwrap(),
-                locals: renderer.create_consts(&[SkyboxLocals::default()]).unwrap(),
+                model: renderer.create_model(&create_skybox_mesh()),
+                locals: renderer.create_consts(&[SkyboxLocals::default()]),
             },
             postprocess: PostProcess {
-                model: renderer.create_model(&create_pp_mesh()).unwrap(),
-                locals: renderer
-                    .create_consts(&[PostProcessLocals::default()])
-                    .unwrap(),
+                model: renderer.create_model(&create_pp_mesh()),
+                locals: renderer.create_consts(&[PostProcessLocals::default()]),
             },
             figure_model_cache: FigureModelCache::new(),
             figure_state: FigureState::new(renderer, CharacterSkeleton::new()),
 
             backdrop: backdrop.map(|specifier| {
                 (
-                    renderer
-                        .create_model(&load_mesh(specifier, Vec3::new(-55.0, -49.5, -2.0)))
-                        .unwrap(),
+                    renderer.create_model(&load_mesh(specifier, Vec3::new(-55.0, -49.5, -2.0))),
                     FigureState::new(renderer, FixtureSkeleton::new()),
                 )
             }),
@@ -156,7 +152,7 @@ impl Scene {
         } = self.camera.dependents();
         const VD: f32 = 115.0; // View Distance
         const TIME: f64 = 43200.0; // 12 hours*3600 seconds
-        if let Err(err) = renderer.update_consts(&mut self.globals, &[Globals::new(
+        renderer.update_consts(&mut self.globals, &[Globals::new(
             view_mat,
             proj_mat,
             cam_pos,
@@ -170,9 +166,7 @@ impl Scene {
             BlockKind::Air,
             None,
             scene_data.gamma,
-        )]) {
-            error!("Renderer failed to update: {:?}", err);
-        }
+        )]);
 
         self.figure_model_cache.clean(scene_data.tick);
 

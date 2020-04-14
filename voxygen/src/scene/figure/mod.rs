@@ -1539,10 +1539,8 @@ pub struct FigureState<S: Skeleton> {
 impl<S: Skeleton> FigureState<S> {
     pub fn new(renderer: &mut Renderer, skeleton: S) -> Self {
         Self {
-            bone_consts: renderer
-                .create_consts(&skeleton.compute_matrices())
-                .unwrap(),
-            locals: renderer.create_consts(&[FigureLocals::default()]).unwrap(),
+            bone_consts: renderer.create_consts(&skeleton.compute_matrices()),
+            locals: renderer.create_consts(&[FigureLocals::default()]),
             movement_time: 0.0,
             action_time: 0.0,
             skeleton,
@@ -1593,11 +1591,9 @@ impl<S: Skeleton> FigureState<S> {
             * Mat4::scaling_3d(Vec3::from(0.8 * scale));
 
         let locals = FigureLocals::new(mat, col);
-        renderer.update_consts(&mut self.locals, &[locals]).unwrap();
+        renderer.update_consts(&mut self.locals, &[locals]);
 
-        renderer
-            .update_consts(&mut self.bone_consts, &self.skeleton.compute_matrices())
-            .unwrap();
+        renderer.update_consts(&mut self.bone_consts, &self.skeleton.compute_matrices());
     }
 
     pub fn locals(&self) -> &Consts<FigureLocals> { &self.locals }

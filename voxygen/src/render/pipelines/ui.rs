@@ -1,38 +1,196 @@
-use super::super::{Globals, Pipeline, Quad, Tri, WinColorFmt, WinDepthFmt};
-use gfx::{
-    self, gfx_constant_struct_meta, gfx_defines, gfx_impl_struct_meta, gfx_pipeline,
-    gfx_pipeline_inner, gfx_vertex_struct_meta,
+use super::{
+    super::{Globals, Pipeline, Quad, Tri, DEPTH_FORMAT},
+    GlobalsLayouts,
 };
 use vek::*;
+use zerocopy::AsBytes;
 
-gfx_defines! {
-    vertex Vertex {
-        pos: [f32; 2] = "v_pos",
-        uv: [f32; 2] = "v_uv",
-        color: [f32; 4] = "v_color",
-        center: [f32; 2] = "v_center",
-        mode: u32 = "v_mode",
-    }
+// gfx_defines! {
+//     vertex Vertex {
+//         pos: [f32; 2] = "v_pos",
+//         uv: [f32; 2] = "v_uv",
+//         color: [f32; 4] = "v_color",
+//         center: [f32; 2] = "v_center",
+//         mode: u32 = "v_mode",
+//     }
 
-    constant Locals {
-        pos: [f32; 4] = "w_pos",
-    }
+//     constant Locals {
+//         pos: [f32; 4] = "w_pos",
+//     }
 
-    pipeline pipe {
-        vbuf: gfx::VertexBuffer<Vertex> = (),
+//     pipeline pipe {
+//         vbuf: gfx::VertexBuffer<Vertex> = (),
 
-        locals: gfx::ConstantBuffer<Locals> = "u_locals",
-        globals: gfx::ConstantBuffer<Globals> = "u_globals",
-        tex: gfx::TextureSampler<[f32; 4]> = "u_tex",
+//         locals: gfx::ConstantBuffer<Locals> = "u_locals",
+//         globals: gfx::ConstantBuffer<Globals> = "u_globals",
+//         tex: gfx::TextureSampler<[f32; 4]> = "u_tex",
 
-        scissor: gfx::Scissor = (),
+//         scissor: gfx::Scissor = (),
 
-        tgt_color: gfx::BlendTarget<WinColorFmt> = ("tgt_color", gfx::state::ColorMask::all(), gfx::preset::blend::ALPHA),
-        tgt_depth: gfx::DepthTarget<WinDepthFmt> = gfx::preset::depth::LESS_EQUAL_TEST,
+//         tgt_color: gfx::BlendTarget<WinColorFmt> = ("tgt_color",
+// gfx::state::ColorMask::all(), gfx::preset::blend::ALPHA),         tgt_depth:
+// gfx::DepthTarget<WinDepthFmt> = gfx::preset::depth::LESS_EQUAL_TEST,     }
+// }
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, AsBytes)]
+pub struct Vertex {
+    pos: [f32; 2],
+    uv: [f32; 2],
+    color: [f32; 4],
+    center: [f32; 2],
+    mode: u32,
+}
+
+impl Vertex {
+    fn desc<'a>() -> wgpu::VertexBufferDescriptor<'a> {
+        use std::mem;
+        wgpu::VertexBufferDescriptor {
+            stride: mem::size_of::<Vertex>() as wgpu::BufferAddress,
+            step_mode: wgpu::InputStepMode::Vertex,
+            attributes: &[
+                wgpu::VertexAttributeDescriptor {
+                    offset: 0,
+                    shader_location: 0,
+                    format: wgpu::VertexFormat::Float2,
+                },
+                wgpu::VertexAttributeDescriptor {
+                    offset: mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+                    shader_location: 1,
+                    format: wgpu::VertexFormat::Float2,
+                },
+                wgpu::VertexAttributeDescriptor {
+                    offset: mem::size_of::<[f32; 2]>() as wgpu::BufferAddress * 2,
+                    shader_location: 2,
+                    format: wgpu::VertexFormat::Float4,
+                },
+                wgpu::VertexAttributeDescriptor {
+                    offset: (mem::size_of::<[f32; 2]>() * 2 + mem::size_of::<[f32; 4]>())
+                        as wgpu::BufferAddress,
+                    shader_location: 3,
+                    format: wgpu::VertexFormat::Float2,
+                },
+                wgpu::VertexAttributeDescriptor {
+                    offset: (mem::size_of::<[f32; 2]>() * 3 + mem::size_of::<[f32; 4]>())
+                        as wgpu::BufferAddress,
+                    shader_location: 4,
+                    format: wgpu::VertexFormat::Uint,
+                },
+            ],
+        }
     }
 }
 
-pub struct UiPipeline;
+#[repr(C)]
+#[derive(Copy, Clone, Debug, AsBytes)]
+pub struct Locals {
+    pos: [f32; 4],
+}
+
+pub struct UiPipeline {
+    pub pipeline: wgpu::RenderPipeline,
+    pub locals: wgpu::BindGroupLayout,
+}
+
+impl UiPipeline {
+    pub fn new(
+        device: &wgpu::Device,
+        vs_module: &wgpu::ShaderModule,
+        fs_module: &wgpu::ShaderModule,
+        sc_desc: &wgpu::SwapChainDescriptor,
+        layouts: &GlobalsLayouts,
+    ) -> Self {
+        let locals = Self::locals_layout(device);
+
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                bind_group_layouts: &[&layouts.globals, &locals],
+            });
+
+        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            layout: &render_pipeline_layout,
+            vertex_stage: wgpu::ProgrammableStageDescriptor {
+                module: vs_module,
+                entry_point: "main",
+            },
+            fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
+                module: fs_module,
+                entry_point: "main",
+            }),
+            rasterization_state: Some(wgpu::RasterizationStateDescriptor {
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: wgpu::CullMode::Back,
+                depth_bias: 0,
+                depth_bias_slope_scale: 0.0,
+                depth_bias_clamp: 0.0,
+            }),
+            primitive_topology: wgpu::PrimitiveTopology::TriangleList,
+            color_states: &[wgpu::ColorStateDescriptor {
+                format: sc_desc.format,
+                color_blend: wgpu::BlendDescriptor {
+                    src_factor: wgpu::BlendFactor::SrcAlpha,
+                    dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                    operation: wgpu::BlendOperation::Add,
+                },
+                alpha_blend: wgpu::BlendDescriptor {
+                    src_factor: wgpu::BlendFactor::One,
+                    dst_factor: wgpu::BlendFactor::One,
+                    operation: wgpu::BlendOperation::Add,
+                },
+                write_mask: wgpu::ColorWrite::ALL,
+            }],
+            depth_stencil_state: Some(wgpu::DepthStencilStateDescriptor {
+                format: DEPTH_FORMAT,
+                depth_write_enabled: false,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil_front: wgpu::StencilStateFaceDescriptor::IGNORE,
+                stencil_back: wgpu::StencilStateFaceDescriptor::IGNORE,
+                stencil_read_mask: !0,
+                stencil_write_mask: !0,
+            }),
+            vertex_state: wgpu::VertexStateDescriptor {
+                index_format: wgpu::IndexFormat::Uint16,
+                vertex_buffers: &[Vertex::desc()],
+            },
+            sample_count: 1,
+            sample_mask: !0,
+            alpha_to_coverage_enabled: false,
+        });
+
+        Self {
+            pipeline: render_pipeline,
+            locals,
+        }
+    }
+
+    fn locals_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            bindings: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::UniformBuffer { dynamic: false },
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::SampledTexture {
+                        dimension: wgpu::TextureViewDimension::D2,
+                        //todo
+                        component_type: wgpu::TextureComponentType::Float,
+                        multisampled: false,
+                    },
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler { comparison: false },
+                },
+            ],
+        })
+    }
+}
 
 impl Pipeline for UiPipeline {
     type Vertex = Vertex;

@@ -1,17 +1,17 @@
-#version 330 core
+#version 450 core
 
 #include <globals.glsl>
 // Note: The sampler uniform is declared here because it differs for MSAA
 #include <anti-aliasing.glsl>
 
-in vec2 f_pos;
+layout(location=0) in vec2 f_pos;
 
-layout (std140)
+layout (set = 1, binding = 0,std140)
 uniform u_locals {
 	vec4 nul;
 };
 
-out vec4 tgt_color;
+layout(location=0) out vec4 tgt_color;
 
 vec3 rgb2hsv(vec3 c) {
     vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);

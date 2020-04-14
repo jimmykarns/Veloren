@@ -24,8 +24,8 @@ use vek::*;
 struct TerrainChunkData {
     // GPU data
     load_time: f32,
-    opaque_model: Model<TerrainPipeline>,
-    fluid_model: Option<Model<FluidPipeline>>,
+    opaque_model: Model,
+    fluid_model: Option<Model>,
     sprite_instances: HashMap<(BlockKind, usize), Instances<SpriteInstance>>,
     locals: Consts<TerrainLocals>,
 
@@ -241,7 +241,7 @@ pub struct Terrain<V: RectRasterableVol> {
     mesh_todo: HashMap<Vec2<i32>, ChunkMeshState>,
 
     // GPU data
-    sprite_models: HashMap<(BlockKind, usize), Model<SpritePipeline>>,
+    sprite_models: HashMap<(BlockKind, usize), Model>,
     waves: Texture,
 
     phantom: PhantomData<V>,
@@ -254,15 +254,13 @@ impl<V: RectRasterableVol> Terrain<V> {
         let (send, recv) = channel::unbounded();
 
         let mut make_model = |s, offset| {
-            renderer
-                .create_model(
-                    &Meshable::<SpritePipeline, SpritePipeline>::generate_mesh(
-                        &Segment::from(assets::load_expect::<DotVoxData>(s).as_ref()),
-                        offset,
-                    )
-                    .0,
+            renderer.create_model(
+                &Meshable::<SpritePipeline, SpritePipeline>::generate_mesh(
+                    &Segment::from(assets::load_expect::<DotVoxData>(s).as_ref()),
+                    offset,
                 )
-                .unwrap()
+                .0,
+            )
         };
 
         Self {
@@ -1068,13 +1066,7 @@ impl<V: RectRasterableVol> Terrain<V> {
             ]
             .into_iter()
             .collect(),
-            waves: renderer
-                .create_texture(
-                    &assets::load_expect("voxygen.texture.waves"),
-                    Some(gfx::texture::FilterMethod::Trilinear),
-                    Some(gfx::texture::WrapMode::Tile),
-                )
-                .expect("Failed to create wave texture"),
+            waves: renderer.create_texture(&assets::load_expect("voxygen.texture.waves"), true),
             phantom: PhantomData,
         }
     }
@@ -1294,41 +1286,26 @@ impl<V: RectRasterableVol> Terrain<V> {
                         .unwrap_or(current_time as f32);
                     self.chunks.insert(response.pos, TerrainChunkData {
                         load_time,
-                        opaque_model: renderer
-                            .create_model(&response.opaque_mesh)
-                            .expect("Failed to upload chunk mesh to the GPU!"),
+                        opaque_model: renderer.create_model(&response.opaque_mesh),
                         fluid_model: if response.fluid_mesh.vertices().len() > 0 {
-                            Some(
-                                renderer
-                                    .create_model(&response.fluid_mesh)
-                                    .expect("Failed to upload chunk mesh to the GPU!"),
-                            )
+                            Some(renderer.create_model(&response.fluid_mesh))
                         } else {
                             None
                         },
                         sprite_instances: response
                             .sprite_instances
                             .into_iter()
-                            .map(|(kind, instances)| {
-                                (
-                                    kind,
-                                    renderer.create_instances(&instances).expect(
-                                        "Failed to upload chunk sprite instances to the GPU!",
-                                    ),
-                                )
-                            })
+                            .map(|(kind, instances)| (kind, renderer.create_instances(&instances)))
                             .collect(),
-                        locals: renderer
-                            .create_consts(&[TerrainLocals {
-                                model_offs: Vec3::from(
-                                    response.pos.map2(VolGrid2d::<V>::chunk_size(), |e, sz| {
-                                        e as f32 * sz as f32
-                                    }),
-                                )
-                                .into_array(),
-                                load_time,
-                            }])
-                            .expect("Failed to upload chunk locals to the GPU!"),
+                        locals: renderer.create_consts(&[TerrainLocals {
+                            model_offs: Vec3::from(
+                                response.pos.map2(VolGrid2d::<V>::chunk_size(), |e, sz| {
+                                    e as f32 * sz as f32
+                                }),
+                            )
+                            .into_array(),
+                            load_time,
+                        }]),
                         visible: false,
                         z_bounds: response.z_bounds,
                         frustum_last_plane_index: 0,
