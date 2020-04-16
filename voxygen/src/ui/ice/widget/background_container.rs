@@ -6,7 +6,7 @@ use std::{hash::Hash, u32};
 // Note: maybe we could just use the container styling for this (not really with
 // the aspect ratio stuff)
 
-#[derive(Hash)]
+#[derive(Copy, Clone, Hash)]
 pub struct Padding {
     pub top: u16,
     pub bottom: u16,
@@ -44,20 +44,20 @@ impl Padding {
         self
     }
 
-    pub fn vertical(self, pad: u16) -> Self {
-        self.left = pad;
-        self.right = pad;
-        self
-    }
-
-    pub fn horizontal(self, pad: u16) -> Self {
+    pub fn vertical(mut self, pad: u16) -> Self {
         self.top = pad;
         self.bottom = pad;
         self
     }
+
+    pub fn horizontal(mut self, pad: u16) -> Self {
+        self.left = pad;
+        self.right = pad;
+        self
+    }
 }
 
-trait Background<R: iced::Renderer>: Sized {
+pub trait Background<R: iced::Renderer>: Sized {
     // The intended implementors already store the state accessed in the three
     // functions below
     fn width(&self) -> Length;
@@ -71,25 +71,7 @@ trait Background<R: iced::Renderer>: Sized {
         layout: Layout<'_>,
         cursor_position: Point,
     ) -> R::Output;
-    // somehow need to get image specific padding which depends on scaling,
-    // irritatingly this information is not needed unless the widget is being
-    // used here (where it kinda isn't really being used as a widget)
-    fn padded(self, padding: Padding) -> Padded<Self> {
-        Padded {
-            inner: self,
-            padding,
-        }
-    }
 }
-
-pub struct Padded<T> {
-    inner: T,
-    padding: Padding,
-}
-
-//impl Background for super::image::Image {}
-
-//impl Background for super::compound_graphic::CompoundGraphic {}
 
 /// This widget is displays a background image behind it's content
 pub struct BackgroundContainer<'a, M, R: self::Renderer, B: Background<R>> {
@@ -97,7 +79,10 @@ pub struct BackgroundContainer<'a, M, R: self::Renderer, B: Background<R>> {
     //height: Length,
     max_width: u32,
     max_height: u32,
-    background: Padded<B>,
+    background: B,
+    // Padding in same pixel units as background image
+    // Scaled relative to the background's scaling
+    padding: Padding,
     content: Element<'a, M, R>,
 }
 
@@ -106,15 +91,21 @@ where
     R: self::Renderer,
     B: Background<R>,
 {
-    pub fn new(background: Padded<B>, content: impl Into<Element<'a, M, R>>) -> Self {
+    pub fn new(background: B, content: impl Into<Element<'a, M, R>>) -> Self {
         Self {
             //width: Length::Shrink,
             //height: Length::Shrink,
             max_width: u32::MAX,
             max_height: u32::MAX,
             background,
+            padding: Padding::new(),
             content: content.into(),
         }
+    }
+
+    pub fn padding(mut self, padding: Padding) -> Self {
+        self.padding = padding;
+        self
     }
 
     /*pub fn width(mut self, width: Length) -> Self {
@@ -155,9 +146,9 @@ where
     B: Background<R>,
 {
     // Uses the width and height from the background
-    fn width(&self) -> Length { self.background.inner.width() }
+    fn width(&self) -> Length { self.background.width() }
 
-    fn height(&self) -> Length { self.background.inner.height() }
+    fn height(&self) -> Length { self.background.height() }
 
     fn layout(&self, renderer: &R, limits: &layout::Limits) -> layout::Node {
         let limits = limits
@@ -167,14 +158,14 @@ where
             .width(self.width())
             .height(self.height());
 
-        let [pixel_w, pixel_h] = self.background.inner.pixel_dims(renderer);
+        let [pixel_w, pixel_h] = self.background.pixel_dims(renderer);
         let (horizontal_pad_frac, vertical_pad_frac, top_pad_frac, left_pad_frac) = {
             let Padding {
                 top,
                 bottom,
                 right,
                 left,
-            } = self.background.padding;
+            } = self.padding;
             // Just in case
             // could convert to gracefully handling
             debug_assert!(pixel_w != 0);
@@ -189,7 +180,7 @@ where
             )
         };
 
-        let (size, content) = if self.background.inner.aspect_ratio_fixed() {
+        let (size, content) = if self.background.aspect_ratio_fixed() {
             // To fix the aspect ratio we have to have a separate layout from the content
             // because we can't force the content to have a specific aspect ratio
             let aspect_ratio = pixel_w as f32 / pixel_h as f32;
@@ -204,7 +195,7 @@ where
             } else {
                 limits.max_height((max_width / aspect_ratio) as u32)
             };
-
+            limits;
             // Account for padding at max size in the limits for the children
             let limits = limits.shrink({
                 let max = limits.max();
@@ -213,10 +204,11 @@ where
                     max.height * vertical_pad_frac,
                 )
             });
+            limits;
 
             // Get content size
             // again, why is loose() used here?
-            let content = self.content.layout(renderer, &limits.loose());
+            let mut content = self.content.layout(renderer, &limits.loose());
 
             // This time we need to adjust up to meet the aspect ratio
             // so that the container is larger than the contents
@@ -231,6 +223,13 @@ where
             } else {
                 Size::new(content_size.height * aspect_ratio, content_size.width)
             };
+
+            // Move content to account for padding
+            content.move_to(Point::new(
+                left_pad_frac * size.width,
+                top_pad_frac * size.height,
+            ));
+            size;
 
             (size, content)
         } else {
@@ -274,7 +273,7 @@ where
     ) -> R::Output {
         renderer.draw(
             defaults,
-            &self.background.inner,
+            &self.background,
             layout,
             &self.content,
             layout.children().next().unwrap(),
@@ -290,8 +289,8 @@ where
         self.height().hash(state);
         self.max_width.hash(state);
         self.max_height.hash(state);
-        self.background.inner.aspect_ratio_fixed().hash(state);
-        self.background.padding.hash(state);
+        self.background.aspect_ratio_fixed().hash(state);
+        self.padding.hash(state);
         // TODO: add pixel dims (need renderer)
 
         self.content.hash_layout(state);
