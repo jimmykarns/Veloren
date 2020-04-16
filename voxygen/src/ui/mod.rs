@@ -44,7 +44,7 @@ use conrod_core::{
     widget::{self, id::Generator},
     Rect, UiBuilder, UiCell,
 };
-use graphic::{Rotation, TexId};
+use graphic::TexId;
 use std::{
     f32, f64,
     fs::File,
