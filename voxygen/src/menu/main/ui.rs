@@ -177,7 +177,10 @@ pub type Message = Event;
 impl IcedState {
     pub fn view(&mut self) -> Element<Message> {
         use iced::{Align, Column, Container, Length, Row};
-        use ui::ice::Image;
+        use ui::ice::{
+            compound_graphic::{CompoundGraphic, Graphic},
+            Image,
+        };
         use vek::*;
 
         let buttons = Column::with_children(vec![
