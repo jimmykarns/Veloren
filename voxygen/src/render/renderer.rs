@@ -51,7 +51,6 @@ pub struct Renderer {
     tgt_color_texture: Texture,
 
     win_tex: Option<wgpu::SwapChainOutput>,
-    render_command_encoder: Option<wgpu::CommandEncoder>,
 
     globals_layouts: GlobalsLayouts,
 
@@ -88,7 +87,7 @@ impl Renderer {
                 power_preference: wgpu::PowerPreference::HighPerformance,
                 compatible_surface: Some(&surface),
             },
-            wgpu::BackendBit::PRIMARY | wgpu::BackendBit::SECONDARY,
+            wgpu::BackendBit::all(),
         ))
         .unwrap();
 
@@ -190,11 +189,6 @@ impl Renderer {
         // )?;
 
         let win_tex = Some(swap_chain.get_next_texture().unwrap());
-        let render_command_encoder = Some(device.create_command_encoder(
-            &wgpu::CommandEncoderDescriptor {
-                label: Some("render command encoder"),
-            },
-        ));
 
         Self {
             shader_reload_indicator,
@@ -224,7 +218,6 @@ impl Renderer {
             postprocess_pipeline,
 
             win_tex,
-            render_command_encoder,
 
             aa_mode,
             cloud_mode,
@@ -347,15 +340,38 @@ impl Renderer {
     /// Perform all queued draw calls for this frame and clean up discarded
     /// items.
     pub fn flush(&mut self) {
-        self.queue
-            .submit(&[self.render_command_encoder.take().unwrap().finish()]);
-        self.win_tex = None;
+        std::mem::drop(self.win_tex.take());
         self.win_tex = Some(self.swap_chain.get_next_texture().unwrap());
-        self.render_command_encoder = Some(self.device.create_command_encoder(
-            &wgpu::CommandEncoderDescriptor {
-                label: Some("render command encoder"),
-            },
-        ));
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("skybox command encoder"),
+            });
+
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+                    attachment: &self.win_tex.as_ref().unwrap().view,
+                    resolve_target: None,
+                    load_op: wgpu::LoadOp::Load,
+                    store_op: wgpu::StoreOp::Store,
+                    clear_color: wgpu::Color::TRANSPARENT,
+                }],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
+                    attachment: &self.depth_stencil_texture.view,
+                    depth_load_op: wgpu::LoadOp::Clear,
+                    depth_store_op: wgpu::StoreOp::Store,
+                    clear_depth: 1.0,
+                    stencil_load_op: wgpu::LoadOp::Clear,
+                    stencil_store_op: wgpu::StoreOp::Store,
+                    clear_stencil: 0,
+                }),
+            });
+        }
+
+        self.queue.submit(&[encoder.finish()]);
+
         // If the shaders files were changed attempt to recreate the shaders
         if self.shader_reload_indicator.reloaded() {
             self.recreate_pipelines();
@@ -1120,7 +1136,11 @@ impl Renderer {
         //         tgt_depth: self.win_depth_view.clone(),
         //     },
         // );
-        let encoder = self.render_command_encoder.as_mut().unwrap();
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("skybox command encoder"),
+            });
 
         let globals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
@@ -1162,36 +1182,40 @@ impl Renderer {
             ],
         });
 
-        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                attachment: &self.win_tex.as_ref().unwrap().view,
-                resolve_target: None,
-                load_op: wgpu::LoadOp::Load,
-                store_op: wgpu::StoreOp::Store,
-                clear_color: wgpu::Color::WHITE,
-            }],
-            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
-                attachment: &self.depth_stencil_texture.view,
-                depth_load_op: wgpu::LoadOp::Load,
-                depth_store_op: wgpu::StoreOp::Store,
-                clear_depth: 1.0,
-                stencil_load_op: wgpu::LoadOp::Load,
-                stencil_store_op: wgpu::StoreOp::Store,
-                clear_stencil: 0,
-            }),
-        });
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+                    attachment: &self.win_tex.as_ref().unwrap().view,
+                    resolve_target: None,
+                    load_op: wgpu::LoadOp::Load,
+                    store_op: wgpu::StoreOp::Store,
+                    clear_color: wgpu::Color::TRANSPARENT,
+                }],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
+                    attachment: &self.depth_stencil_texture.view,
+                    depth_load_op: wgpu::LoadOp::Load,
+                    depth_store_op: wgpu::StoreOp::Store,
+                    clear_depth: 1.0,
+                    stencil_load_op: wgpu::LoadOp::Load,
+                    stencil_store_op: wgpu::StoreOp::Store,
+                    clear_stencil: 0,
+                }),
+            });
 
-        render_pass.set_pipeline(&self.ui_pipeline.pipeline);
-        render_pass.set_bind_group(0, &globals_bind_group, &[]);
-        render_pass.set_bind_group(1, &locals_bind_group, &[]);
-        render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-        render_pass.set_scissor_rect(
-            min.x as u32,
-            min.y as u32,
-            (max.x - min.x) as u32,
-            (max.y - min.y) as u32,
-        );
-        render_pass.draw(model.vertex_range().start..model.vertex_range().end, 0..1);
+            render_pass.set_pipeline(&self.ui_pipeline.pipeline);
+            render_pass.set_bind_group(0, &globals_bind_group, &[]);
+            render_pass.set_bind_group(1, &locals_bind_group, &[]);
+            render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
+            render_pass.set_scissor_rect(
+                min.x as u32,
+                min.y as u32,
+                (max.x - min.x) as u32,
+                (max.y - min.y) as u32,
+            );
+            render_pass.draw(model.vertex_range().start..model.vertex_range().end, 0..1);
+        }
+
+        self.queue.submit(&[encoder.finish()]);
     }
 
     pub fn render_post_process(

@@ -13,8 +13,6 @@ uniform u_locals {
 	vec4 w_pos;
 };
 
-layout (set = 1, binding = 2) uniform sampler2D u_tex;
-
 layout(location=0) out vec2 f_uv;
 layout(location=1) flat out uint f_mode;
 layout(location=2) out vec4 f_color;
@@ -44,7 +42,7 @@ void main() {
         gl_Position = vec4(v_center + vec2(v_proj.x, v_proj.y * aspect_ratio), 0.0, 1.0);
     } else {
         // Interface element
-        f_uv = v_uv;
+        f_uv = vec2(1.0,-1.0) * v_uv;
         gl_Position = vec4(v_pos, 0.0, 1.0);
     }
     f_mode = v_mode;

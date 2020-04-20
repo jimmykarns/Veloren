@@ -264,7 +264,7 @@ pub fn create_quad(
         color: color.into_array(),
         mode: mode_val,
     };
-    let aabr_to_lbrt = |aabr: Aabr<f32>| (aabr.min.x, aabr.min.y, aabr.max.x, aabr.max.y);
+    let aabr_to_lbrt = |aabr: Aabr<f32>| (aabr.min.x, -aabr.min.y, aabr.max.x, -aabr.max.y);
 
     let (l, b, r, t) = aabr_to_lbrt(rect);
     let (uv_l, uv_b, uv_r, uv_t) = aabr_to_lbrt(uv_rect);
