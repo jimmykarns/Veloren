@@ -198,7 +198,7 @@ image_ids! {
 
         <ImageGraphic>
 
-        name_input: "voxygen.element.misc_bg.textbox_mid",
+        name_input: "voxygen.element.misc_bg.textbox",
 
         // Tool Icons
         daggers: "voxygen.element.icons.daggers",
