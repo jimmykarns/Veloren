@@ -328,5 +328,6 @@ fn aabr_from_alloc_rect(rect: guillotiere::Rectangle) -> Aabr<u16> {
 fn upload_image(renderer: &mut Renderer, aabr: Aabr<u16>, tex: &Texture, image: &RgbaImage) {
     let offset = aabr.min.into_array();
     let size = aabr.size().into_array();
+
     renderer.update_texture(tex, offset, size, &*image);
 }

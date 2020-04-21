@@ -753,8 +753,9 @@ impl Ui {
 
         // Create a larger dynamic model if the mesh is larger than the current model
         // size.
-        if self.model.len() < mesh.vertices().len() {
-            self.model = renderer.create_dynamic_model(mesh.vertices().len() * 4 / 3);
+        if self.model.len() < std::mem::size_of_val(mesh.vertices()) {
+            self.model =
+                renderer.create_dynamic_model(std::mem::size_of_val(mesh.vertices()) * 4 / 3);
         }
         // Update model with new mesh.
         renderer.update_model(&mut self.model, &mesh, 0);

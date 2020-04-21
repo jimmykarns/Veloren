@@ -36,10 +36,10 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
         match event {
             winit::event::Event::MainEventsCleared => {
                 if polled_twice {
-                    println!(
+                    /* println!(
                         "Time outside voxygen cleared: {} us",
                         timer.elapsed().as_nanos() as f32 / 1000.0 - handle_time / 1000.0
-                    );
+                    ); */
                     handle_main_events_cleared(&mut states, control_flow, &mut global_state);
                     timer = std::time::Instant::now();
                     handle_time = 0.0;

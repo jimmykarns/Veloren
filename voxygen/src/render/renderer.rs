@@ -45,7 +45,6 @@ pub struct Renderer {
     size: winit::dpi::PhysicalSize<u32>,
 
     noise_texture: Texture,
-    noise_bind_group: wgpu::BindGroup,
 
     depth_stencil_texture: Texture,
     tgt_color_texture: Texture,
@@ -114,42 +113,6 @@ impl Renderer {
         let (noise_texture, cmds) =
             Texture::from_image(&device, &assets::load_expect("voxygen.texture.noise"), true);
         queue.submit(&[cmds]);
-
-        let noise_texture_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("noise texture bind group layout"),
-                bindings: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
-                        ty: wgpu::BindingType::SampledTexture {
-                            multisampled: false,
-                            dimension: wgpu::TextureViewDimension::D2,
-                            component_type: wgpu::TextureComponentType::Uint,
-                        },
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler { comparison: false },
-                    },
-                ],
-            });
-
-        let noise_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("noise texture bind group"),
-            layout: &noise_texture_bind_group_layout,
-            bindings: &[
-                wgpu::Binding {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&noise_texture.view),
-                },
-                wgpu::Binding {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&noise_texture.sampler),
-                },
-            ],
-        });
         // Noise Texture End
 
         let depth_stencil_texture = Texture::create_depth_stencil_texture(&device, &sc_desc);
@@ -202,7 +165,6 @@ impl Renderer {
             size: window.inner_size(),
 
             noise_texture,
-            noise_bind_group,
 
             depth_stencil_texture,
             tgt_color_texture,
@@ -265,14 +227,15 @@ impl Renderer {
         self.size = new_size;
         self.sc_desc.width = new_size.width;
         self.sc_desc.height = new_size.height;
-        self.win_tex = None;
+        std::mem::forget(self.win_tex.take().unwrap());
         self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
-        self.flush();
 
         self.depth_stencil_texture =
             Texture::create_depth_stencil_texture(&self.device, &self.sc_desc);
-        self.depth_stencil_texture =
+        self.tgt_color_texture =
             Texture::create_multi_sample_texture(&self.device, &self.sc_desc, self.aa_mode);
+
+        self.flush();
     }
 
     // fn create_rt_views(
@@ -1155,6 +1118,10 @@ impl Renderer {
                 },
                 wgpu::Binding {
                     binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
+                },
+                wgpu::Binding {
+                    binding: 2,
                     resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
                 },
             ],

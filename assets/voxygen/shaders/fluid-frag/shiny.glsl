@@ -34,19 +34,19 @@ float wave_height(vec3 pos) {
 	);
 
 	vec3 warp = (
-		texture(t_noise, fract(pos.yx * 0.1 + tick.x * 0.02)).xyz * 0.3 +
-		texture(t_noise, fract(pos.yx * 0.1 - tick.x * 0.02)).xyz * 0.3 +
+		texture(sampler2D(t_noise, s_noise), fract(pos.yx * 0.1 + tick.x * 0.02)).xyz * 0.3 +
+		texture(sampler2D(t_noise, s_noise), fract(pos.yx * 0.1 - tick.x * 0.02)).xyz * 0.3 +
 		vec3(0)
 	);
 
 	float height = (
-		(texture(t_noise, pos.xy * 0.03 + big_warp.xy + tick.x * 0.05).y - 0.5) * 1.0 +
-		(texture(t_noise, pos.yx * 0.03 + big_warp.yx - tick.x * 0.05).y - 0.5) * 1.0 +
+		(texture(sampler2D(t_noise, s_noise), pos.xy * 0.03 + big_warp.xy + tick.x * 0.05).y - 0.5) * 1.0 +
+		(texture(sampler2D(t_noise, s_noise), pos.yx * 0.03 + big_warp.yx - tick.x * 0.05).y - 0.5) * 1.0 +
 		(texture(t_waves, pos.xy * 0.1 + warp.xy + tick.x * 0.1).x - 0.5) * 0.5 +
 		(texture(t_waves, pos.yx * 0.1 + warp.yx - tick.x * 0.1).x - 0.5) * 0.5 +
-		(texture(t_noise, pos.yx * 0.3 + warp.xy * 0.5 + tick.x * 0.1).x - 0.5) * 0.2 +
-		(texture(t_noise, pos.yx * 0.3 + warp.yx * 0.5 - tick.x * 0.1).x - 0.5) * 0.2 +
-		(texture(t_noise, pos.yx * 1.0 + warp.yx * 0.0 - tick.x * 0.1).x - 0.5) * 0.05 +
+		(texture(sampler2D(t_noise, s_noise), pos.yx * 0.3 + warp.xy * 0.5 + tick.x * 0.1).x - 0.5) * 0.2 +
+		(texture(sampler2D(t_noise, s_noise), pos.yx * 0.3 + warp.yx * 0.5 - tick.x * 0.1).x - 0.5) * 0.2 +
+		(texture(sampler2D(t_noise, s_noise), pos.yx * 1.0 + warp.yx * 0.0 - tick.x * 0.1).x - 0.5) * 0.05 +
 		0.0
 	);
 

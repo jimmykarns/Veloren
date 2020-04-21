@@ -256,7 +256,7 @@ impl Texture {
         encoder.copy_buffer_to_texture(
             wgpu::BufferCopyView {
                 buffer: &buffer,
-                offset: 0,
+                offset: 4 * offset[0] as u64 * offset[1] as u64,
                 bytes_per_row: 4 * self.width,
                 rows_per_image: self.height,
             },

@@ -1,5 +1,7 @@
-layout(set = 0, binding = 1) 
-uniform sampler2D t_noise;
+layout(set = 0, binding = 1)
+uniform texture2D t_noise;
+layout(set = 0, binding = 2)
+uniform sampler s_noise;
 
 const float CLOUD_AVG_HEIGHT = 1025.0;
 const float CLOUD_HEIGHT_MIN = CLOUD_AVG_HEIGHT - 50.0;
@@ -16,21 +18,21 @@ vec2 cloud_at(vec3 pos) {
 	vec2 scaled_pos = pos.xy / CLOUD_SCALE;
 
 	float tick_offs = 0.0
-		+ texture(t_noise, scaled_pos * 0.0005 - time_of_day.x * 0.00002).x * 0.5
-		+ texture(t_noise, scaled_pos * 0.000015).x * 5.0;
+		+ texture(sampler2D(t_noise, s_noise), scaled_pos * 0.0005 - time_of_day.x * 0.00002).x * 0.5
+		+ texture(sampler2D(t_noise, s_noise), scaled_pos * 0.000015).x * 5.0;
 
 	float value = (
 		0.0
-		+ texture(t_noise, scaled_pos * 0.0003 + tick_offs).x
-		+ texture(t_noise, scaled_pos * 0.0015 - tick_offs * 2.0).x * 0.5
-		//+ texture(t_noise, scaled_pos * 0.0025 - time_of_day.x * 0.0002).x * 0.25
-        //+ texture(t_noise, scaled_pos * 0.008 + time_of_day.x * 0.0004).x * 0.15
-        //+ texture(t_noise, scaled_pos * 0.02 + tick_offs + time_of_day.x * 0.0004).x * 0.2
+		+ texture(sampler2D(t_noise, s_noise), scaled_pos * 0.0003 + tick_offs).x
+		+ texture(sampler2D(t_noise, s_noise), scaled_pos * 0.0015 - tick_offs * 2.0).x * 0.5
+		//+ texture(sampler2D(t_noise, s_noise), scaled_pos * 0.0025 - time_of_day.x * 0.0002).x * 0.25
+        //+ texture(sampler2D(t_noise, s_noise), scaled_pos * 0.008 + time_of_day.x * 0.0004).x * 0.15
+        //+ texture(sampler2D(t_noise, s_noise), scaled_pos * 0.02 + tick_offs + time_of_day.x * 0.0004).x * 0.2
 	) / 3.0;
 
 	value += (0.0
-		+ texture(t_noise, scaled_pos * 0.008 + time_of_day.x * 0.0004).x * 0.25
-		+ texture(t_noise, scaled_pos * 0.02 + tick_offs + time_of_day.x * 0.0004).x * 0.15
+		+ texture(sampler2D(t_noise, s_noise), scaled_pos * 0.008 + time_of_day.x * 0.0004).x * 0.25
+		+ texture(sampler2D(t_noise, s_noise), scaled_pos * 0.02 + tick_offs + time_of_day.x * 0.0004).x * 0.15
 	) * value;
 
 	float density = max((value - CLOUD_THRESHOLD) - abs(pos.z - CLOUD_AVG_HEIGHT) / 400.0, 0.0) * CLOUD_DENSITY;
@@ -51,7 +53,7 @@ vec4 get_cloud_color(vec3 dir, vec3 origin, float time_of_day, float max_dist, f
 	float start = max(min(mind, maxd), 0.0);
 	float delta = min(abs(mind - maxd), max_dist);
 
-	float fuzz = sin(texture(t_noise, dir.xz * 100000.0 + tick.x).x * 100.0) * INCR * delta * pow(abs(maxd - mind), 0.3) * 2.0;
+	float fuzz = sin(texture(sampler2D(t_noise, s_noise), dir.xz * 100000.0 + tick.x).x * 100.0) * INCR * delta * pow(abs(maxd - mind), 0.3) * 2.0;
 
 	float cloud_shade = 1.0;
 	float passthrough = 1.0;
