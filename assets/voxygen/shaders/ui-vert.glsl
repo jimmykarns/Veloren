@@ -42,7 +42,7 @@ void main() {
         gl_Position = vec4(v_center + vec2(v_proj.x, v_proj.y * aspect_ratio), 0.0, 1.0);
     } else {
         // Interface element
-        f_uv = vec2(1.0,-1.0) * v_uv;
+        f_uv = v_uv;
         gl_Position = vec4(v_pos, 0.0, 1.0);
     }
     f_mode = v_mode;

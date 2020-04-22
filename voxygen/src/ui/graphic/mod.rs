@@ -310,7 +310,11 @@ fn create_atlas_texture(renderer: &mut Renderer) -> (SimpleAtlasAllocator, Textu
 
     let max_texture_size = renderer.max_texture_size();
 
-    let size = Vec2::new(w, h).map(|e| (e * GRAPHIC_CACHE_RELATIVE_SIZE).max(512).min(2048 as u16));
+    let size = Vec2::new(w, h).map(|e| {
+        (e * GRAPHIC_CACHE_RELATIVE_SIZE)
+            .max(512)
+            .min(max_texture_size as u16)
+    });
 
     let atlas = SimpleAtlasAllocator::new(size2(i32::from(size.x), i32::from(size.y)));
     let texture = renderer.create_dynamic_texture(size.x as u32, size.y as u32);
