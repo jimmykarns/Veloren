@@ -70,10 +70,19 @@ pub enum Primitive {
         bounds: iced::Rectangle,
         color: Rgba<u8>,
     },
+    Text {
+        content: String,
+        size: f32,
+        bounds: iced::Rectangle,
+        linear_color: Rgba<f32>,
+        font: iced::Font,
+        horizontal_alignment: iced::HorizontalAlignment,
+        vertical_alignment: iced::VerticalAlignment,
+    },
     Nothing,
 }
 
-// Optimization idea inspired by what I think iced wgpu renderer may be doing
+// Optimization idea inspired by what I think iced wgpu renderer may be doing:
 // Could have layers of things which don't intersect and thus can be reordered
 // arbitrarily
 
@@ -348,6 +357,63 @@ impl IcedRenderer {
                     color,
                     UiMode::Geometry,
                 ));
+            },
+            Primitive::Text {
+                content,
+                bounds, // iced::Rectangle
+                linear_color,
+                font,
+                horizontal_alignment,
+                vertical_alignment,
+            } => {
+                self.switch_state(State::Plain);
+
+                let positioned_glyphs = text.positioned_glyphs(p_scale_factor as f32);
+                let (glyph_cache, cache_tex) = self.cache.glyph_cache_mut_and_tex();
+                // Queue the glyphs to be cached.
+                for glyph in positioned_glyphs {
+                    glyph_cache.queue_glyph(font_id.index(), glyph.clone());
+                }
+
+                glyph_cache
+                    .cache_queued(|rect, data| {
+                        let offset = [rect.min.x as u16, rect.min.y as u16];
+                        let size = [rect.width() as u16, rect.height() as u16];
+
+                        let new_data = data
+                            .iter()
+                            .map(|x| [255, 255, 255, *x])
+                            .collect::<Vec<[u8; 4]>>();
+
+                        if let Err(err) =
+                            renderer.update_texture(cache_tex, offset, size, &new_data)
+                        {
+                            warn!("Failed to update texture: {:?}", err);
+                        }
+                    })
+                    .unwrap();
+
+                for g in positioned_glyphs {
+                    if let Ok(Some((uv_rect, screen_rect))) =
+                        glyph_cache.rect_for(font_id.index(), g)
+                    {
+                        let uv = Aabr {
+                            min: Vec2::new(uv_rect.min.x, uv_rect.max.y),
+                            max: Vec2::new(uv_rect.max.x, uv_rect.min.y),
+                        };
+                        let rect = Aabr {
+                            min: Vec2::new(
+                                vx(screen_rect.min.x as f64 / p_scale_factor - self.ui.win_w / 2.0),
+                                vy(self.ui.win_h / 2.0 - screen_rect.max.y as f64 / p_scale_factor),
+                            ),
+                            max: Vec2::new(
+                                vx(screen_rect.max.x as f64 / p_scale_factor - self.ui.win_w / 2.0),
+                                vy(self.ui.win_h / 2.0 - screen_rect.min.y as f64 / p_scale_factor),
+                            ),
+                        };
+                        mesh.push_quad(create_ui_quad(rect, uv, linear_color, UiMode::Text));
+                    }
+                }
             },
             Primitive::Nothing => {},
         }

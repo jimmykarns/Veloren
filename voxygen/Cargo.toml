@@ -36,6 +36,7 @@ euc = { git = "https://github.com/zesterer/euc.git" }
 guillotiere = { git = "https://github.com/Imberflur/guillotiere" }
 iced = {package = "iced_native", git = "https://github.com/hecrj/iced"}
 window_clipboard = "0.1.1"
+glyph_brush = "0.6.3"
 
 # ECS
 specs = "0.15.1"
