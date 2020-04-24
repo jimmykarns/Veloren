@@ -582,6 +582,13 @@ impl Ui {
                                 .flatten()
                                 .collect::<Vec<u8>>();
 
+                            println!(
+                                "{} {:?} {:?}",
+                                std::mem::size_of_val(&new_data[..]) / 4,
+                                offset,
+                                size
+                            );
+
                             renderer.update_texture(cache_tex, offset, size, &new_data);
                         })
                         .unwrap();
@@ -733,7 +740,7 @@ impl Ui {
         });
 
         // Draw glyph cache (use for debugging).
-        /*self.draw_commands
+        /* self.draw_commands
             .push(DrawCommand::Scissor(default_scissor(renderer)));
         start = mesh.vertices().len();
         mesh.push_quad(create_ui_quad(
@@ -749,7 +756,7 @@ impl Ui {
             UiMode::Text,
         ));
         self.draw_commands
-            .push(DrawCommand::plain(start..mesh.vertices().len()));*/
+            .push(DrawCommand::plain(start..mesh.vertices().len())); */
 
         // Create a larger dynamic model if the mesh is larger than the current model
         // size.

@@ -29,7 +29,7 @@ fn main() {
     let file_log_level = std::env::var_os("VOXYGEN_FILE_LOG")
         .and_then(|env| env.to_str().map(|s| s.to_owned()))
         .and_then(|s| log::LevelFilter::from_str(&s).ok())
-        .unwrap_or(log::LevelFilter::Debug);
+        .unwrap_or(log::LevelFilter::Info);
 
     // Load the settings
     // Note: This won't log anything due to it being called before

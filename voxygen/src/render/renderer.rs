@@ -229,13 +229,14 @@ impl Renderer {
         self.sc_desc.height = new_size.height;
         std::mem::forget(self.win_tex.take().unwrap());
         self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
+        self.win_tex = self.swap_chain.get_next_texture().ok();
 
         self.depth_stencil_texture =
             Texture::create_depth_stencil_texture(&self.device, &self.sc_desc);
         self.tgt_color_texture =
             Texture::create_multi_sample_texture(&self.device, &self.sc_desc, self.aa_mode);
 
-        self.flush();
+        //self.flush();
     }
 
     // fn create_rt_views(

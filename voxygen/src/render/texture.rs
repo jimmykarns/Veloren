@@ -248,6 +248,13 @@ impl Texture {
         size: [u16; 2],
         offset: [u16; 2],
     ) -> wgpu::CommandBuffer {
+        println!(
+            "{} {:?} {:?}",
+            std::mem::size_of_val(data) / 4,
+            offset,
+            size
+        );
+
         let buffer = device.create_buffer_with_data(data, wgpu::BufferUsage::COPY_SRC);
 
         let mut encoder =
@@ -256,15 +263,19 @@ impl Texture {
         encoder.copy_buffer_to_texture(
             wgpu::BufferCopyView {
                 buffer: &buffer,
-                offset: 4 * offset[0] as u64 * offset[1] as u64,
-                bytes_per_row: 4 * self.width,
-                rows_per_image: self.height,
+                offset: 0,
+                bytes_per_row: 4 * size[0] as u32,
+                rows_per_image: size[1] as u32,
             },
             wgpu::TextureCopyView {
                 texture: &self.texture,
                 mip_level: 0,
                 array_layer: 0,
-                origin: wgpu::Origin3d::ZERO,
+                origin: wgpu::Origin3d {
+                    x: offset[0] as u32,
+                    y: offset[1] as u32,
+                    z: 0,
+                },
             },
             wgpu::Extent3d {
                 width: size[0] as u32,
