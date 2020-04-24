@@ -314,11 +314,11 @@ impl Renderer {
             });
 
         {
-            let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &self.win_tex.as_ref().unwrap().view,
+                    attachment: &self.tgt_color_texture.view,
                     resolve_target: None,
-                    load_op: wgpu::LoadOp::Load,
+                    load_op: wgpu::LoadOp::Clear,
                     store_op: wgpu::StoreOp::Store,
                     clear_color: wgpu::Color::TRANSPARENT,
                 }],
@@ -513,13 +513,23 @@ impl Renderer {
         let globals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &self.globals_layouts.globals,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &globals.buf,
-                    range: 0..globals.len() as wgpu::BufferAddress,
+            bindings: &[
+                wgpu::Binding {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer {
+                        buffer: &globals.buf,
+                        range: 0..globals.len() as wgpu::BufferAddress,
+                    },
                 },
-            }],
+                wgpu::Binding {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
+                },
+                wgpu::Binding {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
+                },
+            ],
         });
 
         let locals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -609,13 +619,23 @@ impl Renderer {
         let globals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &self.globals_layouts.globals,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &globals.buf,
-                    range: 0..globals.len() as wgpu::BufferAddress,
+            bindings: &[
+                wgpu::Binding {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer {
+                        buffer: &globals.buf,
+                        range: 0..globals.len() as wgpu::BufferAddress,
+                    },
                 },
-            }],
+                wgpu::Binding {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
+                },
+                wgpu::Binding {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
+                },
+            ],
         });
 
         let lights_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -739,13 +759,23 @@ impl Renderer {
         let globals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &self.globals_layouts.globals,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &globals.buf,
-                    range: 0..globals.len() as wgpu::BufferAddress,
+            bindings: &[
+                wgpu::Binding {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer {
+                        buffer: &globals.buf,
+                        range: 0..globals.len() as wgpu::BufferAddress,
+                    },
                 },
-            }],
+                wgpu::Binding {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
+                },
+                wgpu::Binding {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
+                },
+            ],
         });
 
         let lights_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -862,13 +892,23 @@ impl Renderer {
         let globals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &self.globals_layouts.globals,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &globals.buf,
-                    range: 0..globals.len() as wgpu::BufferAddress,
+            bindings: &[
+                wgpu::Binding {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer {
+                        buffer: &globals.buf,
+                        range: 0..globals.len() as wgpu::BufferAddress,
+                    },
                 },
-            }],
+                wgpu::Binding {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
+                },
+                wgpu::Binding {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
+                },
+            ],
         });
 
         let lights_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -910,10 +950,16 @@ impl Renderer {
         let locals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &self.fluid_pipeline.locals,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Sampler(&waves.sampler),
-            }],
+            bindings: &[
+                wgpu::Binding {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&waves.view),
+                },
+                wgpu::Binding {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&waves.sampler),
+                },
+            ],
         });
 
         {
@@ -993,13 +1039,23 @@ impl Renderer {
         let globals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &self.globals_layouts.globals,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &globals.buf,
-                    range: 0..globals.len() as wgpu::BufferAddress,
+            bindings: &[
+                wgpu::Binding {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer {
+                        buffer: &globals.buf,
+                        range: 0..globals.len() as wgpu::BufferAddress,
+                    },
                 },
-            }],
+                wgpu::Binding {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
+                },
+                wgpu::Binding {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
+                },
+            ],
         });
 
         let lights_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -1219,13 +1275,23 @@ impl Renderer {
         let globals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &self.globals_layouts.globals,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &globals.buf,
-                    range: 0..globals.len() as wgpu::BufferAddress,
+            bindings: &[
+                wgpu::Binding {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer {
+                        buffer: &globals.buf,
+                        range: 0..globals.len() as wgpu::BufferAddress,
+                    },
                 },
-            }],
+                wgpu::Binding {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
+                },
+                wgpu::Binding {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
+                },
+            ],
         });
 
         let locals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {

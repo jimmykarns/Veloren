@@ -582,13 +582,6 @@ impl Ui {
                                 .flatten()
                                 .collect::<Vec<u8>>();
 
-                            println!(
-                                "{} {:?} {:?}",
-                                std::mem::size_of_val(&new_data[..]) / 4,
-                                offset,
-                                size
-                            );
-
                             renderer.update_texture(cache_tex, offset, size, &new_data);
                         })
                         .unwrap();

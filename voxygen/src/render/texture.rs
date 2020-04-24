@@ -248,13 +248,6 @@ impl Texture {
         size: [u16; 2],
         offset: [u16; 2],
     ) -> wgpu::CommandBuffer {
-        println!(
-            "{} {:?} {:?}",
-            std::mem::size_of_val(data) / 4,
-            offset,
-            size
-        );
-
         let buffer = device.create_buffer_with_data(data, wgpu::BufferUsage::COPY_SRC);
 
         let mut encoder =

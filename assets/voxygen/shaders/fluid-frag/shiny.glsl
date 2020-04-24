@@ -13,7 +13,8 @@ uniform u_locals {
 	float load_time;
 };
 
-layout (set = 4, binding = 0) uniform sampler2D t_waves;
+layout (set = 4, binding = 0) uniform texture2D t_waves;
+layout (set = 4, binding = 1) uniform sampler s_waves;
 
 layout(location=0) out vec4 tgt_color;
 
@@ -28,8 +29,8 @@ vec3 warp_normal(vec3 norm, vec3 pos, float time) {
 
 float wave_height(vec3 pos) {
 	vec3 big_warp = (
-		texture(t_waves, fract(pos.xy * 0.03 + tick.x * 0.01)).xyz * 0.5 +
-		texture(t_waves, fract(pos.yx * 0.03 - tick.x * 0.01)).xyz * 0.5 +
+		texture(sampler2D(t_waves, s_waves), fract(pos.xy * 0.03 + tick.x * 0.01)).xyz * 0.5 +
+		texture(sampler2D(t_waves, s_waves), fract(pos.yx * 0.03 - tick.x * 0.01)).xyz * 0.5 +
 		vec3(0)
 	);
 
@@ -42,8 +43,8 @@ float wave_height(vec3 pos) {
 	float height = (
 		(texture(sampler2D(t_noise, s_noise), pos.xy * 0.03 + big_warp.xy + tick.x * 0.05).y - 0.5) * 1.0 +
 		(texture(sampler2D(t_noise, s_noise), pos.yx * 0.03 + big_warp.yx - tick.x * 0.05).y - 0.5) * 1.0 +
-		(texture(t_waves, pos.xy * 0.1 + warp.xy + tick.x * 0.1).x - 0.5) * 0.5 +
-		(texture(t_waves, pos.yx * 0.1 + warp.yx - tick.x * 0.1).x - 0.5) * 0.5 +
+		(texture(sampler2D(t_waves, s_waves), pos.xy * 0.1 + warp.xy + tick.x * 0.1).x - 0.5) * 0.5 +
+		(texture(sampler2D(t_waves, s_waves), pos.yx * 0.1 + warp.yx - tick.x * 0.1).x - 0.5) * 0.5 +
 		(texture(sampler2D(t_noise, s_noise), pos.yx * 0.3 + warp.xy * 0.5 + tick.x * 0.1).x - 0.5) * 0.2 +
 		(texture(sampler2D(t_noise, s_noise), pos.yx * 0.3 + warp.yx * 0.5 - tick.x * 0.1).x - 0.5) * 0.2 +
 		(texture(sampler2D(t_noise, s_noise), pos.yx * 1.0 + warp.yx * 0.0 - tick.x * 0.1).x - 0.5) * 0.05 +

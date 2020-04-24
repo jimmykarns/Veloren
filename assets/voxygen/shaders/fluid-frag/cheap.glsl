@@ -13,7 +13,8 @@ uniform u_locals {
 	float load_time;
 };
 
-layout (set = 4, binding = 0) uniform sampler2D t_waves;
+layout (set = 4, binding = 0) uniform texture2D t_waves;
+layout (set = 4, binding = 1) uniform sampler s_waves;
 
 layout(location=0) out vec4 tgt_color;
 

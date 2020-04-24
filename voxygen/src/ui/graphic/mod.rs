@@ -269,6 +269,7 @@ impl GraphicCache {
                 })
             },
         };
+
         // Upload
         upload_image(renderer, aabr, &self.textures[idx], &image);
         // Insert into cached map
