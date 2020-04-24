@@ -240,6 +240,7 @@ pub struct DebugInfo {
 pub struct HudInfo {
     pub is_aiming: bool,
     pub is_first_person: bool,
+    pub target_entity: Option<specs::Entity>,
 }
 
 pub enum Event {
@@ -1019,7 +1020,9 @@ impl Hud {
                 &uids,
             )
                 .join()
-                .filter(|(entity, _, _, stats, _, _, _, _, _, _)| *entity != me && !stats.is_dead)
+                .filter(|(entity, _, _, stats, _, _, _, _, _, _)| *entity != me && !stats.is_dead
+                    && (stats.health.current() != stats.health.maximum() || info.target_entity.map_or(false, |e| e == *entity))
+                    )
                 // Don't show outside a certain range
                 .filter(|(_, pos, _, _, _, _, _, _, hpfl, _)| {
                     pos.0.distance_squared(player_pos)
