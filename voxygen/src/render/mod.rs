@@ -28,7 +28,7 @@ pub use self::{
         },
         Globals, Light, Shadow,
     },
-    renderer::Renderer,
+    renderer::{FirstDrawer, Renderer, SecondDrawer},
     texture::Texture,
 };
 use zerocopy::AsBytes;

@@ -4,7 +4,9 @@ mod ui;
 use super::char_selection::CharSelectionState;
 #[cfg(feature = "singleplayer")]
 use crate::singleplayer::Singleplayer;
-use crate::{render::Renderer, window::Event, Direction, GlobalState, PlayState, PlayStateResult};
+use crate::{
+    window::Event, Direction, FirstDrawer, GlobalState, PlayState, PlayStateResult, SecondDrawer,
+};
 use client_init::{ClientInit, Error as InitError, Msg as InitMsg};
 use common::{assets::load_expect, comp};
 use log::{error, warn};
@@ -227,9 +229,11 @@ impl PlayState for MainMenuState {
 
     fn name(&self) -> &'static str { "Title" }
 
-    fn render(&mut self, renderer: &mut Renderer) {
+    fn first_render(&mut self, _: &mut FirstDrawer) {}
+
+    fn second_render<'b>(&'b mut self, drawer: &'b mut SecondDrawer<'b>) {
         // Draw the UI to the screen.
-        self.main_menu_ui.render(renderer);
+        self.main_menu_ui.render(drawer);
     }
 }
 

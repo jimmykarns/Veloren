@@ -2,7 +2,7 @@ mod ui;
 
 use crate::{
     i18n::{i18n_asset_key, VoxygenLocalization},
-    render::Renderer,
+    render::{FirstDrawer, SecondDrawer},
     scene::simple::{self as scene, Scene},
     session::SessionState,
     window::Event as WinEvent,
@@ -136,7 +136,7 @@ impl PlayState for CharSelectionState {
 
     fn name(&self) -> &'static str { "Title" }
 
-    fn render(&mut self, renderer: &mut Renderer) {
+    fn first_render<'b>(&'b mut self, drawer: &'b mut FirstDrawer<'b>) {
         let humanoid_body = self
                 .char_selection_ui
                 // TODO: Is this function designed to be called every frame?
@@ -147,8 +147,8 @@ impl PlayState for CharSelectionState {
                 });
 
         // Render the scene.
-        self.scene.render(
-            renderer,
+        self.scene.first_render(
+            drawer,
             self.client.borrow().get_tick(),
             humanoid_body.clone(),
             &comp::Equipment {
@@ -160,9 +160,13 @@ impl PlayState for CharSelectionState {
                 alt: None,
             },
         );
+    }
+
+    fn second_render<'b>(&'b mut self, drawer: &'b mut SecondDrawer<'b>) {
+        // Render the scene.
+        self.scene.second_render(drawer);
 
         // Draw the UI to the screen.
-        self.char_selection_ui
-            .render(renderer, self.scene.globals());
+        self.char_selection_ui.render(drawer, self.scene.globals());
     }
 }

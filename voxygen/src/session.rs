@@ -4,7 +4,7 @@ use crate::{
     i18n::{i18n_asset_key, VoxygenLocalization},
     key_state::KeyState,
     menu::char_selection::CharSelectionState,
-    render::Renderer,
+    render::{FirstDrawer, Renderer, SecondDrawer},
     scene::{camera, Scene, SceneData},
     window::{AnalogGameInput, Event, GameInput},
     Direction, Error, GlobalState, PlayState, PlayStateResult,
@@ -682,14 +682,21 @@ impl PlayState for SessionState {
     /// Render the session to the screen.
     ///
     /// This method should be called once per frame.
-    fn render(&mut self, renderer: &mut Renderer) {
+    fn first_render<'b>(&'b mut self, drawer: &'b mut FirstDrawer<'b>) {
         // Render the screen using the global renderer
         {
             let client = self.client.borrow();
             self.scene
-                .render(renderer, client.state(), client.entity(), client.get_tick());
+                .first_render(drawer, client.state(), client.entity(), client.get_tick());
         }
+    }
+
+    /// Render the session to the screen.
+    ///
+    /// This method should be called once per frame.
+    fn second_render<'b>(&'b mut self, drawer: &'b mut SecondDrawer<'b>) {
+        self.scene.second_render(drawer);
         // Draw the UI to the screen
-        self.hud.render(renderer, self.scene.globals());
+        self.hud.render(drawer, self.scene.globals());
     }
 }

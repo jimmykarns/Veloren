@@ -58,7 +58,7 @@ impl<Skel: Skeleton> FigureModelCache<Skel> {
 
     pub fn get_or_create_model(
         &mut self,
-        renderer: &mut Renderer,
+        renderer: &Renderer,
         body: Body,
         equipment: Option<&Equipment>,
         tick: u64,

@@ -20,22 +20,8 @@ use zerocopy::AsBytes;
 /// GPU, along with pipeline state objects (PSOs) needed to renderer different
 /// kinds of models to the screen.
 pub struct Renderer {
-    // device: gfx_backend::Device,
-    // encoder: gfx::Encoder<gfx_backend::Resources, gfx_backend::CommandBuffer>,
-    // factory: gfx_backend::Factory,
-
-    // win_color_view: WinColorView,
-    // win_depth_view: WinDepthView,
-
-    // tgt_color_view: TgtColorView,
-    // tgt_depth_view: TgtDepthView,
-
-    // tgt_color_res: TgtColorRes,
-
-    // sampler: Sampler<gfx_backend::Resources>,
     shader_reload_indicator: ReloadIndicator,
 
-    // noise_tex: Texture<(gfx::format::R8, gfx::format::Unorm)>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     swap_chain: wgpu::SwapChain,
@@ -44,22 +30,20 @@ pub struct Renderer {
 
     size: winit::dpi::PhysicalSize<u32>,
 
-    noise_texture: Texture,
+    pub(self) noise_texture: Texture,
 
     depth_stencil_texture: Texture,
     tgt_color_texture: Texture,
 
-    win_tex: Option<wgpu::SwapChainOutput>,
+    pub(self) globals_layouts: GlobalsLayouts,
 
-    globals_layouts: GlobalsLayouts,
-
-    skybox_pipeline: skybox::SkyboxPipeline,
-    figure_pipeline: figure::FigurePipeline,
-    terrain_pipeline: terrain::TerrainPipeline,
-    fluid_pipeline: fluid::FluidPipeline,
-    sprite_pipeline: sprite::SpritePipeline,
-    ui_pipeline: ui::UiPipeline,
-    postprocess_pipeline: postprocess::PostProcessPipeline,
+    pub(self) skybox_pipeline: skybox::SkyboxPipeline,
+    pub(self) figure_pipeline: figure::FigurePipeline,
+    pub(self) terrain_pipeline: terrain::TerrainPipeline,
+    pub(self) fluid_pipeline: fluid::FluidPipeline,
+    pub(self) sprite_pipeline: sprite::SpritePipeline,
+    pub(self) ui_pipeline: ui::UiPipeline,
+    pub(self) postprocess_pipeline: postprocess::PostProcessPipeline,
 
     aa_mode: AaMode,
     cloud_mode: CloudMode,
@@ -138,21 +122,6 @@ impl Renderer {
             &globals_layouts,
         );
 
-        // let dims = win_color_view.get_dimensions();
-        // let (tgt_color_view, tgt_depth_view, tgt_color_res) =
-        //     Self::create_rt_views(&mut factory, (dims.0, dims.1), aa_mode)?;
-
-        // let sampler = factory.create_sampler_linear();
-
-        // let noise_tex = Texture::new(
-        //     &mut factory,
-        //     &assets::load_expect("voxygen.texture.noise"),
-        //     Some(gfx::texture::FilterMethod::Trilinear),
-        //     Some(gfx::texture::WrapMode::Tile),
-        // )?;
-
-        let win_tex = Some(swap_chain.get_next_texture().unwrap());
-
         Self {
             shader_reload_indicator,
 
@@ -178,8 +147,6 @@ impl Renderer {
             sprite_pipeline,
             ui_pipeline,
             postprocess_pipeline,
-
-            win_tex,
 
             aa_mode,
             cloud_mode,
@@ -227,74 +194,15 @@ impl Renderer {
         self.size = new_size;
         self.sc_desc.width = new_size.width;
         self.sc_desc.height = new_size.height;
-        std::mem::forget(self.win_tex.take().unwrap());
         self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
-        self.win_tex = self.swap_chain.get_next_texture().ok();
 
         self.depth_stencil_texture =
             Texture::create_depth_stencil_texture(&self.device, &self.sc_desc);
         self.tgt_color_texture =
             Texture::create_multi_sample_texture(&self.device, &self.sc_desc, self.aa_mode);
 
-        //self.flush();
+        self.flush();
     }
-
-    // fn create_rt_views(
-    //     factory: &mut gfx_device_gl::Factory,
-    //     size: (u16, u16),
-    //     aa_mode: AaMode,
-    // ) -> Result<(TgtColorView, TgtDepthView, TgtColorRes), RenderError> {
-    //     let kind = match aa_mode {
-    //         AaMode::None | AaMode::Fxaa => {
-    //             gfx::texture::Kind::D2(size.0, size.1,
-    // gfx::texture::AaMode::Single)         },
-    //         // TODO: Ensure sampling in the shader is exactly between the 4
-    // texels         AaMode::SsaaX4 => {
-    //             gfx::texture::Kind::D2(size.0 * 2, size.1 * 2,
-    // gfx::texture::AaMode::Single)         },
-    //         AaMode::MsaaX4 => {
-    //             gfx::texture::Kind::D2(size.0, size.1,
-    // gfx::texture::AaMode::Multi(4))         },
-    //         AaMode::MsaaX8 => {
-    //             gfx::texture::Kind::D2(size.0, size.1,
-    // gfx::texture::AaMode::Multi(8))         },
-    //         AaMode::MsaaX16 => {
-    //             gfx::texture::Kind::D2(size.0, size.1,
-    // gfx::texture::AaMode::Multi(16))         },
-    //     };
-    //     let levels = 1;
-
-    //     let color_cty = <<TgtColorFmt as gfx::format::Formatted>::Channel as
-    // gfx::format::ChannelTyped             >::get_channel_type();
-    //     let tgt_color_tex = factory.create_texture(
-    //         kind,
-    //         levels,
-    //         gfx::memory::Bind::SHADER_RESOURCE |
-    // gfx::memory::Bind::RENDER_TARGET,         gfx::memory::Usage::Data,
-    //         Some(color_cty),
-    //     )?;
-    //     let tgt_color_res =
-    // factory.view_texture_as_shader_resource::<TgtColorFmt>(
-    //         &tgt_color_tex,
-    //         (0, levels - 1),
-    //         gfx::format::Swizzle::new(),
-    //     )?;
-    //     let tgt_color_view =
-    // factory.view_texture_as_render_target(&tgt_color_tex, 0, None)?;
-
-    //     let depth_cty = <<TgtDepthFmt as gfx::format::Formatted>::Channel as
-    // gfx::format::ChannelTyped>::get_channel_type();     let tgt_depth_tex =
-    // factory.create_texture(         kind,
-    //         levels,
-    //         gfx::memory::Bind::DEPTH_STENCIL,
-    //         gfx::memory::Usage::Data,
-    //         Some(depth_cty),
-    //     )?;
-    //     let tgt_depth_view =
-    // factory.view_texture_as_depth_stencil_trivial(&tgt_depth_tex)?;
-
-    //     Ok((tgt_color_view, tgt_depth_view, tgt_color_res))
-    // }
 
     /// Get the resolution of the render target.
     pub fn get_resolution(&self) -> Vec2<u16> {
@@ -304,38 +212,6 @@ impl Renderer {
     /// Perform all queued draw calls for this frame and clean up discarded
     /// items.
     pub fn flush(&mut self) {
-        std::mem::drop(self.win_tex.take());
-        self.win_tex = Some(self.swap_chain.get_next_texture().unwrap());
-
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("skybox command encoder"),
-            });
-
-        {
-            encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &self.tgt_color_texture.view,
-                    resolve_target: None,
-                    load_op: wgpu::LoadOp::Clear,
-                    store_op: wgpu::StoreOp::Store,
-                    clear_color: wgpu::Color::TRANSPARENT,
-                }],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
-                    attachment: &self.depth_stencil_texture.view,
-                    depth_load_op: wgpu::LoadOp::Clear,
-                    depth_store_op: wgpu::StoreOp::Store,
-                    clear_depth: 1.0,
-                    stencil_load_op: wgpu::LoadOp::Clear,
-                    stencil_store_op: wgpu::StoreOp::Store,
-                    clear_stencil: 0,
-                }),
-            });
-        }
-
-        self.queue.submit(&[encoder.finish()]);
-
         // If the shaders files were changed attempt to recreate the shaders
         if self.shader_reload_indicator.reloaded() {
             self.recreate_pipelines();
@@ -391,8 +267,8 @@ impl Renderer {
     }
 
     /// Create a new model from the provided mesh.
-    pub fn create_model<P: Pipeline>(&mut self, mesh: &Mesh<P>) -> Model {
-        Model::new(&mut self.device, mesh)
+    pub fn create_model<P: Pipeline>(&self, mesh: &Mesh<P>) -> Model {
+        Model::new(&self.device, mesh)
     }
 
     /// Create a new dynamic model with the specified size.
@@ -479,84 +355,21 @@ impl Renderer {
         // raw_data).unwrap(), )
     }
 
-    /// Queue the rendering of the provided skybox model in the upcoming frame.
-    pub fn render_skybox(
-        &mut self,
-        model: &Model,
-        globals: &Consts<Globals>,
-        locals: &Consts<skybox::Locals>,
-    ) {
-        // self.encoder.draw(
-        //     &gfx::Slice {
-        //         start: model.vertex_range().start,
-        //         end: model.vertex_range().end,
-        //         base_vertex: 0,
-        //         instances: None,
-        //         buffer: gfx::IndexBuffer::Auto,
-        //     },
-        //     &self.skybox_pipeline.pso,
-        //     &skybox::pipe::Data {
-        //         vbuf: model.vbuf.clone(),
-        //         locals: locals.buf.clone(),
-        //         globals: globals.buf.clone(),
-        //         noise: (self.noise_tex.srv.clone(), self.noise_tex.sampler.clone()),
-        //         tgt_color: self.tgt_color_view.clone(),
-        //         tgt_depth: self.tgt_depth_view.clone(),
-        //     },
-        // );
+    pub fn first_render<'a: 'b, 'b>(&'a mut self, f: impl FnMut(FirstDrawer<'b>)) {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("skybox command encoder"),
+                label: Some("First render pass encoder"),
             });
-
-        let globals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.globals,
-            bindings: &[
-                wgpu::Binding {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer {
-                        buffer: &globals.buf,
-                        range: 0..globals.len() as wgpu::BufferAddress,
-                    },
-                },
-                wgpu::Binding {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
-                },
-                wgpu::Binding {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
-                },
-            ],
-        });
-
-        let locals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.skybox_pipeline.locals,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &locals.buf,
-                    range: 0..locals.len() as wgpu::BufferAddress,
-                },
-            }],
-        });
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &self.win_tex.as_ref().unwrap().view,
+                    attachment: &self.tgt_color_texture.view,
                     resolve_target: None,
                     load_op: wgpu::LoadOp::Clear,
                     store_op: wgpu::StoreOp::Store,
-                    clear_color: wgpu::Color {
-                        r: 0.1,
-                        g: 0.2,
-                        b: 0.3,
-                        a: 1.0,
-                    },
+                    clear_color: wgpu::Color::TRANSPARENT,
                 }],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
                     attachment: &self.depth_stencil_texture.view,
@@ -569,649 +382,28 @@ impl Renderer {
                 }),
             });
 
-            render_pass.set_pipeline(&self.skybox_pipeline.pipeline);
-            render_pass.set_bind_group(0, &globals_bind_group, &[]);
-            render_pass.set_bind_group(1, &locals_bind_group, &[]);
-            render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-            render_pass.draw(model.vertex_range().start..model.vertex_range().end, 0..1);
+            f(FirstDrawer {
+                render_pass: &mut render_pass,
+                renderer: &self,
+            })
         }
 
         self.queue.submit(&[encoder.finish()]);
     }
 
-    /// Queue the rendering of the provided figure model in the upcoming frame.
-    pub fn render_figure(
-        &mut self,
-        model: &Model,
-        globals: &Consts<Globals>,
-        locals: &Consts<figure::Locals>,
-        bones: &Consts<figure::BoneData>,
-        lights: &Consts<Light>,
-        shadows: &Consts<Shadow>,
-    ) {
-        // self.encoder.draw(
-        //     &gfx::Slice {
-        //         start: model.vertex_range().start,
-        //         end: model.vertex_range().end,
-        //         base_vertex: 0,
-        //         instances: None,
-        //         buffer: gfx::IndexBuffer::Auto,
-        //     },
-        //     &self.figure_pipeline.pso,
-        //     &figure::pipe::Data {
-        //         vbuf: model.vbuf.clone(),
-        //         locals: locals.buf.clone(),
-        //         globals: globals.buf.clone(),
-        //         bones: bones.buf.clone(),
-        //         lights: lights.buf.clone(),
-        //         shadows: shadows.buf.clone(),
-        //         noise: (self.noise_tex.srv.clone(), self.noise_tex.sampler.clone()),
-        //         tgt_color: self.tgt_color_view.clone(),
-        //         tgt_depth: self.tgt_depth_view.clone(),
-        //     },
-        // );
+    pub fn second_render<'a: 'b, 'b>(&'a mut self, f: impl FnMut(SecondDrawer<'b>)) {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("skybox command encoder"),
+                label: Some("Second render pass encoder"),
             });
-
-        let globals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.globals,
-            bindings: &[
-                wgpu::Binding {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer {
-                        buffer: &globals.buf,
-                        range: 0..globals.len() as wgpu::BufferAddress,
-                    },
-                },
-                wgpu::Binding {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
-                },
-                wgpu::Binding {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
-                },
-            ],
-        });
-
-        let lights_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.light,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &lights.buf,
-                    range: 0..lights.len() as wgpu::BufferAddress,
-                },
-            }],
-        });
-
-        let shadows_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.shadow,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &shadows.buf,
-                    range: 0..shadows.len() as wgpu::BufferAddress,
-                },
-            }],
-        });
-
-        let locals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.figure_pipeline.locals,
-            bindings: &[
-                wgpu::Binding {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer {
-                        buffer: &locals.buf,
-                        range: 0..locals.len() as wgpu::BufferAddress,
-                    },
-                },
-                wgpu::Binding {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Buffer {
-                        buffer: &bones.buf,
-                        range: 0..bones.len() as wgpu::BufferAddress,
-                    },
-                },
-            ],
-        });
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &self.win_tex.as_ref().unwrap().view,
+                    attachment: &self.swap_chain.get_next_texture().unwrap().view,
                     resolve_target: None,
                     load_op: wgpu::LoadOp::Clear,
-                    store_op: wgpu::StoreOp::Store,
-                    clear_color: wgpu::Color {
-                        r: 0.1,
-                        g: 0.2,
-                        b: 0.3,
-                        a: 1.0,
-                    },
-                }],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
-                    attachment: &self.depth_stencil_texture.view,
-                    depth_load_op: wgpu::LoadOp::Clear,
-                    depth_store_op: wgpu::StoreOp::Store,
-                    clear_depth: 1.0,
-                    stencil_load_op: wgpu::LoadOp::Clear,
-                    stencil_store_op: wgpu::StoreOp::Store,
-                    clear_stencil: 0,
-                }),
-            });
-
-            render_pass.set_pipeline(&self.figure_pipeline.pipeline);
-            render_pass.set_bind_group(0, &globals_bind_group, &[]);
-            render_pass.set_bind_group(1, &lights_bind_group, &[]);
-            render_pass.set_bind_group(2, &shadows_bind_group, &[]);
-            render_pass.set_bind_group(3, &locals_bind_group, &[]);
-            render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-            render_pass.draw(model.vertex_range().start..model.vertex_range().end, 0..1);
-        }
-
-        self.queue.submit(&[encoder.finish()]);
-    }
-
-    /// Queue the rendering of the provided terrain chunk model in the upcoming
-    /// frame.
-    pub fn render_terrain_chunk(
-        &mut self,
-        model: &Model,
-        globals: &Consts<Globals>,
-        locals: &Consts<terrain::Locals>,
-        lights: &Consts<Light>,
-        shadows: &Consts<Shadow>,
-    ) {
-        // self.encoder.draw(
-        //     &gfx::Slice {
-        //         start: model.vertex_range().start,
-        //         end: model.vertex_range().end,
-        //         base_vertex: 0,
-        //         instances: None,
-        //         buffer: gfx::IndexBuffer::Auto,
-        //     },
-        //     &self.terrain_pipeline.pso,
-        //     &terrain::pipe::Data {
-        //         vbuf: model.vbuf.clone(),
-        //         locals: locals.buf.clone(),
-        //         globals: globals.buf.clone(),
-        //         lights: lights.buf.clone(),
-        //         shadows: shadows.buf.clone(),
-        //         noise: (self.noise_tex.srv.clone(), self.noise_tex.sampler.clone()),
-        //         tgt_color: self.tgt_color_view.clone(),
-        //         tgt_depth: self.tgt_depth_view.clone(),
-        //     },
-        // );
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("skybox command encoder"),
-            });
-
-        let globals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.globals,
-            bindings: &[
-                wgpu::Binding {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer {
-                        buffer: &globals.buf,
-                        range: 0..globals.len() as wgpu::BufferAddress,
-                    },
-                },
-                wgpu::Binding {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
-                },
-                wgpu::Binding {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
-                },
-            ],
-        });
-
-        let lights_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.light,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &lights.buf,
-                    range: 0..lights.len() as wgpu::BufferAddress,
-                },
-            }],
-        });
-
-        let shadows_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.shadow,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &shadows.buf,
-                    range: 0..shadows.len() as wgpu::BufferAddress,
-                },
-            }],
-        });
-
-        let locals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.terrain_pipeline.locals,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &locals.buf,
-                    range: 0..locals.len() as wgpu::BufferAddress,
-                },
-            }],
-        });
-
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &self.win_tex.as_ref().unwrap().view,
-                    resolve_target: None,
-                    load_op: wgpu::LoadOp::Clear,
-                    store_op: wgpu::StoreOp::Store,
-                    clear_color: wgpu::Color {
-                        r: 0.1,
-                        g: 0.2,
-                        b: 0.3,
-                        a: 1.0,
-                    },
-                }],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
-                    attachment: &self.depth_stencil_texture.view,
-                    depth_load_op: wgpu::LoadOp::Clear,
-                    depth_store_op: wgpu::StoreOp::Store,
-                    clear_depth: 1.0,
-                    stencil_load_op: wgpu::LoadOp::Clear,
-                    stencil_store_op: wgpu::StoreOp::Store,
-                    clear_stencil: 0,
-                }),
-            });
-
-            render_pass.set_pipeline(&self.terrain_pipeline.pipeline);
-            render_pass.set_bind_group(0, &globals_bind_group, &[]);
-            render_pass.set_bind_group(1, &lights_bind_group, &[]);
-            render_pass.set_bind_group(2, &shadows_bind_group, &[]);
-            render_pass.set_bind_group(3, &locals_bind_group, &[]);
-            render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-            render_pass.draw(model.vertex_range().start..model.vertex_range().end, 0..1);
-        }
-
-        self.queue.submit(&[encoder.finish()]);
-    }
-
-    /// Queue the rendering of the provided terrain chunk model in the upcoming
-    /// frame.
-    pub fn render_fluid_chunk(
-        &mut self,
-        model: &Model,
-        globals: &Consts<Globals>,
-        locals: &Consts<terrain::Locals>,
-        lights: &Consts<Light>,
-        shadows: &Consts<Shadow>,
-        waves: &Texture,
-    ) {
-        // self.encoder.draw(
-        //     &gfx::Slice {
-        //         start: model.vertex_range().start,
-        //         end: model.vertex_range().end,
-        //         base_vertex: 0,
-        //         instances: None,
-        //         buffer: gfx::IndexBuffer::Auto,
-        //     },
-        //     &self.fluid_pipeline.pso,
-        //     &fluid::pipe::Data {
-        //         vbuf: model.vbuf.clone(),
-        //         locals: locals.buf.clone(),
-        //         globals: globals.buf.clone(),
-        //         lights: lights.buf.clone(),
-        //         shadows: shadows.buf.clone(),
-        //         noise: (self.noise_tex.srv.clone(), self.noise_tex.sampler.clone()),
-        //         waves: (waves.srv.clone(), waves.sampler.clone()),
-        //         tgt_color: self.tgt_color_view.clone(),
-        //         tgt_depth: self.tgt_depth_view.clone(),
-        //     },
-        // );
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("skybox command encoder"),
-            });
-
-        let globals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.globals,
-            bindings: &[
-                wgpu::Binding {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer {
-                        buffer: &globals.buf,
-                        range: 0..globals.len() as wgpu::BufferAddress,
-                    },
-                },
-                wgpu::Binding {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
-                },
-                wgpu::Binding {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
-                },
-            ],
-        });
-
-        let lights_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.light,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &lights.buf,
-                    range: 0..lights.len() as wgpu::BufferAddress,
-                },
-            }],
-        });
-
-        let shadows_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.shadow,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &shadows.buf,
-                    range: 0..shadows.len() as wgpu::BufferAddress,
-                },
-            }],
-        });
-
-        let terrain_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.terrain_pipeline.locals,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &locals.buf,
-                    range: 0..locals.len() as wgpu::BufferAddress,
-                },
-            }],
-        });
-
-        let locals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.fluid_pipeline.locals,
-            bindings: &[
-                wgpu::Binding {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&waves.view),
-                },
-                wgpu::Binding {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&waves.sampler),
-                },
-            ],
-        });
-
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &self.win_tex.as_ref().unwrap().view,
-                    resolve_target: None,
-                    load_op: wgpu::LoadOp::Clear,
-                    store_op: wgpu::StoreOp::Store,
-                    clear_color: wgpu::Color {
-                        r: 0.1,
-                        g: 0.2,
-                        b: 0.3,
-                        a: 1.0,
-                    },
-                }],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
-                    attachment: &self.depth_stencil_texture.view,
-                    depth_load_op: wgpu::LoadOp::Clear,
-                    depth_store_op: wgpu::StoreOp::Store,
-                    clear_depth: 1.0,
-                    stencil_load_op: wgpu::LoadOp::Clear,
-                    stencil_store_op: wgpu::StoreOp::Store,
-                    clear_stencil: 0,
-                }),
-            });
-
-            render_pass.set_pipeline(&self.fluid_pipeline.pipeline);
-            render_pass.set_bind_group(0, &globals_bind_group, &[]);
-            render_pass.set_bind_group(1, &lights_bind_group, &[]);
-            render_pass.set_bind_group(2, &shadows_bind_group, &[]);
-            render_pass.set_bind_group(3, &terrain_bind_group, &[]);
-            render_pass.set_bind_group(4, &locals_bind_group, &[]);
-            render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-            render_pass.draw(model.vertex_range().start..model.vertex_range().end, 0..1);
-        }
-
-        self.queue.submit(&[encoder.finish()]);
-    }
-
-    /// Queue the rendering of the provided terrain chunk model in the upcoming
-    /// frame.
-    pub fn render_sprites(
-        &mut self,
-        model: &Model,
-        globals: &Consts<Globals>,
-        instances: &Instances<sprite::Instance>,
-        lights: &Consts<Light>,
-        shadows: &Consts<Shadow>,
-    ) {
-        // self.encoder.draw(
-        //     &gfx::Slice {
-        //         start: model.vertex_range().start,
-        //         end: model.vertex_range().end,
-        //         base_vertex: 0,
-        //         instances: Some((instances.count() as u32, 0)),
-        //         buffer: gfx::IndexBuffer::Auto,
-        //     },
-        //     &self.sprite_pipeline.pso,
-        //     &sprite::pipe::Data {
-        //         vbuf: model.vbuf.clone(),
-        //         ibuf: instances.ibuf.clone(),
-        //         globals: globals.buf.clone(),
-        //         lights: lights.buf.clone(),
-        //         shadows: shadows.buf.clone(),
-        //         noise: (self.noise_tex.srv.clone(), self.noise_tex.sampler.clone()),
-        //         tgt_color: self.tgt_color_view.clone(),
-        //         tgt_depth: self.tgt_depth_view.clone(),
-        //     },
-        // );
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("skybox command encoder"),
-            });
-
-        let globals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.globals,
-            bindings: &[
-                wgpu::Binding {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer {
-                        buffer: &globals.buf,
-                        range: 0..globals.len() as wgpu::BufferAddress,
-                    },
-                },
-                wgpu::Binding {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
-                },
-                wgpu::Binding {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
-                },
-            ],
-        });
-
-        let lights_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.light,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &lights.buf,
-                    range: 0..lights.len() as wgpu::BufferAddress,
-                },
-            }],
-        });
-
-        let shadows_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.shadow,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &shadows.buf,
-                    range: 0..shadows.len() as wgpu::BufferAddress,
-                },
-            }],
-        });
-
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &self.win_tex.as_ref().unwrap().view,
-                    resolve_target: None,
-                    load_op: wgpu::LoadOp::Clear,
-                    store_op: wgpu::StoreOp::Store,
-                    clear_color: wgpu::Color {
-                        r: 0.1,
-                        g: 0.2,
-                        b: 0.3,
-                        a: 1.0,
-                    },
-                }],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
-                    attachment: &self.depth_stencil_texture.view,
-                    depth_load_op: wgpu::LoadOp::Clear,
-                    depth_store_op: wgpu::StoreOp::Store,
-                    clear_depth: 1.0,
-                    stencil_load_op: wgpu::LoadOp::Clear,
-                    stencil_store_op: wgpu::StoreOp::Store,
-                    clear_stencil: 0,
-                }),
-            });
-
-            render_pass.set_pipeline(&self.sprite_pipeline.pipeline);
-            render_pass.set_bind_group(0, &globals_bind_group, &[]);
-            render_pass.set_bind_group(1, &lights_bind_group, &[]);
-            render_pass.set_bind_group(2, &shadows_bind_group, &[]);
-            render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-            render_pass.set_vertex_buffer(1, &instances.ibuf, 0, 0);
-            render_pass.draw(
-                model.vertex_range().start..model.vertex_range().end,
-                0..instances.count() as u32,
-            );
-        }
-
-        self.queue.submit(&[encoder.finish()]);
-    }
-
-    /// Queue the rendering of the provided UI element in the upcoming frame.
-    pub fn render_ui_element(
-        &mut self,
-        model: &Model,
-        tex: &Texture,
-        scissor: Aabr<u16>,
-        globals: &Consts<Globals>,
-        locals: &Consts<ui::Locals>,
-    ) {
-        let Aabr { min, max } = scissor;
-        // self.encoder.draw(
-        //     &gfx::Slice {
-        //         start: model.vertex_range().start,
-        //         end: model.vertex_range().end,
-        //         base_vertex: 0,
-        //         instances: None,
-        //         buffer: gfx::IndexBuffer::Auto,
-        //     },
-        //     &self.ui_pipeline.pso,
-        //     &ui::pipe::Data {
-        //         vbuf: model.vbuf.clone(),
-        //         scissor: gfx::Rect {
-        //             x: min.x,
-        //             y: min.y,
-        //             w: max.x - min.x,
-        //             h: max.y - min.y,
-        //         },
-        //         tex: (tex.srv.clone(), tex.sampler.clone()),
-        //         locals: locals.buf.clone(),
-        //         globals: globals.buf.clone(),
-        //         tgt_color: self.win_color_view.clone(),
-        //         tgt_depth: self.win_depth_view.clone(),
-        //     },
-        // );
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("skybox command encoder"),
-            });
-
-        let globals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.globals,
-            bindings: &[
-                wgpu::Binding {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer {
-                        buffer: &globals.buf,
-                        range: 0..globals.len() as wgpu::BufferAddress,
-                    },
-                },
-                wgpu::Binding {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
-                },
-                wgpu::Binding {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
-                },
-            ],
-        });
-
-        let locals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.ui_pipeline.locals,
-            bindings: &[
-                wgpu::Binding {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer {
-                        buffer: &locals.buf,
-                        range: 0..locals.len() as wgpu::BufferAddress,
-                    },
-                },
-                wgpu::Binding {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&tex.view),
-                },
-                wgpu::Binding {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(&tex.sampler),
-                },
-            ],
-        });
-
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &self.win_tex.as_ref().unwrap().view,
-                    resolve_target: None,
-                    load_op: wgpu::LoadOp::Load,
                     store_op: wgpu::StoreOp::Store,
                     clear_color: wgpu::Color::TRANSPARENT,
                 }],
@@ -1226,119 +418,718 @@ impl Renderer {
                 }),
             });
 
-            render_pass.set_pipeline(&self.ui_pipeline.pipeline);
-            render_pass.set_bind_group(0, &globals_bind_group, &[]);
-            render_pass.set_bind_group(1, &locals_bind_group, &[]);
-            render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-            render_pass.set_scissor_rect(
-                min.x as u32,
-                min.y as u32,
-                (max.x - min.x) as u32,
-                (max.y - min.y) as u32,
-            );
-            render_pass.draw(model.vertex_range().start..model.vertex_range().end, 0..1);
+            f(SecondDrawer {
+                render_pass: &mut render_pass,
+                renderer: &self,
+            })
         }
 
         self.queue.submit(&[encoder.finish()]);
     }
+}
 
-    pub fn render_post_process(
+pub struct UiDrawer<'a> {
+    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
+    pub(self) renderer: &'a Renderer,
+}
+
+impl<'a> UiDrawer<'a> {
+    pub fn draw<'b: 'a>(
         &mut self,
-        model: &Model,
+        model: &'b Model,
+        tex: &Texture,
+        scissor: Aabr<u16>,
+        locals: &Consts<ui::Locals>,
         globals: &Consts<Globals>,
-        locals: &Consts<postprocess::Locals>,
     ) {
-        // self.encoder.draw(
-        //     &gfx::Slice {
-        //         start: model.vertex_range().start,
-        //         end: model.vertex_range().end,
-        //         base_vertex: 0,
-        //         instances: None,
-        //         buffer: gfx::IndexBuffer::Auto,
-        //     },
-        //     &self.postprocess_pipeline.pso,
-        //     &postprocess::pipe::Data {
-        //         vbuf: model.vbuf.clone(),
-        //         locals: locals.buf.clone(),
-        //         globals: globals.buf.clone(),
-        //         src_sampler: (self.tgt_color_res.clone(), self.sampler.clone()),
-        //         tgt_color: self.win_color_view.clone(),
-        //         tgt_depth: self.win_depth_view.clone(),
-        //     },
-        // )
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("skybox command encoder"),
-            });
+        let Aabr { min, max } = scissor;
 
-        let globals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.globals_layouts.globals,
-            bindings: &[
-                wgpu::Binding {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer {
-                        buffer: &globals.buf,
-                        range: 0..globals.len() as wgpu::BufferAddress,
-                    },
-                },
-                wgpu::Binding {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
-                },
-                wgpu::Binding {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
-                },
-            ],
+        let globals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.globals,
+                    bindings: &[
+                        wgpu::Binding {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Buffer {
+                                buffer: &globals.buf,
+                                range: 0..globals.len() as wgpu::BufferAddress,
+                            },
+                        },
+                        wgpu::Binding {
+                            binding: 1,
+                            resource: wgpu::BindingResource::TextureView(
+                                &self.renderer.noise_texture.view,
+                            ),
+                        },
+                        wgpu::Binding {
+                            binding: 2,
+                            resource: wgpu::BindingResource::Sampler(
+                                &self.renderer.noise_texture.sampler,
+                            ),
+                        },
+                    ],
+                });
+
+        let locals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Ui locals"),
+                    layout: &self.renderer.ui_pipeline.locals,
+                    bindings: &[
+                        wgpu::Binding {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Buffer {
+                                buffer: &locals.buf,
+                                range: 0..locals.len() as wgpu::BufferAddress,
+                            },
+                        },
+                        wgpu::Binding {
+                            binding: 1,
+                            resource: wgpu::BindingResource::TextureView(&tex.view),
+                        },
+                        wgpu::Binding {
+                            binding: 2,
+                            resource: wgpu::BindingResource::Sampler(&tex.sampler),
+                        },
+                    ],
+                });
+
+        self.render_pass
+            .set_pipeline(&self.renderer.ui_pipeline.pipeline);
+        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
+        self.render_pass.set_bind_group(1, &locals_bind_group, &[]);
+        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
+        self.render_pass.set_scissor_rect(
+            min.x as u32,
+            min.y as u32,
+            (max.x - min.x) as u32,
+            (max.y - min.y) as u32,
+        );
+        self.render_pass
+            .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
+    }
+}
+
+pub struct SkyboxDrawer<'a> {
+    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
+    pub(self) renderer: &'a Renderer,
+}
+
+impl<'a> SkyboxDrawer<'a> {
+    pub fn draw<'b: 'a>(
+        &mut self,
+        model: &'b Model,
+        locals: &Consts<skybox::Locals>,
+        globals: &Consts<Globals>,
+    ) {
+        let globals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.globals,
+                    bindings: &[
+                        wgpu::Binding {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Buffer {
+                                buffer: &globals.buf,
+                                range: 0..globals.len() as wgpu::BufferAddress,
+                            },
+                        },
+                        wgpu::Binding {
+                            binding: 1,
+                            resource: wgpu::BindingResource::TextureView(
+                                &self.renderer.noise_texture.view,
+                            ),
+                        },
+                        wgpu::Binding {
+                            binding: 2,
+                            resource: wgpu::BindingResource::Sampler(
+                                &self.renderer.noise_texture.sampler,
+                            ),
+                        },
+                    ],
+                });
+
+        let locals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Skybox locals"),
+                    layout: &self.renderer.skybox_pipeline.locals,
+                    bindings: &[wgpu::Binding {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer {
+                            buffer: &locals.buf,
+                            range: 0..locals.len() as wgpu::BufferAddress,
+                        },
+                    }],
+                });
+
+        self.render_pass
+            .set_pipeline(&self.renderer.skybox_pipeline.pipeline);
+        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
+        self.render_pass.set_bind_group(1, &locals_bind_group, &[]);
+        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
+        self.render_pass
+            .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
+    }
+}
+
+pub struct FigureDrawer<'a> {
+    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
+    pub(self) renderer: &'a Renderer,
+}
+
+impl<'a> FigureDrawer<'a> {
+    pub fn draw<'b: 'a>(
+        &mut self,
+        model: &'b Model,
+        locals: &Consts<figure::Locals>,
+        bones: &Consts<figure::BoneData>,
+        globals: &Consts<Globals>,
+        lights: &Consts<Light>,
+        shadows: &Consts<Shadow>,
+    ) {
+        let globals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.globals,
+                    bindings: &[
+                        wgpu::Binding {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Buffer {
+                                buffer: &globals.buf,
+                                range: 0..globals.len() as wgpu::BufferAddress,
+                            },
+                        },
+                        wgpu::Binding {
+                            binding: 1,
+                            resource: wgpu::BindingResource::TextureView(
+                                &self.renderer.noise_texture.view,
+                            ),
+                        },
+                        wgpu::Binding {
+                            binding: 2,
+                            resource: wgpu::BindingResource::Sampler(
+                                &self.renderer.noise_texture.sampler,
+                            ),
+                        },
+                    ],
+                });
+
+        let lights_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.light,
+                    bindings: &[wgpu::Binding {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer {
+                            buffer: &lights.buf,
+                            range: 0..lights.len() as wgpu::BufferAddress,
+                        },
+                    }],
+                });
+
+        let shadows_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.shadow,
+                    bindings: &[wgpu::Binding {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer {
+                            buffer: &shadows.buf,
+                            range: 0..shadows.len() as wgpu::BufferAddress,
+                        },
+                    }],
+                });
+
+        let locals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Figure locals"),
+                    layout: &self.renderer.figure_pipeline.locals,
+                    bindings: &[
+                        wgpu::Binding {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Buffer {
+                                buffer: &locals.buf,
+                                range: 0..locals.len() as wgpu::BufferAddress,
+                            },
+                        },
+                        wgpu::Binding {
+                            binding: 1,
+                            resource: wgpu::BindingResource::Buffer {
+                                buffer: &bones.buf,
+                                range: 0..bones.len() as wgpu::BufferAddress,
+                            },
+                        },
+                    ],
+                });
+
+        self.render_pass
+            .set_pipeline(&self.renderer.figure_pipeline.pipeline);
+        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
+        self.render_pass.set_bind_group(1, &lights_bind_group, &[]);
+        self.render_pass.set_bind_group(2, &shadows_bind_group, &[]);
+        self.render_pass.set_bind_group(3, &locals_bind_group, &[]);
+        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
+        self.render_pass
+            .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
+    }
+}
+
+pub struct TerrainDrawer<'a> {
+    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
+    pub(self) renderer: &'a Renderer,
+}
+
+impl<'a> TerrainDrawer<'a> {
+    pub fn draw<'b: 'a>(
+        &mut self,
+        model: &'b Model,
+        locals: &Consts<terrain::Locals>,
+        globals: &Consts<Globals>,
+        lights: &Consts<Light>,
+        shadows: &Consts<Shadow>,
+    ) {
+        let globals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.globals,
+                    bindings: &[
+                        wgpu::Binding {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Buffer {
+                                buffer: &globals.buf,
+                                range: 0..globals.len() as wgpu::BufferAddress,
+                            },
+                        },
+                        wgpu::Binding {
+                            binding: 1,
+                            resource: wgpu::BindingResource::TextureView(
+                                &self.renderer.noise_texture.view,
+                            ),
+                        },
+                        wgpu::Binding {
+                            binding: 2,
+                            resource: wgpu::BindingResource::Sampler(
+                                &self.renderer.noise_texture.sampler,
+                            ),
+                        },
+                    ],
+                });
+
+        let lights_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.light,
+                    bindings: &[wgpu::Binding {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer {
+                            buffer: &lights.buf,
+                            range: 0..lights.len() as wgpu::BufferAddress,
+                        },
+                    }],
+                });
+
+        let shadows_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.shadow,
+                    bindings: &[wgpu::Binding {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer {
+                            buffer: &shadows.buf,
+                            range: 0..shadows.len() as wgpu::BufferAddress,
+                        },
+                    }],
+                });
+
+        let locals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Terrain locals"),
+                    layout: &self.renderer.terrain_pipeline.locals,
+                    bindings: &[wgpu::Binding {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer {
+                            buffer: &locals.buf,
+                            range: 0..locals.len() as wgpu::BufferAddress,
+                        },
+                    }],
+                });
+
+        self.render_pass
+            .set_pipeline(&self.renderer.terrain_pipeline.pipeline);
+        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
+        self.render_pass.set_bind_group(1, &lights_bind_group, &[]);
+        self.render_pass.set_bind_group(2, &shadows_bind_group, &[]);
+        self.render_pass.set_bind_group(3, &locals_bind_group, &[]);
+        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
+        self.render_pass
+            .draw(model.vertex_range().start..model.vertex_range().end, 0..1)
+    }
+}
+
+pub struct FluidDrawer<'a> {
+    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
+    pub(self) renderer: &'a Renderer,
+}
+
+impl<'a> FluidDrawer<'a> {
+    pub fn draw<'b: 'a>(
+        &mut self,
+        model: &'b Model,
+        locals: &Consts<terrain::Locals>,
+        waves: &Texture,
+        globals: &Consts<Globals>,
+        lights: &Consts<Light>,
+        shadows: &Consts<Shadow>,
+    ) {
+        let globals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.globals,
+                    bindings: &[
+                        wgpu::Binding {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Buffer {
+                                buffer: &globals.buf,
+                                range: 0..globals.len() as wgpu::BufferAddress,
+                            },
+                        },
+                        wgpu::Binding {
+                            binding: 1,
+                            resource: wgpu::BindingResource::TextureView(
+                                &self.renderer.noise_texture.view,
+                            ),
+                        },
+                        wgpu::Binding {
+                            binding: 2,
+                            resource: wgpu::BindingResource::Sampler(
+                                &self.renderer.noise_texture.sampler,
+                            ),
+                        },
+                    ],
+                });
+
+        let lights_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.light,
+                    bindings: &[wgpu::Binding {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer {
+                            buffer: &lights.buf,
+                            range: 0..lights.len() as wgpu::BufferAddress,
+                        },
+                    }],
+                });
+
+        let shadows_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.shadow,
+                    bindings: &[wgpu::Binding {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer {
+                            buffer: &shadows.buf,
+                            range: 0..shadows.len() as wgpu::BufferAddress,
+                        },
+                    }],
+                });
+
+        let terrain_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Fluid terrain locals"),
+                    layout: &self.renderer.terrain_pipeline.locals,
+                    bindings: &[wgpu::Binding {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer {
+                            buffer: &locals.buf,
+                            range: 0..locals.len() as wgpu::BufferAddress,
+                        },
+                    }],
+                });
+
+        let locals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Fluid locals"),
+                    layout: &self.renderer.fluid_pipeline.locals,
+                    bindings: &[
+                        wgpu::Binding {
+                            binding: 0,
+                            resource: wgpu::BindingResource::TextureView(&waves.view),
+                        },
+                        wgpu::Binding {
+                            binding: 1,
+                            resource: wgpu::BindingResource::Sampler(&waves.sampler),
+                        },
+                    ],
+                });
+
+        self.render_pass
+            .set_pipeline(&self.renderer.fluid_pipeline.pipeline);
+        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
+        self.render_pass.set_bind_group(1, &lights_bind_group, &[]);
+        self.render_pass.set_bind_group(2, &shadows_bind_group, &[]);
+        self.render_pass.set_bind_group(3, &terrain_bind_group, &[]);
+        self.render_pass.set_bind_group(4, &locals_bind_group, &[]);
+        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
+        self.render_pass
+            .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
+    }
+}
+
+pub struct SpriteDrawer<'a> {
+    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
+    pub(self) renderer: &'a Renderer,
+}
+
+impl<'a> SpriteDrawer<'a> {
+    pub fn draw<'b: 'a>(
+        &mut self,
+        model: &'b Model,
+        instances: &'a Instances<sprite::Instance>,
+        globals: &Consts<Globals>,
+        lights: &Consts<Light>,
+        shadows: &Consts<Shadow>,
+    ) {
+        let globals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.globals,
+                    bindings: &[
+                        wgpu::Binding {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Buffer {
+                                buffer: &globals.buf,
+                                range: 0..globals.len() as wgpu::BufferAddress,
+                            },
+                        },
+                        wgpu::Binding {
+                            binding: 1,
+                            resource: wgpu::BindingResource::TextureView(
+                                &self.renderer.noise_texture.view,
+                            ),
+                        },
+                        wgpu::Binding {
+                            binding: 2,
+                            resource: wgpu::BindingResource::Sampler(
+                                &self.renderer.noise_texture.sampler,
+                            ),
+                        },
+                    ],
+                });
+
+        let lights_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.light,
+                    bindings: &[wgpu::Binding {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer {
+                            buffer: &lights.buf,
+                            range: 0..lights.len() as wgpu::BufferAddress,
+                        },
+                    }],
+                });
+
+        let shadows_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.shadow,
+                    bindings: &[wgpu::Binding {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer {
+                            buffer: &shadows.buf,
+                            range: 0..shadows.len() as wgpu::BufferAddress,
+                        },
+                    }],
+                });
+
+        self.render_pass
+            .set_pipeline(&self.renderer.sprite_pipeline.pipeline);
+        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
+        self.render_pass.set_bind_group(1, &lights_bind_group, &[]);
+        self.render_pass.set_bind_group(2, &shadows_bind_group, &[]);
+        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
+        self.render_pass.set_vertex_buffer(1, &instances.ibuf, 0, 0);
+        self.render_pass.draw(
+            model.vertex_range().start..model.vertex_range().end,
+            0..instances.count() as u32,
+        );
+    }
+}
+
+pub struct PostProcessDrawer<'a> {
+    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
+    pub(self) renderer: &'a Renderer,
+}
+
+impl<'a> PostProcessDrawer<'a> {
+    pub fn draw<'b: 'a>(
+        &mut self,
+        model: &'b Model,
+        locals: &Consts<postprocess::Locals>,
+        globals: &Consts<Globals>,
+    ) {
+        let globals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.globals,
+                    bindings: &[
+                        wgpu::Binding {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Buffer {
+                                buffer: &globals.buf,
+                                range: 0..globals.len() as wgpu::BufferAddress,
+                            },
+                        },
+                        wgpu::Binding {
+                            binding: 1,
+                            resource: wgpu::BindingResource::TextureView(
+                                &self.renderer.noise_texture.view,
+                            ),
+                        },
+                        wgpu::Binding {
+                            binding: 2,
+                            resource: wgpu::BindingResource::Sampler(
+                                &self.renderer.noise_texture.sampler,
+                            ),
+                        },
+                    ],
+                });
+
+        let locals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.postprocess_pipeline.locals,
+                    bindings: &[wgpu::Binding {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer {
+                            buffer: &locals.buf,
+                            range: 0..locals.len() as wgpu::BufferAddress,
+                        },
+                    }],
+                });
+
+        self.render_pass
+            .set_pipeline(&self.renderer.postprocess_pipeline.pipeline);
+        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
+        self.render_pass.set_bind_group(1, &locals_bind_group, &[]);
+        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
+        self.render_pass
+            .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
+    }
+}
+
+pub struct FirstDrawer<'a> {
+    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
+    pub renderer: &'a Renderer,
+}
+
+impl<'a> FirstDrawer<'a> {
+    pub fn render_skybox(&'a mut self, f: impl FnMut(SkyboxDrawer<'a>)) {
+        //Set pipeline
+        f(SkyboxDrawer {
+            render_pass: self.render_pass,
+            renderer: self.renderer,
         });
+    }
 
-        let locals_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.postprocess_pipeline.locals,
-            bindings: &[wgpu::Binding {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer {
-                    buffer: &locals.buf,
-                    range: 0..locals.len() as wgpu::BufferAddress,
-                },
-            }],
+    pub fn render_figure(&'a mut self, f: impl FnMut(FigureDrawer<'a>)) {
+        //Set pipeline
+        f(FigureDrawer {
+            render_pass: self.render_pass,
+            renderer: self.renderer,
         });
+    }
 
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &self.win_tex.as_ref().unwrap().view,
-                    resolve_target: None,
-                    load_op: wgpu::LoadOp::Load,
-                    store_op: wgpu::StoreOp::Store,
-                    clear_color: wgpu::Color {
-                        r: 0.1,
-                        g: 0.2,
-                        b: 0.3,
-                        a: 1.0,
-                    },
-                }],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
-                    attachment: &self.depth_stencil_texture.view,
-                    depth_load_op: wgpu::LoadOp::Load,
-                    depth_store_op: wgpu::StoreOp::Store,
-                    clear_depth: 1.0,
-                    stencil_load_op: wgpu::LoadOp::Load,
-                    stencil_store_op: wgpu::StoreOp::Store,
-                    clear_stencil: 0,
-                }),
-            });
+    pub fn render_terrain(&'a mut self, f: impl FnMut(TerrainDrawer<'a>)) {
+        //Set pipeline
+        f(TerrainDrawer {
+            render_pass: self.render_pass,
+            renderer: self.renderer,
+        });
+    }
 
-            render_pass.set_pipeline(&self.postprocess_pipeline.pipeline);
-            render_pass.set_bind_group(0, &globals_bind_group, &[]);
-            render_pass.set_bind_group(1, &locals_bind_group, &[]);
-            render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-            render_pass.draw(model.vertex_range().start..model.vertex_range().end, 0..1);
-        }
+    pub fn render_fluid(&'a mut self, f: impl FnMut(FluidDrawer<'a>)) {
+        //Set pipeline
+        f(FluidDrawer {
+            render_pass: self.render_pass,
+            renderer: self.renderer,
+        });
+    }
 
-        self.queue.submit(&[encoder.finish()]);
+    pub fn render_sprite(&'a mut self, f: impl FnMut(SpriteDrawer<'a>)) {
+        //Set pipeline
+        f(SpriteDrawer {
+            render_pass: self.render_pass,
+            renderer: self.renderer,
+        });
+    }
+}
+
+pub struct SecondDrawer<'a> {
+    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
+    pub renderer: &'a Renderer,
+}
+
+impl<'a> SecondDrawer<'a> {
+    pub fn render_ui(&'a mut self, f: impl FnMut(UiDrawer<'a>)) {
+        //Set pipeline
+        f(UiDrawer {
+            render_pass: self.render_pass,
+            renderer: self.renderer,
+        });
+    }
+
+    pub fn render_post_process(&'a mut self, f: impl FnMut(PostProcessDrawer<'a>)) {
+        //Set pipeline
+        f(PostProcessDrawer {
+            render_pass: self.render_pass,
+            renderer: self.renderer,
+        });
     }
 }
 

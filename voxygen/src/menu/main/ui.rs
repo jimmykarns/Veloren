@@ -1,6 +1,6 @@
 use crate::{
     i18n::{i18n_asset_key, VoxygenLocalization},
-    render::Renderer,
+    render::SecondDrawer,
     ui::{
         self,
         fonts::ConrodVoxygenFonts,
@@ -787,5 +787,5 @@ impl MainMenuUi {
         events
     }
 
-    pub fn render(&self, renderer: &mut Renderer) { self.ui.render(renderer, None); }
+    pub fn render<'b>(&'b self, drawer: &'b mut SecondDrawer<'b>) { self.ui.render(drawer, None); }
 }

@@ -37,7 +37,7 @@ use spell::Spell;
 use crate::{
     ecs::comp as vcomp,
     i18n::{i18n_asset_key, LanguageMetadata, VoxygenLocalization},
-    render::{AaMode, CloudMode, Consts, FluidMode, Globals, Renderer},
+    render::{AaMode, CloudMode, Consts, FluidMode, Globals, SecondDrawer},
     scene::camera::{self, Camera},
     ui::{fonts::ConrodVoxygenFonts, Graphic, Ingameable, ScaleMode, Ui},
     window::{Event as WinEvent, GameInput},
@@ -2124,10 +2124,10 @@ impl Hud {
         events
     }
 
-    pub fn render(&self, renderer: &mut Renderer, globals: &Consts<Globals>) {
+    pub fn render<'b>(&'b self, drawer: &'b mut SecondDrawer<'b>, globals: &Consts<Globals>) {
         // Don't show anything if the UI is toggled off.
         if self.show.ui {
-            self.ui.render(renderer, Some(globals));
+            self.ui.render(drawer, Some(globals));
         }
     }
 }

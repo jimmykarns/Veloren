@@ -1,7 +1,7 @@
 use crate::{
     i18n::{i18n_asset_key, VoxygenLocalization},
     meta::CharacterData,
-    render::{Consts, Globals, Renderer},
+    render::{Consts, Globals, SecondDrawer},
     ui::{
         fonts::ConrodVoxygenFonts,
         img_ids::{BlankGraphic, ImageGraphic, VoxelGraphic, VoxelSs9Graphic},
@@ -1327,7 +1327,7 @@ impl CharSelectionUi {
         events
     }
 
-    pub fn render(&self, renderer: &mut Renderer, globals: &Consts<Globals>) {
-        self.ui.render(renderer, Some(globals));
+    pub fn render<'b>(&'b self, drawer: &'b mut SecondDrawer<'b>, globals: &Consts<Globals>) {
+        self.ui.render(drawer, Some(globals));
     }
 }

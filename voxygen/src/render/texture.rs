@@ -71,7 +71,7 @@ impl Texture {
 
         let desc = wgpu::TextureDescriptor {
             label: None,
-            format: Self::DEPTH_FORMAT,
+            format: wgpu::TextureFormat::Bgra8UnormSrgb,
             usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
             size: wgpu::Extent3d {
                 width,

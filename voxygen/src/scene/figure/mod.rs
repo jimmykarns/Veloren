@@ -12,7 +12,7 @@ use crate::{
         object::ObjectSkeleton, quadruped_medium::QuadrupedMediumSkeleton,
         quadruped_small::QuadrupedSmallSkeleton, Animation, Skeleton,
     },
-    render::{Consts, FigureBoneData, FigureLocals, Globals, Light, Renderer, Shadow},
+    render::{Consts, FigureBoneData, FigureLocals, FirstDrawer, Globals, Light, Renderer, Shadow},
     scene::{
         camera::{Camera, CameraMode},
         SceneData,
@@ -1210,9 +1210,9 @@ impl FigureMgr {
             .retain(|entity, _| ecs.entities().is_alive(*entity));
     }
 
-    pub fn render(
-        &mut self,
-        renderer: &mut Renderer,
+    pub fn render<'b>(
+        &'b mut self,
+        drawer: &'b mut FirstDrawer<'b>,
         state: &State,
         player_entity: EcsEntity,
         tick: u64,
@@ -1280,7 +1280,7 @@ impl FigureMgr {
                             state.bone_consts(),
                             &model_cache
                                 .get_or_create_model(
-                                    renderer,
+                                    drawer.renderer,
                                     *body,
                                     stats,
                                     tick,
@@ -1296,7 +1296,7 @@ impl FigureMgr {
                         state.bone_consts(),
                         &quadruped_small_model_cache
                             .get_or_create_model(
-                                renderer,
+                                drawer.renderer,
                                 *body,
                                 stats,
                                 tick,
@@ -1312,7 +1312,7 @@ impl FigureMgr {
                         state.bone_consts(),
                         &quadruped_medium_model_cache
                             .get_or_create_model(
-                                renderer,
+                                drawer.renderer,
                                 *body,
                                 stats,
                                 tick,
@@ -1328,7 +1328,7 @@ impl FigureMgr {
                         state.bone_consts(),
                         &bird_medium_model_cache
                             .get_or_create_model(
-                                renderer,
+                                drawer.renderer,
                                 *body,
                                 stats,
                                 tick,
@@ -1344,7 +1344,7 @@ impl FigureMgr {
                         state.bone_consts(),
                         &fish_medium_model_cache
                             .get_or_create_model(
-                                renderer,
+                                drawer.renderer,
                                 *body,
                                 stats,
                                 tick,
@@ -1360,7 +1360,7 @@ impl FigureMgr {
                         state.bone_consts(),
                         &critter_model_cache
                             .get_or_create_model(
-                                renderer,
+                                drawer.renderer,
                                 *body,
                                 stats,
                                 tick,
@@ -1376,7 +1376,7 @@ impl FigureMgr {
                         state.bone_consts(),
                         &dragon_model_cache
                             .get_or_create_model(
-                                renderer,
+                                drawer.renderer,
                                 *body,
                                 stats,
                                 tick,
@@ -1392,7 +1392,7 @@ impl FigureMgr {
                         state.bone_consts(),
                         &bird_small_model_cache
                             .get_or_create_model(
-                                renderer,
+                                drawer.renderer,
                                 *body,
                                 stats,
                                 tick,
@@ -1408,7 +1408,7 @@ impl FigureMgr {
                         state.bone_consts(),
                         &fish_small_model_cache
                             .get_or_create_model(
-                                renderer,
+                                drawer.renderer,
                                 *body,
                                 stats,
                                 tick,
@@ -1424,7 +1424,7 @@ impl FigureMgr {
                         state.bone_consts(),
                         &biped_large_model_cache
                             .get_or_create_model(
-                                renderer,
+                                drawer.renderer,
                                 *body,
                                 stats,
                                 tick,
@@ -1440,7 +1440,7 @@ impl FigureMgr {
                         state.bone_consts(),
                         &model_cache
                             .get_or_create_model(
-                                renderer,
+                                drawer.renderer,
                                 *body,
                                 stats,
                                 tick,
@@ -1451,7 +1451,9 @@ impl FigureMgr {
                     )
                 }),
             } {
-                renderer.render_figure(model, globals, locals, bone_consts, lights, shadows);
+                drawer.render_figure(|drawer| {
+                    drawer.draw(model, locals, bone_consts, globals, lights, shadows)
+                });
             } else {
                 trace!("Body has no saved figure");
             }

@@ -5,8 +5,9 @@ use crate::{
         Animation, Skeleton,
     },
     render::{
-        create_pp_mesh, create_skybox_mesh, Consts, FigurePipeline, Globals, Light, Model,
-        PostProcessLocals, PostProcessPipeline, Renderer, Shadow, SkyboxLocals, SkyboxPipeline,
+        create_pp_mesh, create_skybox_mesh, Consts, FigurePipeline, FirstDrawer, Globals, Light,
+        Model, PostProcessLocals, PostProcessPipeline, Renderer, SecondDrawer, Shadow,
+        SkyboxLocals, SkyboxPipeline,
     },
     scene::{
         camera::{self, Camera, CameraMode},
@@ -198,20 +199,22 @@ impl Scene {
         );
     }
 
-    pub fn render(
-        &mut self,
-        renderer: &mut Renderer,
+    pub fn first_render<'b>(
+        &'b mut self,
+        drawer: &'b mut FirstDrawer<'b>,
         tick: u64,
         body: Option<humanoid::Body>,
         equipment: &Equipment,
     ) {
-        renderer.render_skybox(&self.skybox.model, &self.globals, &self.skybox.locals);
+        drawer.render_skybox(|drawer| {
+            drawer.draw(&self.skybox.model, &self.skybox.locals, &self.globals);
+        });
 
         if let Some(body) = body {
             let model = &self
                 .figure_model_cache
                 .get_or_create_model(
-                    renderer,
+                    drawer.renderer,
                     Body::Humanoid(body),
                     Some(equipment),
                     tick,
@@ -220,31 +223,39 @@ impl Scene {
                 )
                 .0;
 
-            renderer.render_figure(
-                model,
-                &self.globals,
-                self.figure_state.locals(),
-                self.figure_state.bone_consts(),
-                &self.lights,
-                &self.shadows,
-            );
+            drawer.render_figure(|drawer| {
+                drawer.draw(
+                    model,
+                    self.figure_state.locals(),
+                    self.figure_state.bone_consts(),
+                    &self.globals,
+                    &self.lights,
+                    &self.shadows,
+                );
+            });
         }
 
         if let Some((model, state)) = &self.backdrop {
-            renderer.render_figure(
-                model,
-                &self.globals,
-                state.locals(),
-                state.bone_consts(),
-                &self.lights,
-                &self.shadows,
-            );
+            drawer.render_figure(|drawer| {
+                drawer.draw(
+                    model,
+                    state.locals(),
+                    state.bone_consts(),
+                    &self.globals,
+                    &self.lights,
+                    &self.shadows,
+                );
+            });
         }
+    }
 
-        renderer.render_post_process(
-            &self.postprocess.model,
-            &self.globals,
-            &self.postprocess.locals,
-        );
+    pub fn second_render<'b>(&'b mut self, drawer: &'b mut SecondDrawer<'b>) {
+        drawer.render_post_process(|postprocessing| {
+            postprocessing.draw(
+                &self.postprocess.model,
+                &self.postprocess.locals,
+                &self.globals,
+            );
+        });
     }
 }

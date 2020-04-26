@@ -145,7 +145,14 @@ fn handle_main_events_cleared(
     }
 
     if let Some(last) = states.last_mut() {
-        last.render(global_state.window.renderer_mut());
+        global_state.window.renderer_mut().first_render(|drawer| {
+            let last_borrow = &mut last;
+
+            last_borrow.first_render(&mut drawer);
+        });
+        global_state.window.renderer_mut().second_render(|drawer| {
+            last.second_render(&mut drawer);
+        });
         // Finish the frame.
         global_state.window.renderer_mut().flush();
     }

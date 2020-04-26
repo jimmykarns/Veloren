@@ -33,7 +33,7 @@ use crate::singleplayer::Singleplayer;
 use crate::{
     audio::AudioFrontend,
     meta::Meta,
-    render::Renderer,
+    render::{FirstDrawer, Renderer, SecondDrawer},
     settings::Settings,
     window::{Event, Window},
 };
@@ -115,5 +115,8 @@ pub trait PlayState {
     fn name(&self) -> &'static str;
 
     /// Draw the play state.
-    fn render(&mut self, renderer: &mut Renderer);
+    fn first_render<'b>(&'b mut self, renderer: &'b mut FirstDrawer<'b>);
+
+    /// Draw the play state.
+    fn second_render<'b>(&'b mut self, renderer: &'b mut SecondDrawer<'b>);
 }

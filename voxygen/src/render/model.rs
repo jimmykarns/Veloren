@@ -9,7 +9,7 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn new<P: Pipeline>(device: &mut wgpu::Device, mesh: &Mesh<P>) -> Self {
+    pub fn new<P: Pipeline>(device: &wgpu::Device, mesh: &Mesh<P>) -> Self {
         let vbuf = device.create_buffer_with_data(
             mesh.vertices()
                 .iter()

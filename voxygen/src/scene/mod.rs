@@ -12,8 +12,9 @@ use crate::{
     anim::character::SkeletonAttr,
     audio::{music::MusicMgr, sfx::SfxMgr, AudioFrontend},
     render::{
-        create_pp_mesh, create_skybox_mesh, Consts, Globals, Light, Model, PostProcessLocals,
-        PostProcessPipeline, Renderer, Shadow, SkyboxLocals, SkyboxPipeline,
+        create_pp_mesh, create_skybox_mesh, Consts, FirstDrawer, Globals, Light, Model,
+        PostProcessLocals, PostProcessPipeline, Renderer, SecondDrawer, Shadow, SkyboxLocals,
+        SkyboxPipeline,
     },
     window::{AnalogGameInput, Event},
 };
@@ -345,16 +346,16 @@ impl Scene {
     }
 
     /// Render the scene using the provided `Renderer`.
-    pub fn render(
-        &mut self,
-        renderer: &mut Renderer,
+    pub fn first_render<'b>(
+        &'b mut self,
+        drawer: &'b mut FirstDrawer<'b>,
         state: &State,
         player_entity: EcsEntity,
         tick: u64,
     ) {
         // Render terrain and figures.
         self.figure_mgr.render(
-            renderer,
+            drawer,
             state,
             player_entity,
             tick,
@@ -364,7 +365,7 @@ impl Scene {
             &self.camera,
         );
         self.terrain.render(
-            renderer,
+            drawer,
             &self.globals,
             &self.lights,
             &self.shadows,
@@ -372,20 +373,27 @@ impl Scene {
         );
 
         // Render the skybox.
-        renderer.render_skybox(&self.skybox.model, &self.globals, &self.skybox.locals);
+        drawer.render_skybox(|drawer| {
+            drawer.draw(&self.skybox.model, &self.skybox.locals, &self.globals);
+        });
 
         self.terrain.render_translucent(
-            renderer,
+            drawer,
             &self.globals,
             &self.lights,
             &self.shadows,
             self.camera.get_focus_pos(),
         );
+    }
 
-        renderer.render_post_process(
-            &self.postprocess.model,
-            &self.globals,
-            &self.postprocess.locals,
-        );
+    /// Render the scene using the provided `Renderer`.
+    pub fn second_render<'b>(&'b mut self, drawer: &'b mut SecondDrawer<'b>) {
+        drawer.render_post_process(|postprocessing| {
+            postprocessing.draw(
+                &self.postprocess.model,
+                &self.postprocess.locals,
+                &self.globals,
+            )
+        });
     }
 }
