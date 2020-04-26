@@ -466,7 +466,7 @@ impl Window {
             },
         };
 
-        let controller_settings = ControllerSettings::from(&settings.controller);
+        let controller_settings = ControllerSettings::from(&settings.controls);
 
         let (message_sender, message_receiver): (
             channel::Sender<String>,

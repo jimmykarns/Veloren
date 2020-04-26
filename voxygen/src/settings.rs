@@ -42,6 +42,18 @@ impl From<ControlSettings> for ControlSettingsSerde {
 pub struct ControlSettings {
     pub keybindings: HashMap<GameInput, KeyMouse>,
     pub inverse_keybindings: HashMap<KeyMouse, HashSet<GameInput>>, // used in event loop
+    pub game_buttons: con_settings::GameButtons,
+    pub menu_buttons: con_settings::MenuButtons,
+    pub game_axis: con_settings::GameAxis,
+    pub menu_axis: con_settings::MenuAxis,
+    pub game_analog_buttons: con_settings::GameAnalogButton,
+    pub menu_analog_buttons: con_settings::MenuAnalogButton,
+    pub pan_sensitivity: u32,
+    pub pan_invert_y: bool,
+    pub axis_deadzones: HashMap<crate::controller::Axis, f32>,
+    pub button_deadzones: HashMap<crate::controller::AnalogButton, f32>,
+    pub mouse_emulation_sensitivity: u32,
+    pub inverted_axes: Vec<crate::controller::Axis>,
 }
 
 impl From<ControlSettingsSerde> for ControlSettings {
@@ -160,6 +172,18 @@ impl Default for ControlSettings {
         let mut new_settings = Self {
             keybindings: HashMap::new(),
             inverse_keybindings: HashMap::new(),
+            game_buttons: con_settings::GameButtons::default(),
+            menu_buttons: con_settings::MenuButtons::default(),
+            game_axis: con_settings::GameAxis::default(),
+            menu_axis: con_settings::MenuAxis::default(),
+            game_analog_buttons: con_settings::GameAnalogButton::default(),
+            menu_analog_buttons: con_settings::MenuAnalogButton::default(),
+            pan_sensitivity: 10,
+            pan_invert_y: false,
+            axis_deadzones: HashMap::new(),
+            button_deadzones: HashMap::new(),
+            mouse_emulation_sensitivity: 12,
+            inverted_axes: Vec::new(),
         };
         // Sets the initial keybindings for those GameInputs. If a new one is created in
         // future, you'll have to update default_binding, and you should update this vec
@@ -218,42 +242,6 @@ impl Default for ControlSettings {
             new_settings.insert_binding(game_input, ControlSettings::default_binding(game_input));
         }
         new_settings
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(default)]
-pub struct GamepadSettings {
-    pub game_buttons: con_settings::GameButtons,
-    pub menu_buttons: con_settings::MenuButtons,
-    pub game_axis: con_settings::GameAxis,
-    pub menu_axis: con_settings::MenuAxis,
-    pub game_analog_buttons: con_settings::GameAnalogButton,
-    pub menu_analog_buttons: con_settings::MenuAnalogButton,
-    pub pan_sensitivity: u32,
-    pub pan_invert_y: bool,
-    pub axis_deadzones: HashMap<crate::controller::Axis, f32>,
-    pub button_deadzones: HashMap<crate::controller::AnalogButton, f32>,
-    pub mouse_emulation_sensitivity: u32,
-    pub inverted_axes: Vec<crate::controller::Axis>,
-}
-
-impl Default for GamepadSettings {
-    fn default() -> Self {
-        Self {
-            game_buttons: con_settings::GameButtons::default(),
-            menu_buttons: con_settings::MenuButtons::default(),
-            game_axis: con_settings::GameAxis::default(),
-            menu_axis: con_settings::MenuAxis::default(),
-            game_analog_buttons: con_settings::GameAnalogButton::default(),
-            menu_analog_buttons: con_settings::MenuAnalogButton::default(),
-            pan_sensitivity: 10,
-            pan_invert_y: false,
-            axis_deadzones: HashMap::new(),
-            button_deadzones: HashMap::new(),
-            mouse_emulation_sensitivity: 12,
-            inverted_axes: Vec::new(),
-        }
     }
 }
 
@@ -673,7 +661,6 @@ pub struct Settings {
     pub logon_commands: Vec<String>,
     pub language: LanguageSettings,
     pub screenshots_path: PathBuf,
-    pub controller: GamepadSettings,
 }
 
 impl Default for Settings {
@@ -707,7 +694,6 @@ impl Default for Settings {
             logon_commands: Vec::new(),
             language: LanguageSettings::default(),
             screenshots_path,
-            controller: GamepadSettings::default(),
         }
     }
 }

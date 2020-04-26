@@ -29,7 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added group chat `/join_group` `/group`
 - Added faction chat `/join_faction` `/faction`
 - Added regional, local, and global chat (`/region`, `/say`, and `/world`, respectively)
-- Added command shortcuts for each of the above chat modes (`/g`, `/f`, `/r`, `/s`, and `/w`, respectively and `/t` for `/tell`)
+- Added command shortcuts for each of the above chat modes (`/g`, `/f`, `/r`,
+  `/s`, and `/w`, respectively and `/t` for `/tell`)
+- Combine GamepadSettings with ControlSettings
 
 ### Changed
 

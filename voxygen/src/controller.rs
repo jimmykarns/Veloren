@@ -53,8 +53,8 @@ impl ControllerSettings {
     }
 }
 
-impl From<&crate::settings::GamepadSettings> for ControllerSettings {
-    fn from(settings: &crate::settings::GamepadSettings) -> Self {
+impl From<&crate::settings::ControlSettings> for ControllerSettings {
+    fn from(settings: &crate::settings::ControlSettings) -> Self {
         Self {
             game_button_map: {
                 let mut map: HashMap<_, Vec<_>> = HashMap::new();
