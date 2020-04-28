@@ -206,9 +206,7 @@ impl Scene {
         body: Option<humanoid::Body>,
         equipment: &Equipment,
     ) {
-        drawer.render_skybox(|drawer| {
-            drawer.draw(&self.skybox.model, &self.skybox.locals, &self.globals);
-        });
+        drawer.draw_skybox(&self.skybox.model, &self.skybox.locals, &self.globals);
 
         if let Some(body) = body {
             let model = &self
@@ -223,39 +221,33 @@ impl Scene {
                 )
                 .0;
 
-            drawer.render_figure(|drawer| {
-                drawer.draw(
-                    model,
-                    self.figure_state.locals(),
-                    self.figure_state.bone_consts(),
-                    &self.globals,
-                    &self.lights,
-                    &self.shadows,
-                );
-            });
+            drawer.draw_figure(
+                model,
+                self.figure_state.locals(),
+                self.figure_state.bone_consts(),
+                &self.globals,
+                &self.lights,
+                &self.shadows,
+            );
         }
 
         if let Some((model, state)) = &self.backdrop {
-            drawer.render_figure(|drawer| {
-                drawer.draw(
-                    model,
-                    state.locals(),
-                    state.bone_consts(),
-                    &self.globals,
-                    &self.lights,
-                    &self.shadows,
-                );
-            });
+            drawer.draw_figure(
+                model,
+                state.locals(),
+                state.bone_consts(),
+                &self.globals,
+                &self.lights,
+                &self.shadows,
+            );
         }
     }
 
     pub fn second_render<'b>(&'b mut self, drawer: &'b mut SecondDrawer<'b>) {
-        drawer.render_post_process(|postprocessing| {
-            postprocessing.draw(
-                &self.postprocess.model,
-                &self.postprocess.locals,
-                &self.globals,
-            );
-        });
+        drawer.draw_post_process(
+            &self.postprocess.model,
+            &self.postprocess.locals,
+            &self.globals,
+        );
     }
 }

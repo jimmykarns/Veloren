@@ -115,8 +115,5 @@ pub trait PlayState {
     fn name(&self) -> &'static str;
 
     /// Draw the play state.
-    fn first_render<'b>(&'b mut self, renderer: &'b mut FirstDrawer<'b>);
-
-    /// Draw the play state.
-    fn second_render<'b>(&'b mut self, renderer: &'b mut SecondDrawer<'b>);
+    fn render(&mut self, renderer: &mut Renderer);
 }

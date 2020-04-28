@@ -1210,9 +1210,9 @@ impl FigureMgr {
             .retain(|entity, _| ecs.entities().is_alive(*entity));
     }
 
-    pub fn render<'b>(
+    pub fn render<'a, 'b: 'a>(
         &'b mut self,
-        drawer: &'b mut FirstDrawer<'b>,
+        drawer: &'a mut FirstDrawer<'a>,
         state: &State,
         player_entity: EcsEntity,
         tick: u64,
@@ -1451,9 +1451,7 @@ impl FigureMgr {
                     )
                 }),
             } {
-                drawer.render_figure(|drawer| {
-                    drawer.draw(model, locals, bone_consts, globals, lights, shadows)
-                });
+                drawer.draw_figure(model, locals, bone_consts, globals, lights, shadows);
             } else {
                 trace!("Body has no saved figure");
             }

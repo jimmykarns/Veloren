@@ -2,7 +2,7 @@ mod ui;
 
 use crate::{
     i18n::{i18n_asset_key, VoxygenLocalization},
-    render::{FirstDrawer, SecondDrawer},
+    render::{FirstDrawer, Renderer, SecondDrawer},
     scene::simple::{self as scene, Scene},
     session::SessionState,
     window::Event as WinEvent,
@@ -136,37 +136,46 @@ impl PlayState for CharSelectionState {
 
     fn name(&self) -> &'static str { "Title" }
 
-    fn first_render<'b>(&'b mut self, drawer: &'b mut FirstDrawer<'b>) {
-        let humanoid_body = self
-                .char_selection_ui
-                // TODO: Is this function designed to be called every frame?
-                .get_character_data()
-                .and_then(|data| match data.body {
-                    comp::Body::Humanoid(body) => Some(body),
-                    _ => None,
-                });
+    fn render(&mut self, renderer: &mut Renderer) {
+        let drawer = renderer.drawer();
 
-        // Render the scene.
-        self.scene.first_render(
-            drawer,
-            self.client.borrow().get_tick(),
-            humanoid_body.clone(),
-            &comp::Equipment {
-                main: self
-                    .char_selection_ui
-                    .get_character_data()
-                    .and_then(|data| data.tool)
-                    .and_then(|tool| assets::load_cloned(&tool).ok()),
-                alt: None,
-            },
-        );
-    }
+        {
+            let drawer = drawer.first_render();
 
-    fn second_render<'b>(&'b mut self, drawer: &'b mut SecondDrawer<'b>) {
-        // Render the scene.
-        self.scene.second_render(drawer);
+            let humanoid_body = self
+        .char_selection_ui
+        // TODO: Is this function designed to be called every frame?
+        .get_character_data()
+        .and_then(|data| match data.body {
+            comp::Body::Humanoid(body) => Some(body),
+            _ => None,
+        });
 
-        // Draw the UI to the screen.
-        self.char_selection_ui.render(drawer, self.scene.globals());
+            // Render the scene.
+            self.scene.first_render(
+                &mut drawer,
+                self.client.borrow().get_tick(),
+                humanoid_body.clone(),
+                &comp::Equipment {
+                    main: self
+                        .char_selection_ui
+                        .get_character_data()
+                        .and_then(|data| data.tool)
+                        .and_then(|tool| assets::load_cloned(&tool).ok()),
+                    alt: None,
+                },
+            );
+        }
+
+        {
+            let drawer = drawer.second_render();
+
+            // Render the scene.
+            self.scene.second_render(&mut drawer);
+
+            // Draw the UI to the screen.
+            self.char_selection_ui
+                .render(&mut drawer, self.scene.globals());
+        }
     }
 }

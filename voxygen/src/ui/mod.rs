@@ -784,26 +784,24 @@ impl Ui {
         let mut scissor = default_scissor(drawer.renderer);
         let globals = maybe_globals.unwrap_or(&self.default_globals);
         let mut locals = &self.interface_locals;
-        drawer.render_ui(move |ui| {
-            for draw_command in self.draw_commands.iter() {
-                match draw_command {
-                    DrawCommand::Scissor(new_scissor) => {
-                        scissor = *new_scissor;
-                    },
-                    DrawCommand::WorldPos(index) => {
-                        locals = index.map_or(&self.interface_locals, |i| &self.ingame_locals[i]);
-                    },
-                    DrawCommand::Draw { kind, verts } => {
-                        let tex = match kind {
-                            DrawKind::Image(tex_id) => self.cache.graphic_cache().get_tex(*tex_id),
-                            DrawKind::Plain => self.cache.glyph_cache_tex(),
-                        };
-                        let model = self.model.submodel(verts.clone());
-                        ui.draw(&model, tex, scissor, locals, globals);
-                    },
-                }
+        for draw_command in self.draw_commands.iter() {
+            match draw_command {
+                DrawCommand::Scissor(new_scissor) => {
+                    scissor = *new_scissor;
+                },
+                DrawCommand::WorldPos(index) => {
+                    locals = index.map_or(&self.interface_locals, |i| &self.ingame_locals[i]);
+                },
+                DrawCommand::Draw { kind, verts } => {
+                    let tex = match kind {
+                        DrawKind::Image(tex_id) => self.cache.graphic_cache().get_tex(*tex_id),
+                        DrawKind::Plain => self.cache.glyph_cache_tex(),
+                    };
+                    let model = self.model.submodel(verts.clone());
+                    drawer.draw_ui(&model, tex, scissor, locals, globals);
+                },
             }
-        })
+        }
     }
 }
 

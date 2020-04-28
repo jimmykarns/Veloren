@@ -1388,13 +1388,11 @@ impl<V: RectRasterableVol> Terrain<V> {
             .filter_map(|x| x);
 
         // Opaque
-        drawer.render_terrain(|drawer| {
-            for (_, chunk) in chunk_iter.clone() {
-                if chunk.visible {
-                    drawer.draw(&chunk.opaque_model, &chunk.locals, globals, lights, shadows);
-                }
+        for (_, chunk) in chunk_iter.clone() {
+            if chunk.visible {
+                drawer.draw_terrain(&chunk.opaque_model, &chunk.locals, globals, lights, shadows);
             }
-        });
+        }
     }
 
     pub fn render_translucent<'b>(
@@ -1423,45 +1421,41 @@ impl<V: RectRasterableVol> Terrain<V> {
             .filter_map(|x| x);
 
         // Terrain sprites
-        drawer.render_sprite(move |drawer| {
-            for (pos, chunk) in chunk_iter.clone() {
-                if chunk.visible {
-                    const SPRITE_RENDER_DISTANCE: f32 = 128.0;
+        for (pos, chunk) in chunk_iter.clone() {
+            if chunk.visible {
+                const SPRITE_RENDER_DISTANCE: f32 = 128.0;
 
-                    let chunk_center =
-                        pos.map2(V::RECT_SIZE, |e, sz: u32| (e as f32 + 0.5) * sz as f32);
-                    if Vec2::from(focus_pos).distance_squared(chunk_center)
-                        < SPRITE_RENDER_DISTANCE * SPRITE_RENDER_DISTANCE
-                    {
-                        for (kind, instances) in &chunk.sprite_instances {
-                            drawer.draw(
-                                &self.sprite_models[&kind],
-                                &instances,
-                                globals,
-                                lights,
-                                shadows,
-                            );
-                        }
+                let chunk_center =
+                    pos.map2(V::RECT_SIZE, |e, sz: u32| (e as f32 + 0.5) * sz as f32);
+                if Vec2::from(focus_pos).distance_squared(chunk_center)
+                    < SPRITE_RENDER_DISTANCE * SPRITE_RENDER_DISTANCE
+                {
+                    for (kind, instances) in &chunk.sprite_instances {
+                        drawer.draw_sprite(
+                            &self.sprite_models[&kind],
+                            &instances,
+                            globals,
+                            lights,
+                            shadows,
+                        );
                     }
                 }
             }
-        });
+        }
 
-        drawer.render_fluid(|drawer| {
-            // Translucent
-            chunk_iter
-                .clone()
-                .filter(|(_, chunk)| chunk.visible)
-                .filter_map(|(_, chunk)| {
-                    chunk
-                        .fluid_model
-                        .as_ref()
-                        .map(|model| (model, &chunk.locals))
-                })
-                .for_each(|(model, locals)| {
-                    drawer.draw(model, locals, &self.waves, globals, lights, shadows)
-                });
-        });
+        // Translucent
+        chunk_iter
+            .clone()
+            .filter(|(_, chunk)| chunk.visible)
+            .filter_map(|(_, chunk)| {
+                chunk
+                    .fluid_model
+                    .as_ref()
+                    .map(|model| (model, &chunk.locals))
+            })
+            .for_each(|(model, locals)| {
+                drawer.draw_fluid(model, locals, &self.waves, globals, lights, shadows)
+            });
     }
 }
 

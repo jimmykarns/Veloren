@@ -5,7 +5,8 @@ use super::char_selection::CharSelectionState;
 #[cfg(feature = "singleplayer")]
 use crate::singleplayer::Singleplayer;
 use crate::{
-    window::Event, Direction, FirstDrawer, GlobalState, PlayState, PlayStateResult, SecondDrawer,
+    window::Event, Direction, FirstDrawer, GlobalState, PlayState, PlayStateResult, Renderer,
+    SecondDrawer,
 };
 use client_init::{ClientInit, Error as InitError, Msg as InitMsg};
 use common::{assets::load_expect, comp};
@@ -229,11 +230,9 @@ impl PlayState for MainMenuState {
 
     fn name(&self) -> &'static str { "Title" }
 
-    fn first_render(&mut self, _: &mut FirstDrawer) {}
-
-    fn second_render<'b>(&'b mut self, drawer: &'b mut SecondDrawer<'b>) {
-        // Draw the UI to the screen.
-        self.main_menu_ui.render(drawer);
+    fn render(&mut self, renderer: &mut Renderer) {
+        self.main_menu_ui
+            .render(&mut renderer.drawer().second_render());
     }
 }
 

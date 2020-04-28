@@ -355,172 +355,90 @@ impl Renderer {
         // raw_data).unwrap(), )
     }
 
-    pub fn first_render<'a: 'b, 'b>(&'a mut self, f: impl FnMut(FirstDrawer<'b>)) {
+    pub fn drawer(&mut self) -> Drawer {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("First render pass encoder"),
             });
 
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &self.tgt_color_texture.view,
-                    resolve_target: None,
-                    load_op: wgpu::LoadOp::Clear,
-                    store_op: wgpu::StoreOp::Store,
-                    clear_color: wgpu::Color::TRANSPARENT,
-                }],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
-                    attachment: &self.depth_stencil_texture.view,
-                    depth_load_op: wgpu::LoadOp::Clear,
-                    depth_store_op: wgpu::StoreOp::Store,
-                    clear_depth: 1.0,
-                    stencil_load_op: wgpu::LoadOp::Clear,
-                    stencil_store_op: wgpu::StoreOp::Store,
-                    clear_stencil: 0,
-                }),
-            });
-
-            f(FirstDrawer {
-                render_pass: &mut render_pass,
-                renderer: &self,
-            })
+        Drawer {
+            encoder,
+            renderer: self,
         }
-
-        self.queue.submit(&[encoder.finish()]);
     }
+}
 
-    pub fn second_render<'a: 'b, 'b>(&'a mut self, f: impl FnMut(SecondDrawer<'b>)) {
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Second render pass encoder"),
-            });
+pub struct Drawer<'a> {
+    pub(self) encoder: wgpu::CommandEncoder,
+    pub(self) renderer: &'a mut Renderer,
+}
 
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &self.swap_chain.get_next_texture().unwrap().view,
-                    resolve_target: None,
-                    load_op: wgpu::LoadOp::Clear,
-                    store_op: wgpu::StoreOp::Store,
-                    clear_color: wgpu::Color::TRANSPARENT,
-                }],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
-                    attachment: &self.depth_stencil_texture.view,
-                    depth_load_op: wgpu::LoadOp::Load,
-                    depth_store_op: wgpu::StoreOp::Store,
-                    clear_depth: 1.0,
-                    stencil_load_op: wgpu::LoadOp::Load,
-                    stencil_store_op: wgpu::StoreOp::Store,
-                    clear_stencil: 0,
-                }),
-            });
+impl<'a> Drawer<'a> {
+    pub fn first_render(&mut self) -> FirstDrawer {
+        let mut render_pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+                attachment: &self.renderer.tgt_color_texture.view,
+                resolve_target: None,
+                load_op: wgpu::LoadOp::Clear,
+                store_op: wgpu::StoreOp::Store,
+                clear_color: wgpu::Color::TRANSPARENT,
+            }],
+            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
+                attachment: &self.renderer.depth_stencil_texture.view,
+                depth_load_op: wgpu::LoadOp::Clear,
+                depth_store_op: wgpu::StoreOp::Store,
+                clear_depth: 1.0,
+                stencil_load_op: wgpu::LoadOp::Clear,
+                stencil_store_op: wgpu::StoreOp::Store,
+                clear_stencil: 0,
+            }),
+        });
 
-            f(SecondDrawer {
-                render_pass: &mut render_pass,
-                renderer: &self,
-            })
+        FirstDrawer {
+            render_pass: &mut render_pass,
+            renderer: &self.renderer,
         }
+    }
 
-        self.queue.submit(&[encoder.finish()]);
+    pub fn second_render(&mut self) -> SecondDrawer {
+        let mut render_pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+                attachment: &self.renderer.swap_chain.get_next_texture().unwrap().view,
+                resolve_target: None,
+                load_op: wgpu::LoadOp::Clear,
+                store_op: wgpu::StoreOp::Store,
+                clear_color: wgpu::Color::TRANSPARENT,
+            }],
+            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
+                attachment: &self.renderer.depth_stencil_texture.view,
+                depth_load_op: wgpu::LoadOp::Load,
+                depth_store_op: wgpu::StoreOp::Store,
+                clear_depth: 1.0,
+                stencil_load_op: wgpu::LoadOp::Load,
+                stencil_store_op: wgpu::StoreOp::Store,
+                clear_stencil: 0,
+            }),
+        });
+
+        SecondDrawer {
+            render_pass: &mut render_pass,
+            renderer: &self.renderer,
+        }
     }
 }
 
-pub struct UiDrawer<'a> {
+impl<'a> Drop for Drawer<'a> {
+    fn drop(&mut self) { self.renderer.queue.submit(&[self.encoder.finish()]); }
+}
+
+pub struct FirstDrawer<'a> {
     pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
-    pub(self) renderer: &'a Renderer,
+    pub renderer: &'a Renderer,
 }
 
-impl<'a> UiDrawer<'a> {
-    pub fn draw<'b: 'a>(
-        &mut self,
-        model: &'b Model,
-        tex: &Texture,
-        scissor: Aabr<u16>,
-        locals: &Consts<ui::Locals>,
-        globals: &Consts<Globals>,
-    ) {
-        let Aabr { min, max } = scissor;
-
-        let globals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.globals,
-                    bindings: &[
-                        wgpu::Binding {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Buffer {
-                                buffer: &globals.buf,
-                                range: 0..globals.len() as wgpu::BufferAddress,
-                            },
-                        },
-                        wgpu::Binding {
-                            binding: 1,
-                            resource: wgpu::BindingResource::TextureView(
-                                &self.renderer.noise_texture.view,
-                            ),
-                        },
-                        wgpu::Binding {
-                            binding: 2,
-                            resource: wgpu::BindingResource::Sampler(
-                                &self.renderer.noise_texture.sampler,
-                            ),
-                        },
-                    ],
-                });
-
-        let locals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("Ui locals"),
-                    layout: &self.renderer.ui_pipeline.locals,
-                    bindings: &[
-                        wgpu::Binding {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Buffer {
-                                buffer: &locals.buf,
-                                range: 0..locals.len() as wgpu::BufferAddress,
-                            },
-                        },
-                        wgpu::Binding {
-                            binding: 1,
-                            resource: wgpu::BindingResource::TextureView(&tex.view),
-                        },
-                        wgpu::Binding {
-                            binding: 2,
-                            resource: wgpu::BindingResource::Sampler(&tex.sampler),
-                        },
-                    ],
-                });
-
-        self.render_pass
-            .set_pipeline(&self.renderer.ui_pipeline.pipeline);
-        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
-        self.render_pass.set_bind_group(1, &locals_bind_group, &[]);
-        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-        self.render_pass.set_scissor_rect(
-            min.x as u32,
-            min.y as u32,
-            (max.x - min.x) as u32,
-            (max.y - min.y) as u32,
-        );
-        self.render_pass
-            .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
-    }
-}
-
-pub struct SkyboxDrawer<'a> {
-    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
-    pub(self) renderer: &'a Renderer,
-}
-
-impl<'a> SkyboxDrawer<'a> {
-    pub fn draw<'b: 'a>(
+impl<'a> FirstDrawer<'a> {
+    pub fn draw_skybox<'b: 'a>(
         &mut self,
         model: &'b Model,
         locals: &Consts<skybox::Locals>,
@@ -578,15 +496,8 @@ impl<'a> SkyboxDrawer<'a> {
         self.render_pass
             .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
     }
-}
 
-pub struct FigureDrawer<'a> {
-    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
-    pub(self) renderer: &'a Renderer,
-}
-
-impl<'a> FigureDrawer<'a> {
-    pub fn draw<'b: 'a>(
+    pub fn draw_figure<'b: 'a>(
         &mut self,
         model: &'b Model,
         locals: &Consts<figure::Locals>,
@@ -688,15 +599,8 @@ impl<'a> FigureDrawer<'a> {
         self.render_pass
             .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
     }
-}
 
-pub struct TerrainDrawer<'a> {
-    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
-    pub(self) renderer: &'a Renderer,
-}
-
-impl<'a> TerrainDrawer<'a> {
-    pub fn draw<'b: 'a>(
+    pub fn draw_terrain<'b: 'a>(
         &mut self,
         model: &'b Model,
         locals: &Consts<terrain::Locals>,
@@ -788,15 +692,8 @@ impl<'a> TerrainDrawer<'a> {
         self.render_pass
             .draw(model.vertex_range().start..model.vertex_range().end, 0..1)
     }
-}
 
-pub struct FluidDrawer<'a> {
-    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
-    pub(self) renderer: &'a Renderer,
-}
-
-impl<'a> FluidDrawer<'a> {
-    pub fn draw<'b: 'a>(
+    pub fn draw_fluid<'b: 'a>(
         &mut self,
         model: &'b Model,
         locals: &Consts<terrain::Locals>,
@@ -908,15 +805,8 @@ impl<'a> FluidDrawer<'a> {
         self.render_pass
             .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
     }
-}
 
-pub struct SpriteDrawer<'a> {
-    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
-    pub(self) renderer: &'a Renderer,
-}
-
-impl<'a> SpriteDrawer<'a> {
-    pub fn draw<'b: 'a>(
+    pub fn draw_sprite<'b: 'a>(
         &mut self,
         model: &'b Model,
         instances: &'a Instances<sprite::Instance>,
@@ -997,13 +887,13 @@ impl<'a> SpriteDrawer<'a> {
     }
 }
 
-pub struct PostProcessDrawer<'a> {
+pub struct SecondDrawer<'a> {
     pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
-    pub(self) renderer: &'a Renderer,
+    pub renderer: &'a Renderer,
 }
 
-impl<'a> PostProcessDrawer<'a> {
-    pub fn draw<'b: 'a>(
+impl<'a> SecondDrawer<'a> {
+    pub fn draw_post_process<'b: 'a>(
         &mut self,
         model: &'b Model,
         locals: &Consts<postprocess::Locals>,
@@ -1061,75 +951,84 @@ impl<'a> PostProcessDrawer<'a> {
         self.render_pass
             .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
     }
-}
 
-pub struct FirstDrawer<'a> {
-    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
-    pub renderer: &'a Renderer,
-}
+    pub fn draw_ui<'b: 'a>(
+        &mut self,
+        model: &'b Model,
+        tex: &Texture,
+        scissor: Aabr<u16>,
+        locals: &Consts<ui::Locals>,
+        globals: &Consts<Globals>,
+    ) {
+        let Aabr { min, max } = scissor;
 
-impl<'a> FirstDrawer<'a> {
-    pub fn render_skybox(&'a mut self, f: impl FnMut(SkyboxDrawer<'a>)) {
-        //Set pipeline
-        f(SkyboxDrawer {
-            render_pass: self.render_pass,
-            renderer: self.renderer,
-        });
-    }
+        let globals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &self.renderer.globals_layouts.globals,
+                    bindings: &[
+                        wgpu::Binding {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Buffer {
+                                buffer: &globals.buf,
+                                range: 0..globals.len() as wgpu::BufferAddress,
+                            },
+                        },
+                        wgpu::Binding {
+                            binding: 1,
+                            resource: wgpu::BindingResource::TextureView(
+                                &self.renderer.noise_texture.view,
+                            ),
+                        },
+                        wgpu::Binding {
+                            binding: 2,
+                            resource: wgpu::BindingResource::Sampler(
+                                &self.renderer.noise_texture.sampler,
+                            ),
+                        },
+                    ],
+                });
 
-    pub fn render_figure(&'a mut self, f: impl FnMut(FigureDrawer<'a>)) {
-        //Set pipeline
-        f(FigureDrawer {
-            render_pass: self.render_pass,
-            renderer: self.renderer,
-        });
-    }
+        let locals_bind_group =
+            self.renderer
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Ui locals"),
+                    layout: &self.renderer.ui_pipeline.locals,
+                    bindings: &[
+                        wgpu::Binding {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Buffer {
+                                buffer: &locals.buf,
+                                range: 0..locals.len() as wgpu::BufferAddress,
+                            },
+                        },
+                        wgpu::Binding {
+                            binding: 1,
+                            resource: wgpu::BindingResource::TextureView(&tex.view),
+                        },
+                        wgpu::Binding {
+                            binding: 2,
+                            resource: wgpu::BindingResource::Sampler(&tex.sampler),
+                        },
+                    ],
+                });
 
-    pub fn render_terrain(&'a mut self, f: impl FnMut(TerrainDrawer<'a>)) {
-        //Set pipeline
-        f(TerrainDrawer {
-            render_pass: self.render_pass,
-            renderer: self.renderer,
-        });
-    }
-
-    pub fn render_fluid(&'a mut self, f: impl FnMut(FluidDrawer<'a>)) {
-        //Set pipeline
-        f(FluidDrawer {
-            render_pass: self.render_pass,
-            renderer: self.renderer,
-        });
-    }
-
-    pub fn render_sprite(&'a mut self, f: impl FnMut(SpriteDrawer<'a>)) {
-        //Set pipeline
-        f(SpriteDrawer {
-            render_pass: self.render_pass,
-            renderer: self.renderer,
-        });
-    }
-}
-
-pub struct SecondDrawer<'a> {
-    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
-    pub renderer: &'a Renderer,
-}
-
-impl<'a> SecondDrawer<'a> {
-    pub fn render_ui(&'a mut self, f: impl FnMut(UiDrawer<'a>)) {
-        //Set pipeline
-        f(UiDrawer {
-            render_pass: self.render_pass,
-            renderer: self.renderer,
-        });
-    }
-
-    pub fn render_post_process(&'a mut self, f: impl FnMut(PostProcessDrawer<'a>)) {
-        //Set pipeline
-        f(PostProcessDrawer {
-            render_pass: self.render_pass,
-            renderer: self.renderer,
-        });
+        self.render_pass
+            .set_pipeline(&self.renderer.ui_pipeline.pipeline);
+        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
+        self.render_pass.set_bind_group(1, &locals_bind_group, &[]);
+        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
+        self.render_pass.set_scissor_rect(
+            min.x as u32,
+            min.y as u32,
+            (max.x - min.x) as u32,
+            (max.y - min.y) as u32,
+        );
+        self.render_pass
+            .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
     }
 }
 

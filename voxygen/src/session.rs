@@ -682,21 +682,27 @@ impl PlayState for SessionState {
     /// Render the session to the screen.
     ///
     /// This method should be called once per frame.
-    fn first_render<'b>(&'b mut self, drawer: &'b mut FirstDrawer<'b>) {
+    fn render(&mut self, renderer: &mut Renderer) {
+        let drawer = renderer.drawer();
+
         // Render the screen using the global renderer
         {
             let client = self.client.borrow();
-            self.scene
-                .first_render(drawer, client.state(), client.entity(), client.get_tick());
-        }
-    }
 
-    /// Render the session to the screen.
-    ///
-    /// This method should be called once per frame.
-    fn second_render<'b>(&'b mut self, drawer: &'b mut SecondDrawer<'b>) {
-        self.scene.second_render(drawer);
-        // Draw the UI to the screen
-        self.hud.render(drawer, self.scene.globals());
+            self.scene.first_render(
+                &mut drawer.first_render(),
+                client.state(),
+                client.entity(),
+                client.get_tick(),
+            );
+        }
+
+        {
+            let drawer = drawer.second_render();
+
+            self.scene.second_render(&mut drawer);
+            // Draw the UI to the screen
+            self.hud.render(&mut drawer, self.scene.globals());
+        }
     }
 }

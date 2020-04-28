@@ -346,9 +346,9 @@ impl Scene {
     }
 
     /// Render the scene using the provided `Renderer`.
-    pub fn first_render<'b>(
+    pub fn first_render<'a, 'b: 'a>(
         &'b mut self,
-        drawer: &'b mut FirstDrawer<'b>,
+        drawer: &'a mut FirstDrawer<'a>,
         state: &State,
         player_entity: EcsEntity,
         tick: u64,
@@ -373,9 +373,7 @@ impl Scene {
         );
 
         // Render the skybox.
-        drawer.render_skybox(|drawer| {
-            drawer.draw(&self.skybox.model, &self.skybox.locals, &self.globals);
-        });
+        drawer.draw_skybox(&self.skybox.model, &self.skybox.locals, &self.globals);
 
         self.terrain.render_translucent(
             drawer,
@@ -387,13 +385,11 @@ impl Scene {
     }
 
     /// Render the scene using the provided `Renderer`.
-    pub fn second_render<'b>(&'b mut self, drawer: &'b mut SecondDrawer<'b>) {
-        drawer.render_post_process(|postprocessing| {
-            postprocessing.draw(
-                &self.postprocess.model,
-                &self.postprocess.locals,
-                &self.globals,
-            )
-        });
+    pub fn second_render<'b: 'a, 'a>(&'b mut self, drawer: &'a mut SecondDrawer<'a>) {
+        drawer.draw_post_process(
+            &self.postprocess.model,
+            &self.postprocess.locals,
+            &self.globals,
+        )
     }
 }
