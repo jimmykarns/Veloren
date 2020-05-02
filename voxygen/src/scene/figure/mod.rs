@@ -1216,9 +1216,9 @@ impl FigureMgr {
         state: &State,
         player_entity: EcsEntity,
         tick: u64,
-        globals: &Consts<Globals>,
-        lights: &Consts<Light>,
-        shadows: &Consts<Shadow>,
+        globals: &'b Consts<Globals>,
+        lights: &'b Consts<Light>,
+        shadows: &'b Consts<Shadow>,
         camera: &Camera,
     ) {
         let ecs = state.ecs();
@@ -1270,7 +1270,7 @@ impl FigureMgr {
                 biped_large_states,
                 object_states,
             } = self;
-            if let Some((locals, bone_consts, model)) = match body {
+            if let Some((locals, bone_consts, (model, verts))) = match body {
                 Body::Humanoid(_) => character_states
                     .get(&entity)
                     .filter(|state| state.visible)
@@ -1451,7 +1451,15 @@ impl FigureMgr {
                     )
                 }),
             } {
-                drawer.draw_figure(model, locals, bone_consts, globals, lights, shadows);
+                drawer.draw_figure(
+                    model,
+                    locals,
+                    bone_consts,
+                    globals,
+                    lights,
+                    shadows,
+                    verts.clone(),
+                );
             } else {
                 trace!("Body has no saved figure");
             }
@@ -1539,8 +1547,8 @@ pub struct FigureState<S: Skeleton> {
 impl<S: Skeleton> FigureState<S> {
     pub fn new(renderer: &mut Renderer, skeleton: S) -> Self {
         Self {
-            bone_consts: renderer.create_consts(&skeleton.compute_matrices()),
-            locals: renderer.create_consts(&[FigureLocals::default()]),
+            bone_consts: renderer.create_consts_bone_data(&skeleton.compute_matrices()),
+            locals: renderer.create_consts_figure_locals(&[FigureLocals::default()]),
             movement_time: 0.0,
             action_time: 0.0,
             skeleton,

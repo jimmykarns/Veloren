@@ -137,10 +137,10 @@ impl PlayState for CharSelectionState {
     fn name(&self) -> &'static str { "Title" }
 
     fn render(&mut self, renderer: &mut Renderer) {
-        let drawer = renderer.drawer();
+        let mut drawer = renderer.drawer();
 
         {
-            let drawer = drawer.first_render();
+            let mut first_drawer = drawer.first_render();
 
             let humanoid_body = self
         .char_selection_ui
@@ -153,7 +153,7 @@ impl PlayState for CharSelectionState {
 
             // Render the scene.
             self.scene.first_render(
-                &mut drawer,
+                &mut first_drawer,
                 self.client.borrow().get_tick(),
                 humanoid_body.clone(),
                 &comp::Equipment {
@@ -168,14 +168,14 @@ impl PlayState for CharSelectionState {
         }
 
         {
-            let drawer = drawer.second_render();
+            let mut second_drawer = drawer.second_render();
 
             // Render the scene.
-            self.scene.second_render(&mut drawer);
+            self.scene.second_render(&mut second_drawer);
 
             // Draw the UI to the screen.
             self.char_selection_ui
-                .render(&mut drawer, self.scene.globals());
+                .render(&mut second_drawer, self.scene.globals());
         }
     }
 }

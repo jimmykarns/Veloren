@@ -13,8 +13,7 @@ use crate::{
     audio::{music::MusicMgr, sfx::SfxMgr, AudioFrontend},
     render::{
         create_pp_mesh, create_skybox_mesh, Consts, FirstDrawer, Globals, Light, Model,
-        PostProcessLocals, PostProcessPipeline, Renderer, SecondDrawer, Shadow, SkyboxLocals,
-        SkyboxPipeline,
+        PostProcessPipeline, Renderer, SecondDrawer, Shadow, SkyboxPipeline,
     },
     window::{AnalogGameInput, Event},
 };
@@ -38,12 +37,10 @@ const SHADOW_MAX_DIST: f32 = 96.0; // The distance beyond which shadows may not 
 
 struct Skybox {
     model: Model,
-    locals: Consts<SkyboxLocals>,
 }
 
 struct PostProcess {
     model: Model,
-    locals: Consts<PostProcessLocals>,
 }
 
 pub struct Scene {
@@ -79,19 +76,17 @@ impl Scene {
         let resolution = renderer.get_resolution().map(|e| e as f32);
 
         Self {
-            globals: renderer.create_consts(&[Globals::default()]),
-            lights: renderer.create_consts(&[Light::default(); MAX_LIGHT_COUNT]),
-            shadows: renderer.create_consts(&[Shadow::default(); MAX_SHADOW_COUNT]),
+            globals: renderer.create_consts_globals(&[Globals::default()]),
+            lights: renderer.create_consts_light(&[Light::default(); MAX_LIGHT_COUNT]),
+            shadows: renderer.create_consts_shadows(&[Shadow::default(); MAX_SHADOW_COUNT]),
             camera: Camera::new(resolution.x / resolution.y, CameraMode::ThirdPerson),
             camera_input_state: Vec2::zero(),
 
             skybox: Skybox {
                 model: renderer.create_model(&create_skybox_mesh()),
-                locals: renderer.create_consts(&[SkyboxLocals::default()]),
             },
             postprocess: PostProcess {
                 model: renderer.create_model(&create_pp_mesh()),
-                locals: renderer.create_consts(&[PostProcessLocals::default()]),
             },
             terrain: Terrain::new(renderer),
             loaded_distance: 0.0,
@@ -373,7 +368,7 @@ impl Scene {
         );
 
         // Render the skybox.
-        drawer.draw_skybox(&self.skybox.model, &self.skybox.locals, &self.globals);
+        drawer.draw_skybox(&self.skybox.model, &self.globals, 0..6 * 6);
 
         self.terrain.render_translucent(
             drawer,
@@ -386,10 +381,6 @@ impl Scene {
 
     /// Render the scene using the provided `Renderer`.
     pub fn second_render<'b: 'a, 'a>(&'b mut self, drawer: &'a mut SecondDrawer<'a>) {
-        drawer.draw_post_process(
-            &self.postprocess.model,
-            &self.postprocess.locals,
-            &self.globals,
-        )
+        drawer.draw_post_process(&self.postprocess.model, &self.globals, 0..3 * 2)
     }
 }

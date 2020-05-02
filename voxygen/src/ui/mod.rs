@@ -22,8 +22,8 @@ pub use widgets::{
 
 use crate::{
     render::{
-        create_ui_quad, create_ui_tri, Consts, DynamicModel, Globals, Mesh, Renderer, SecondDrawer,
-        UiLocals, UiMode, UiPipeline,
+        create_ui_quad, create_ui_tri, Consts, Globals, Mesh, Model, Renderer, SecondDrawer,
+        Texture, UiLocals, UiMode, UiPipeline,
     },
     window::Window,
     Error,
@@ -59,19 +59,19 @@ enum DrawKind {
     Plain,
 }
 enum DrawCommand {
-    Draw { kind: DrawKind, verts: Range<usize> },
+    Draw { kind: DrawKind, verts: Range<u32> },
     Scissor(Aabr<u16>),
     WorldPos(Option<usize>),
 }
 impl DrawCommand {
-    fn image(verts: Range<usize>, id: TexId) -> DrawCommand {
+    fn image(verts: Range<u32>, id: TexId) -> DrawCommand {
         DrawCommand::Draw {
             kind: DrawKind::Image(id),
             verts,
         }
     }
 
-    fn plain(verts: Range<usize>) -> DrawCommand {
+    fn plain(verts: Range<u32>) -> DrawCommand {
         DrawCommand::Draw {
             kind: DrawKind::Plain,
             verts,
@@ -97,7 +97,7 @@ pub struct Ui {
     // Draw commands for the next render
     draw_commands: Vec<DrawCommand>,
     // Model for drawing the ui
-    model: DynamicModel,
+    model: Model,
     // Consts for default ui drawing position (ie the interface)
     interface_locals: Consts<UiLocals>,
     default_globals: Consts<Globals>,
@@ -128,14 +128,16 @@ impl Ui {
             scale.scale_factor_logical(),
         );
 
+        let empty_tex = renderer.create_dynamic_texture(0, 0);
+
         Ok(Self {
             ui,
             image_map: Map::new(),
             cache: Cache::new(renderer)?,
             draw_commands: Vec::new(),
             model: renderer.create_dynamic_model(100),
-            interface_locals: renderer.create_consts(&[UiLocals::default()]),
-            default_globals: renderer.create_consts(&[Globals::default()]),
+            interface_locals: renderer.create_consts_ui_locals(&[UiLocals::default()], &empty_tex),
+            default_globals: renderer.create_consts_globals(&[Globals::default()]),
             ingame_locals: Vec::new(),
             window_resized: None,
             need_cache_resize: false,
@@ -319,8 +321,8 @@ impl Ui {
             () => {
                 if let State::Image(id) = current_state {
                     self.draw_commands
-                        .push(DrawCommand::image(start..mesh.vertices().len(), id));
-                    start = mesh.vertices().len();
+                        .push(DrawCommand::image(start..mesh.vertices().len() as u32, id));
+                    start = mesh.vertices().len() as u32;
                     current_state = State::Plain;
                 }
             };
@@ -364,10 +366,10 @@ impl Ui {
             if new_scissor != current_scissor {
                 // Finish the current command.
                 self.draw_commands.push(match current_state {
-                    State::Plain => DrawCommand::plain(start..mesh.vertices().len()),
-                    State::Image(id) => DrawCommand::image(start..mesh.vertices().len(), id),
+                    State::Plain => DrawCommand::plain(start..mesh.vertices().len() as u32),
+                    State::Image(id) => DrawCommand::image(start..mesh.vertices().len() as u32, id),
                 });
-                start = mesh.vertices().len();
+                start = mesh.vertices().len() as u32;
 
                 // Update the scissor and produce a command.
                 current_scissor = new_scissor;
@@ -381,10 +383,12 @@ impl Ui {
                     placement = Placement::Interface;
                     // Finish current state
                     self.draw_commands.push(match current_state {
-                        State::Plain => DrawCommand::plain(start..mesh.vertices().len()),
-                        State::Image(id) => DrawCommand::image(start..mesh.vertices().len(), id),
+                        State::Plain => DrawCommand::plain(start..mesh.vertices().len() as u32),
+                        State::Image(id) => {
+                            DrawCommand::image(start..mesh.vertices().len() as u32, id)
+                        },
                     });
-                    start = mesh.vertices().len();
+                    start = mesh.vertices().len() as u32;
                     // Push new position command
                     self.draw_commands.push(DrawCommand::WorldPos(None));
                 },
@@ -535,15 +539,15 @@ impl Ui {
                         // Switch to the image state if we are not in it already.
                         State::Plain => {
                             self.draw_commands
-                                .push(DrawCommand::plain(start..mesh.vertices().len()));
-                            start = mesh.vertices().len();
+                                .push(DrawCommand::plain(start..mesh.vertices().len() as u32));
+                            start = mesh.vertices().len() as u32;
                             current_state = State::Image(tex_id);
                         },
                         // If the image is cached in a different texture switch to the new one
                         State::Image(id) if id != tex_id => {
                             self.draw_commands
-                                .push(DrawCommand::image(start..mesh.vertices().len(), id));
-                            start = mesh.vertices().len();
+                                .push(DrawCommand::image(start..mesh.vertices().len() as u32, id));
+                            start = mesh.vertices().len() as u32;
                             current_state = State::Image(tex_id);
                         },
                         State::Image(_) => {},
@@ -691,13 +695,13 @@ impl Ui {
                                 // Finish current state
                                 self.draw_commands.push(match current_state {
                                     State::Plain => {
-                                        DrawCommand::plain(start..mesh.vertices().len())
+                                        DrawCommand::plain(start..mesh.vertices().len() as u32)
                                     },
                                     State::Image(id) => {
-                                        DrawCommand::image(start..mesh.vertices().len(), id)
+                                        DrawCommand::image(start..mesh.vertices().len() as u32, id)
                                     },
                                 });
-                                start = mesh.vertices().len();
+                                start = mesh.vertices().len() as u32;
 
                                 // Push new position command
                                 let world_pos = Vec4::from_point(parameters.pos);
@@ -707,8 +711,15 @@ impl Ui {
                                         &[world_pos.into()],
                                     );
                                 } else {
-                                    self.ingame_locals
-                                        .push(renderer.create_consts(&[world_pos.into()]));
+                                    self.ingame_locals.push(renderer.create_consts_ui_locals(
+                                        &[world_pos.into()],
+                                        match current_state {
+                                            State::Plain => self.cache.glyph_cache_tex(),
+                                            State::Image(id) => {
+                                                self.cache.graphic_cache().get_tex(id)
+                                            },
+                                        },
+                                    ));
                                 }
                                 self.draw_commands
                                     .push(DrawCommand::WorldPos(Some(ingame_local_index)));
@@ -728,8 +739,8 @@ impl Ui {
         }
         // Enter the final command.
         self.draw_commands.push(match current_state {
-            State::Plain => DrawCommand::plain(start..mesh.vertices().len()),
-            State::Image(id) => DrawCommand::image(start..mesh.vertices().len(), id),
+            State::Plain => DrawCommand::plain(start..mesh.vertices().len() as u32),
+            State::Image(id) => DrawCommand::image(start..mesh.vertices().len() as u32, id),
         });
 
         // Draw glyph cache (use for debugging).
@@ -776,10 +787,10 @@ impl Ui {
         }
     }
 
-    pub fn render<'b>(
-        &'b self,
-        drawer: &'b mut SecondDrawer<'b>,
-        maybe_globals: Option<&Consts<Globals>>,
+    pub fn render<'a>(
+        &'a self,
+        drawer: &mut SecondDrawer<'a>,
+        maybe_globals: Option<&'a Consts<Globals>>,
     ) {
         let mut scissor = default_scissor(drawer.renderer);
         let globals = maybe_globals.unwrap_or(&self.default_globals);
@@ -797,8 +808,7 @@ impl Ui {
                         DrawKind::Image(tex_id) => self.cache.graphic_cache().get_tex(*tex_id),
                         DrawKind::Plain => self.cache.glyph_cache_tex(),
                     };
-                    let model = self.model.submodel(verts.clone());
-                    drawer.draw_ui(&model, tex, scissor, locals, globals);
+                    drawer.draw_ui(&self.model, scissor, locals, globals, verts.clone());
                 },
             }
         }

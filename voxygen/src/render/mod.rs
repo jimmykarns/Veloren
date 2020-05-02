@@ -12,14 +12,12 @@ pub use self::{
     consts::Consts,
     instances::Instances,
     mesh::{Mesh, Quad, Tri},
-    model::{DynamicModel, Model},
+    model::Model,
     pipelines::{
         figure::{BoneData as FigureBoneData, FigurePipeline, Locals as FigureLocals},
-        fluid::FluidPipeline,
-        postprocess::{
-            create_mesh as create_pp_mesh, Locals as PostProcessLocals, PostProcessPipeline,
-        },
-        skybox::{create_mesh as create_skybox_mesh, Locals as SkyboxLocals, SkyboxPipeline},
+        fluid::{FluidPipeline, Locals as FluidLocals},
+        postprocess::{create_mesh as create_pp_mesh, PostProcessPipeline},
+        skybox::{create_mesh as create_skybox_mesh, SkyboxPipeline},
         sprite::{Instance as SpriteInstance, SpritePipeline},
         terrain::{Locals as TerrainLocals, TerrainPipeline},
         ui::{

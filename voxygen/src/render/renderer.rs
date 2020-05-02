@@ -2,18 +2,23 @@ use super::{
     consts::Consts,
     instances::Instances,
     mesh::Mesh,
-    model::{DynamicModel, Model},
+    model::Model,
     pipelines::{
         figure, fluid, postprocess, skybox, sprite, terrain, ui, Globals, GlobalsLayouts, Light,
         Shadow,
     },
     texture::Texture,
-    AaMode, CloudMode, FluidMode, Pipeline,
+    AaMode, CloudMode, FigureBoneData, FigureLocals, FluidLocals, FluidMode, Pipeline,
+    TerrainLocals, UiLocals,
 };
 use common::assets::{self, watch::ReloadIndicator};
 use log::error;
 use vek::*;
 use zerocopy::AsBytes;
+
+mod drawer;
+
+pub use drawer::{Drawer, FirstDrawer, SecondDrawer};
 
 /// A type that encapsulates rendering state. `Renderer` is central to Voxygen's
 /// rendering subsystem and contains any state necessary to interact with the
@@ -247,9 +252,249 @@ impl Renderer {
         self.postprocess_pipeline = postprocess_pipeline;
     }
 
-    /// Create a new set of constants with the provided values.
-    pub fn create_consts<T: Copy + AsBytes>(&mut self, vals: &[T]) -> Consts<T> {
-        let mut consts = Consts::new(&mut self.device, std::mem::size_of_val(vals));
+    pub fn create_consts_globals(&mut self, vals: &[Globals]) -> Consts<Globals> {
+        let len = std::mem::size_of_val(vals);
+
+        let buf = self
+            .device
+            .create_buffer_mapped(&wgpu::BufferDescriptor {
+                label: Some("Globals buffer"),
+                size: len as wgpu::BufferAddress,
+                usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
+            })
+            .finish();
+
+        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Globals bind group"),
+            layout: &self.globals_layouts.globals,
+            bindings: &[
+                wgpu::Binding {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer {
+                        buffer: &buf,
+                        range: 0..len as wgpu::BufferAddress,
+                    },
+                },
+                wgpu::Binding {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&self.noise_texture.view),
+                },
+                wgpu::Binding {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&self.noise_texture.sampler),
+                },
+            ],
+        });
+
+        self.create_consts_internal(len, vals, Some(buf), bind_group)
+    }
+
+    pub fn create_consts_light(&mut self, vals: &[Light]) -> Consts<Light> {
+        let len = std::mem::size_of_val(vals);
+
+        let buf = self
+            .device
+            .create_buffer_mapped(&wgpu::BufferDescriptor {
+                label: Some("Light buffer"),
+                size: len as wgpu::BufferAddress,
+                usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
+            })
+            .finish();
+
+        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Light bind group"),
+            layout: &self.globals_layouts.globals,
+            bindings: &[wgpu::Binding {
+                binding: 0,
+                resource: wgpu::BindingResource::Buffer {
+                    buffer: &buf,
+                    range: 0..len as wgpu::BufferAddress,
+                },
+            }],
+        });
+
+        self.create_consts_internal(len, vals, Some(buf), bind_group)
+    }
+
+    pub fn create_consts_shadows(&mut self, vals: &[Shadow]) -> Consts<Shadow> {
+        let len = std::mem::size_of_val(vals);
+
+        let buf = self
+            .device
+            .create_buffer_mapped(&wgpu::BufferDescriptor {
+                label: Some("Shadow buffer"),
+                size: len as wgpu::BufferAddress,
+                usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
+            })
+            .finish();
+
+        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Shadow bind group"),
+            layout: &self.globals_layouts.globals,
+            bindings: &[wgpu::Binding {
+                binding: 0,
+                resource: wgpu::BindingResource::Buffer {
+                    buffer: &buf,
+                    range: 0..len as wgpu::BufferAddress,
+                },
+            }],
+        });
+
+        self.create_consts_internal(len, vals, Some(buf), bind_group)
+    }
+
+    pub fn create_consts_figure_locals(&mut self, vals: &[FigureLocals]) -> Consts<FigureLocals> {
+        let len = std::mem::size_of_val(vals);
+
+        let buf = self
+            .device
+            .create_buffer_mapped(&wgpu::BufferDescriptor {
+                label: Some("Figure locals buffer"),
+                size: len as wgpu::BufferAddress,
+                usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
+            })
+            .finish();
+
+        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Figure locals bind group"),
+            layout: &self.figure_pipeline.locals,
+            bindings: &[wgpu::Binding {
+                binding: 0,
+                resource: wgpu::BindingResource::Buffer {
+                    buffer: &buf,
+                    range: 0..len as wgpu::BufferAddress,
+                },
+            }],
+        });
+
+        self.create_consts_internal(len, vals, Some(buf), bind_group)
+    }
+
+    pub fn create_consts_bone_data(&mut self, vals: &[FigureBoneData]) -> Consts<FigureBoneData> {
+        let len = std::mem::size_of_val(vals);
+
+        let buf = self
+            .device
+            .create_buffer_mapped(&wgpu::BufferDescriptor {
+                label: Some("Bone data buffer"),
+                size: len as wgpu::BufferAddress,
+                usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
+            })
+            .finish();
+
+        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Bone data bind group"),
+            layout: &self.figure_pipeline.bone_data,
+            bindings: &[wgpu::Binding {
+                binding: 0,
+                resource: wgpu::BindingResource::Buffer {
+                    buffer: &buf,
+                    range: 0..len as wgpu::BufferAddress,
+                },
+            }],
+        });
+
+        self.create_consts_internal(len, vals, Some(buf), bind_group)
+    }
+
+    pub fn create_consts_fluid_locals(&mut self, waves: Texture) -> Consts<FluidLocals> {
+        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Fluid locals bind group"),
+            layout: &self.fluid_pipeline.locals,
+            bindings: &[
+                wgpu::Binding {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&waves.view),
+                },
+                wgpu::Binding {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&waves.sampler),
+                },
+            ],
+        });
+
+        self.create_consts_internal(0, &[], None, bind_group)
+    }
+
+    pub fn create_consts_terrain_locals(
+        &mut self,
+        vals: &[TerrainLocals],
+    ) -> Consts<TerrainLocals> {
+        let len = std::mem::size_of_val(vals);
+
+        let buf = self
+            .device
+            .create_buffer_mapped(&wgpu::BufferDescriptor {
+                label: Some("Terrain locals buffer"),
+                size: len as wgpu::BufferAddress,
+                usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
+            })
+            .finish();
+
+        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Terrain locals bind group"),
+            layout: &self.terrain_pipeline.locals,
+            bindings: &[wgpu::Binding {
+                binding: 0,
+                resource: wgpu::BindingResource::Buffer {
+                    buffer: &buf,
+                    range: 0..len as wgpu::BufferAddress,
+                },
+            }],
+        });
+
+        self.create_consts_internal(len, vals, Some(buf), bind_group)
+    }
+
+    pub fn create_consts_ui_locals(
+        &mut self,
+        vals: &[UiLocals],
+        tex: &Texture,
+    ) -> Consts<UiLocals> {
+        let len = std::mem::size_of_val(vals);
+
+        let buf = self
+            .device
+            .create_buffer_mapped(&wgpu::BufferDescriptor {
+                label: Some("UI locals buffer"),
+                size: len as wgpu::BufferAddress,
+                usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
+            })
+            .finish();
+
+        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("UI locals bind group"),
+            layout: &self.ui_pipeline.locals,
+            bindings: &[
+                wgpu::Binding {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer {
+                        buffer: &buf,
+                        range: 0..len as wgpu::BufferAddress,
+                    },
+                },
+                wgpu::Binding {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&tex.view),
+                },
+                wgpu::Binding {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&tex.sampler),
+                },
+            ],
+        });
+
+        self.create_consts_internal(len, vals, Some(buf), bind_group)
+    }
+
+    fn create_consts_internal<T: Copy + AsBytes>(
+        &mut self,
+        len: usize,
+        vals: &[T],
+        buf: Option<wgpu::Buffer>,
+        bind_group: wgpu::BindGroup,
+    ) -> Consts<T> {
+        let mut consts = Consts::new(len, buf, bind_group);
         consts.update(&mut self.device, &mut self.queue, vals);
         consts
     }
@@ -268,21 +513,18 @@ impl Renderer {
 
     /// Create a new model from the provided mesh.
     pub fn create_model<P: Pipeline>(&self, mesh: &Mesh<P>) -> Model {
-        Model::new(&self.device, mesh)
+        let mut model = Model::new(&self.device, std::mem::size_of_val(mesh.vertices()));
+        model.update(&mut self.device, &mut self.queue, mesh, 0);
+        model
     }
 
     /// Create a new dynamic model with the specified size.
-    pub fn create_dynamic_model(&mut self, size: usize) -> DynamicModel {
-        DynamicModel::new(&mut self.device, size)
+    pub fn create_dynamic_model(&mut self, size: usize) -> Model {
+        Model::new(&mut self.device, size)
     }
 
     /// Update a dynamic model with a mesh and a offset.
-    pub fn update_model<P: Pipeline>(
-        &mut self,
-        model: &mut DynamicModel,
-        mesh: &Mesh<P>,
-        offset: usize,
-    ) {
+    pub fn update_model<P: Pipeline>(&mut self, model: &mut Model, mesh: &Mesh<P>, offset: usize) {
         model.update(&mut self.device, &mut self.queue, mesh, offset)
     }
 
@@ -356,679 +598,17 @@ impl Renderer {
     }
 
     pub fn drawer(&mut self) -> Drawer {
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        let mut encoder = Some(self.device.create_command_encoder(
+            &wgpu::CommandEncoderDescriptor {
                 label: Some("First render pass encoder"),
-            });
+            },
+        ));
 
         Drawer {
             encoder,
+            tex: self.swap_chain.get_next_texture().unwrap(),
             renderer: self,
         }
-    }
-}
-
-pub struct Drawer<'a> {
-    pub(self) encoder: wgpu::CommandEncoder,
-    pub(self) renderer: &'a mut Renderer,
-}
-
-impl<'a> Drawer<'a> {
-    pub fn first_render(&mut self) -> FirstDrawer {
-        let mut render_pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                attachment: &self.renderer.tgt_color_texture.view,
-                resolve_target: None,
-                load_op: wgpu::LoadOp::Clear,
-                store_op: wgpu::StoreOp::Store,
-                clear_color: wgpu::Color::TRANSPARENT,
-            }],
-            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
-                attachment: &self.renderer.depth_stencil_texture.view,
-                depth_load_op: wgpu::LoadOp::Clear,
-                depth_store_op: wgpu::StoreOp::Store,
-                clear_depth: 1.0,
-                stencil_load_op: wgpu::LoadOp::Clear,
-                stencil_store_op: wgpu::StoreOp::Store,
-                clear_stencil: 0,
-            }),
-        });
-
-        FirstDrawer {
-            render_pass: &mut render_pass,
-            renderer: &self.renderer,
-        }
-    }
-
-    pub fn second_render(&mut self) -> SecondDrawer {
-        let mut render_pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                attachment: &self.renderer.swap_chain.get_next_texture().unwrap().view,
-                resolve_target: None,
-                load_op: wgpu::LoadOp::Clear,
-                store_op: wgpu::StoreOp::Store,
-                clear_color: wgpu::Color::TRANSPARENT,
-            }],
-            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
-                attachment: &self.renderer.depth_stencil_texture.view,
-                depth_load_op: wgpu::LoadOp::Load,
-                depth_store_op: wgpu::StoreOp::Store,
-                clear_depth: 1.0,
-                stencil_load_op: wgpu::LoadOp::Load,
-                stencil_store_op: wgpu::StoreOp::Store,
-                clear_stencil: 0,
-            }),
-        });
-
-        SecondDrawer {
-            render_pass: &mut render_pass,
-            renderer: &self.renderer,
-        }
-    }
-}
-
-impl<'a> Drop for Drawer<'a> {
-    fn drop(&mut self) { self.renderer.queue.submit(&[self.encoder.finish()]); }
-}
-
-pub struct FirstDrawer<'a> {
-    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
-    pub renderer: &'a Renderer,
-}
-
-impl<'a> FirstDrawer<'a> {
-    pub fn draw_skybox<'b: 'a>(
-        &mut self,
-        model: &'b Model,
-        locals: &Consts<skybox::Locals>,
-        globals: &Consts<Globals>,
-    ) {
-        let globals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.globals,
-                    bindings: &[
-                        wgpu::Binding {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Buffer {
-                                buffer: &globals.buf,
-                                range: 0..globals.len() as wgpu::BufferAddress,
-                            },
-                        },
-                        wgpu::Binding {
-                            binding: 1,
-                            resource: wgpu::BindingResource::TextureView(
-                                &self.renderer.noise_texture.view,
-                            ),
-                        },
-                        wgpu::Binding {
-                            binding: 2,
-                            resource: wgpu::BindingResource::Sampler(
-                                &self.renderer.noise_texture.sampler,
-                            ),
-                        },
-                    ],
-                });
-
-        let locals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("Skybox locals"),
-                    layout: &self.renderer.skybox_pipeline.locals,
-                    bindings: &[wgpu::Binding {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer {
-                            buffer: &locals.buf,
-                            range: 0..locals.len() as wgpu::BufferAddress,
-                        },
-                    }],
-                });
-
-        self.render_pass
-            .set_pipeline(&self.renderer.skybox_pipeline.pipeline);
-        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
-        self.render_pass.set_bind_group(1, &locals_bind_group, &[]);
-        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-        self.render_pass
-            .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
-    }
-
-    pub fn draw_figure<'b: 'a>(
-        &mut self,
-        model: &'b Model,
-        locals: &Consts<figure::Locals>,
-        bones: &Consts<figure::BoneData>,
-        globals: &Consts<Globals>,
-        lights: &Consts<Light>,
-        shadows: &Consts<Shadow>,
-    ) {
-        let globals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.globals,
-                    bindings: &[
-                        wgpu::Binding {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Buffer {
-                                buffer: &globals.buf,
-                                range: 0..globals.len() as wgpu::BufferAddress,
-                            },
-                        },
-                        wgpu::Binding {
-                            binding: 1,
-                            resource: wgpu::BindingResource::TextureView(
-                                &self.renderer.noise_texture.view,
-                            ),
-                        },
-                        wgpu::Binding {
-                            binding: 2,
-                            resource: wgpu::BindingResource::Sampler(
-                                &self.renderer.noise_texture.sampler,
-                            ),
-                        },
-                    ],
-                });
-
-        let lights_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.light,
-                    bindings: &[wgpu::Binding {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer {
-                            buffer: &lights.buf,
-                            range: 0..lights.len() as wgpu::BufferAddress,
-                        },
-                    }],
-                });
-
-        let shadows_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.shadow,
-                    bindings: &[wgpu::Binding {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer {
-                            buffer: &shadows.buf,
-                            range: 0..shadows.len() as wgpu::BufferAddress,
-                        },
-                    }],
-                });
-
-        let locals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("Figure locals"),
-                    layout: &self.renderer.figure_pipeline.locals,
-                    bindings: &[
-                        wgpu::Binding {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Buffer {
-                                buffer: &locals.buf,
-                                range: 0..locals.len() as wgpu::BufferAddress,
-                            },
-                        },
-                        wgpu::Binding {
-                            binding: 1,
-                            resource: wgpu::BindingResource::Buffer {
-                                buffer: &bones.buf,
-                                range: 0..bones.len() as wgpu::BufferAddress,
-                            },
-                        },
-                    ],
-                });
-
-        self.render_pass
-            .set_pipeline(&self.renderer.figure_pipeline.pipeline);
-        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
-        self.render_pass.set_bind_group(1, &lights_bind_group, &[]);
-        self.render_pass.set_bind_group(2, &shadows_bind_group, &[]);
-        self.render_pass.set_bind_group(3, &locals_bind_group, &[]);
-        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-        self.render_pass
-            .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
-    }
-
-    pub fn draw_terrain<'b: 'a>(
-        &mut self,
-        model: &'b Model,
-        locals: &Consts<terrain::Locals>,
-        globals: &Consts<Globals>,
-        lights: &Consts<Light>,
-        shadows: &Consts<Shadow>,
-    ) {
-        let globals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.globals,
-                    bindings: &[
-                        wgpu::Binding {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Buffer {
-                                buffer: &globals.buf,
-                                range: 0..globals.len() as wgpu::BufferAddress,
-                            },
-                        },
-                        wgpu::Binding {
-                            binding: 1,
-                            resource: wgpu::BindingResource::TextureView(
-                                &self.renderer.noise_texture.view,
-                            ),
-                        },
-                        wgpu::Binding {
-                            binding: 2,
-                            resource: wgpu::BindingResource::Sampler(
-                                &self.renderer.noise_texture.sampler,
-                            ),
-                        },
-                    ],
-                });
-
-        let lights_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.light,
-                    bindings: &[wgpu::Binding {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer {
-                            buffer: &lights.buf,
-                            range: 0..lights.len() as wgpu::BufferAddress,
-                        },
-                    }],
-                });
-
-        let shadows_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.shadow,
-                    bindings: &[wgpu::Binding {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer {
-                            buffer: &shadows.buf,
-                            range: 0..shadows.len() as wgpu::BufferAddress,
-                        },
-                    }],
-                });
-
-        let locals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("Terrain locals"),
-                    layout: &self.renderer.terrain_pipeline.locals,
-                    bindings: &[wgpu::Binding {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer {
-                            buffer: &locals.buf,
-                            range: 0..locals.len() as wgpu::BufferAddress,
-                        },
-                    }],
-                });
-
-        self.render_pass
-            .set_pipeline(&self.renderer.terrain_pipeline.pipeline);
-        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
-        self.render_pass.set_bind_group(1, &lights_bind_group, &[]);
-        self.render_pass.set_bind_group(2, &shadows_bind_group, &[]);
-        self.render_pass.set_bind_group(3, &locals_bind_group, &[]);
-        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-        self.render_pass
-            .draw(model.vertex_range().start..model.vertex_range().end, 0..1)
-    }
-
-    pub fn draw_fluid<'b: 'a>(
-        &mut self,
-        model: &'b Model,
-        locals: &Consts<terrain::Locals>,
-        waves: &Texture,
-        globals: &Consts<Globals>,
-        lights: &Consts<Light>,
-        shadows: &Consts<Shadow>,
-    ) {
-        let globals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.globals,
-                    bindings: &[
-                        wgpu::Binding {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Buffer {
-                                buffer: &globals.buf,
-                                range: 0..globals.len() as wgpu::BufferAddress,
-                            },
-                        },
-                        wgpu::Binding {
-                            binding: 1,
-                            resource: wgpu::BindingResource::TextureView(
-                                &self.renderer.noise_texture.view,
-                            ),
-                        },
-                        wgpu::Binding {
-                            binding: 2,
-                            resource: wgpu::BindingResource::Sampler(
-                                &self.renderer.noise_texture.sampler,
-                            ),
-                        },
-                    ],
-                });
-
-        let lights_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.light,
-                    bindings: &[wgpu::Binding {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer {
-                            buffer: &lights.buf,
-                            range: 0..lights.len() as wgpu::BufferAddress,
-                        },
-                    }],
-                });
-
-        let shadows_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.shadow,
-                    bindings: &[wgpu::Binding {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer {
-                            buffer: &shadows.buf,
-                            range: 0..shadows.len() as wgpu::BufferAddress,
-                        },
-                    }],
-                });
-
-        let terrain_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("Fluid terrain locals"),
-                    layout: &self.renderer.terrain_pipeline.locals,
-                    bindings: &[wgpu::Binding {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer {
-                            buffer: &locals.buf,
-                            range: 0..locals.len() as wgpu::BufferAddress,
-                        },
-                    }],
-                });
-
-        let locals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("Fluid locals"),
-                    layout: &self.renderer.fluid_pipeline.locals,
-                    bindings: &[
-                        wgpu::Binding {
-                            binding: 0,
-                            resource: wgpu::BindingResource::TextureView(&waves.view),
-                        },
-                        wgpu::Binding {
-                            binding: 1,
-                            resource: wgpu::BindingResource::Sampler(&waves.sampler),
-                        },
-                    ],
-                });
-
-        self.render_pass
-            .set_pipeline(&self.renderer.fluid_pipeline.pipeline);
-        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
-        self.render_pass.set_bind_group(1, &lights_bind_group, &[]);
-        self.render_pass.set_bind_group(2, &shadows_bind_group, &[]);
-        self.render_pass.set_bind_group(3, &terrain_bind_group, &[]);
-        self.render_pass.set_bind_group(4, &locals_bind_group, &[]);
-        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-        self.render_pass
-            .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
-    }
-
-    pub fn draw_sprite<'b: 'a>(
-        &mut self,
-        model: &'b Model,
-        instances: &'a Instances<sprite::Instance>,
-        globals: &Consts<Globals>,
-        lights: &Consts<Light>,
-        shadows: &Consts<Shadow>,
-    ) {
-        let globals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.globals,
-                    bindings: &[
-                        wgpu::Binding {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Buffer {
-                                buffer: &globals.buf,
-                                range: 0..globals.len() as wgpu::BufferAddress,
-                            },
-                        },
-                        wgpu::Binding {
-                            binding: 1,
-                            resource: wgpu::BindingResource::TextureView(
-                                &self.renderer.noise_texture.view,
-                            ),
-                        },
-                        wgpu::Binding {
-                            binding: 2,
-                            resource: wgpu::BindingResource::Sampler(
-                                &self.renderer.noise_texture.sampler,
-                            ),
-                        },
-                    ],
-                });
-
-        let lights_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.light,
-                    bindings: &[wgpu::Binding {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer {
-                            buffer: &lights.buf,
-                            range: 0..lights.len() as wgpu::BufferAddress,
-                        },
-                    }],
-                });
-
-        let shadows_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.shadow,
-                    bindings: &[wgpu::Binding {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer {
-                            buffer: &shadows.buf,
-                            range: 0..shadows.len() as wgpu::BufferAddress,
-                        },
-                    }],
-                });
-
-        self.render_pass
-            .set_pipeline(&self.renderer.sprite_pipeline.pipeline);
-        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
-        self.render_pass.set_bind_group(1, &lights_bind_group, &[]);
-        self.render_pass.set_bind_group(2, &shadows_bind_group, &[]);
-        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-        self.render_pass.set_vertex_buffer(1, &instances.ibuf, 0, 0);
-        self.render_pass.draw(
-            model.vertex_range().start..model.vertex_range().end,
-            0..instances.count() as u32,
-        );
-    }
-}
-
-pub struct SecondDrawer<'a> {
-    pub(self) render_pass: &'a mut wgpu::RenderPass<'a>,
-    pub renderer: &'a Renderer,
-}
-
-impl<'a> SecondDrawer<'a> {
-    pub fn draw_post_process<'b: 'a>(
-        &mut self,
-        model: &'b Model,
-        locals: &Consts<postprocess::Locals>,
-        globals: &Consts<Globals>,
-    ) {
-        let globals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.globals,
-                    bindings: &[
-                        wgpu::Binding {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Buffer {
-                                buffer: &globals.buf,
-                                range: 0..globals.len() as wgpu::BufferAddress,
-                            },
-                        },
-                        wgpu::Binding {
-                            binding: 1,
-                            resource: wgpu::BindingResource::TextureView(
-                                &self.renderer.noise_texture.view,
-                            ),
-                        },
-                        wgpu::Binding {
-                            binding: 2,
-                            resource: wgpu::BindingResource::Sampler(
-                                &self.renderer.noise_texture.sampler,
-                            ),
-                        },
-                    ],
-                });
-
-        let locals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.postprocess_pipeline.locals,
-                    bindings: &[wgpu::Binding {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer {
-                            buffer: &locals.buf,
-                            range: 0..locals.len() as wgpu::BufferAddress,
-                        },
-                    }],
-                });
-
-        self.render_pass
-            .set_pipeline(&self.renderer.postprocess_pipeline.pipeline);
-        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
-        self.render_pass.set_bind_group(1, &locals_bind_group, &[]);
-        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-        self.render_pass
-            .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
-    }
-
-    pub fn draw_ui<'b: 'a>(
-        &mut self,
-        model: &'b Model,
-        tex: &Texture,
-        scissor: Aabr<u16>,
-        locals: &Consts<ui::Locals>,
-        globals: &Consts<Globals>,
-    ) {
-        let Aabr { min, max } = scissor;
-
-        let globals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &self.renderer.globals_layouts.globals,
-                    bindings: &[
-                        wgpu::Binding {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Buffer {
-                                buffer: &globals.buf,
-                                range: 0..globals.len() as wgpu::BufferAddress,
-                            },
-                        },
-                        wgpu::Binding {
-                            binding: 1,
-                            resource: wgpu::BindingResource::TextureView(
-                                &self.renderer.noise_texture.view,
-                            ),
-                        },
-                        wgpu::Binding {
-                            binding: 2,
-                            resource: wgpu::BindingResource::Sampler(
-                                &self.renderer.noise_texture.sampler,
-                            ),
-                        },
-                    ],
-                });
-
-        let locals_bind_group =
-            self.renderer
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("Ui locals"),
-                    layout: &self.renderer.ui_pipeline.locals,
-                    bindings: &[
-                        wgpu::Binding {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Buffer {
-                                buffer: &locals.buf,
-                                range: 0..locals.len() as wgpu::BufferAddress,
-                            },
-                        },
-                        wgpu::Binding {
-                            binding: 1,
-                            resource: wgpu::BindingResource::TextureView(&tex.view),
-                        },
-                        wgpu::Binding {
-                            binding: 2,
-                            resource: wgpu::BindingResource::Sampler(&tex.sampler),
-                        },
-                    ],
-                });
-
-        self.render_pass
-            .set_pipeline(&self.renderer.ui_pipeline.pipeline);
-        self.render_pass.set_bind_group(0, &globals_bind_group, &[]);
-        self.render_pass.set_bind_group(1, &locals_bind_group, &[]);
-        self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
-        self.render_pass.set_scissor_rect(
-            min.x as u32,
-            min.y as u32,
-            (max.x - min.x) as u32,
-            (max.y - min.y) as u32,
-        );
-        self.render_pass
-            .draw(model.vertex_range().start..model.vertex_range().end, 0..1);
     }
 }
 

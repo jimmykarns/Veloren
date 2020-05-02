@@ -4,11 +4,6 @@
 
 layout(location=0) in vec3 v_pos;
 
-layout (set = 1, binding = 0,std140)
-uniform u_locals {
-	vec4 nul;
-};
-
 layout(location=0) out vec3 f_pos;
 
 void main() {

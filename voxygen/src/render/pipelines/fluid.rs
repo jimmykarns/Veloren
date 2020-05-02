@@ -81,6 +81,11 @@ impl Vertex {
     }
 }
 
+// This is a marker type for the consts
+#[derive(Copy, Clone, Debug, AsBytes)]
+#[repr(C)]
+pub struct Locals;
+
 pub struct FluidPipeline {
     pub pipeline: wgpu::RenderPipeline,
     pub locals: wgpu::BindGroupLayout,

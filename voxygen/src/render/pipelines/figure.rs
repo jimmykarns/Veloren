@@ -132,6 +132,7 @@ impl BoneData {
 pub struct FigurePipeline {
     pub pipeline: wgpu::RenderPipeline,
     pub locals: wgpu::BindGroupLayout,
+    pub bone_data: wgpu::BindGroupLayout,
 }
 
 impl FigurePipeline {
@@ -143,10 +144,17 @@ impl FigurePipeline {
         layouts: &GlobalsLayouts,
     ) -> Self {
         let locals = Self::locals_layout(device);
+        let bone_data = Self::locals_layout(device);
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                bind_group_layouts: &[&layouts.globals, &layouts.light, &layouts.shadow, &locals],
+                bind_group_layouts: &[
+                    &layouts.globals,
+                    &layouts.light,
+                    &layouts.shadow,
+                    &locals,
+                    &bone_data,
+                ],
             });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -194,6 +202,7 @@ impl FigurePipeline {
         Self {
             pipeline: render_pipeline,
             locals,
+            bone_data,
         }
     }
 
@@ -207,13 +216,18 @@ impl FigurePipeline {
                     visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
                     ty: wgpu::BindingType::UniformBuffer { dynamic: false },
                 },
-                // BoneData
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
-                    ty: wgpu::BindingType::UniformBuffer { dynamic: false },
-                },
             ],
+        })
+    }
+
+    fn bone_data_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            bindings: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                ty: wgpu::BindingType::UniformBuffer { dynamic: false },
+            }],
         })
     }
 }

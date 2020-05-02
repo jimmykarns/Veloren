@@ -6,8 +6,7 @@ use crate::{
     },
     render::{
         create_pp_mesh, create_skybox_mesh, Consts, FigurePipeline, FirstDrawer, Globals, Light,
-        Model, PostProcessLocals, PostProcessPipeline, Renderer, SecondDrawer, Shadow,
-        SkyboxLocals, SkyboxPipeline,
+        Model, PostProcessPipeline, Renderer, SecondDrawer, Shadow, SkyboxPipeline,
     },
     scene::{
         camera::{self, Camera, CameraMode},
@@ -21,6 +20,7 @@ use common::{
     vol::{BaseVol, ReadVol, Vox},
 };
 use log::error;
+use std::ops::Range;
 use vek::*;
 
 #[derive(PartialEq, Eq, Copy, Clone)]
@@ -43,12 +43,10 @@ impl ReadVol for VoidVol {
 
 struct Skybox {
     model: Model,
-    locals: Consts<SkyboxLocals>,
 }
 
 struct PostProcess {
     model: Model,
-    locals: Consts<PostProcessLocals>,
 }
 
 pub struct Scene {
@@ -59,7 +57,7 @@ pub struct Scene {
 
     skybox: Skybox,
     postprocess: PostProcess,
-    backdrop: Option<(Model, FigureState<FixtureSkeleton>)>,
+    backdrop: Option<((Model, Range<u32>), FigureState<FixtureSkeleton>)>,
 
     figure_model_cache: FigureModelCache,
     figure_state: FigureState<CharacterSkeleton>,
@@ -86,25 +84,28 @@ impl Scene {
         camera.set_orientation(Vec3::new(0.0, 0.0, 0.0));
 
         Self {
-            globals: renderer.create_consts(&[Globals::default()]),
-            lights: renderer.create_consts(&[Light::default(); 32]),
-            shadows: renderer.create_consts(&[Shadow::default(); 32]),
+            globals: renderer.create_consts_globals(&[Globals::default()]),
+            lights: renderer.create_consts_light(&[Light::default(); 32]),
+            shadows: renderer.create_consts_shadows(&[Shadow::default(); 32]),
             camera,
 
             skybox: Skybox {
                 model: renderer.create_model(&create_skybox_mesh()),
-                locals: renderer.create_consts(&[SkyboxLocals::default()]),
             },
             postprocess: PostProcess {
                 model: renderer.create_model(&create_pp_mesh()),
-                locals: renderer.create_consts(&[PostProcessLocals::default()]),
             },
             figure_model_cache: FigureModelCache::new(),
             figure_state: FigureState::new(renderer, CharacterSkeleton::new()),
 
             backdrop: backdrop.map(|specifier| {
+                let mesh = load_mesh(specifier, Vec3::new(-55.0, -49.5, -2.0));
+
                 (
-                    renderer.create_model(&load_mesh(specifier, Vec3::new(-55.0, -49.5, -2.0))),
+                    (
+                        renderer.create_model(&mesh),
+                        0..mesh.vertices().len() as u32,
+                    ),
                     FigureState::new(renderer, FixtureSkeleton::new()),
                 )
             }),
@@ -199,17 +200,17 @@ impl Scene {
         );
     }
 
-    pub fn first_render<'b>(
+    pub fn first_render<'b: 'a, 'a>(
         &'b mut self,
-        drawer: &'b mut FirstDrawer<'b>,
+        drawer: &'a mut FirstDrawer<'a>,
         tick: u64,
         body: Option<humanoid::Body>,
         equipment: &Equipment,
     ) {
-        drawer.draw_skybox(&self.skybox.model, &self.skybox.locals, &self.globals);
+        drawer.draw_skybox(&self.skybox.model, &self.globals, 0..6 * 6);
 
         if let Some(body) = body {
-            let model = &self
+            let (model, verts) = &self
                 .figure_model_cache
                 .get_or_create_model(
                     drawer.renderer,
@@ -228,10 +229,11 @@ impl Scene {
                 &self.globals,
                 &self.lights,
                 &self.shadows,
+                verts.clone(),
             );
         }
 
-        if let Some((model, state)) = &self.backdrop {
+        if let Some(((model, verts), state)) = &self.backdrop {
             drawer.draw_figure(
                 model,
                 state.locals(),
@@ -239,15 +241,12 @@ impl Scene {
                 &self.globals,
                 &self.lights,
                 &self.shadows,
+                verts.clone(),
             );
         }
     }
 
     pub fn second_render<'b>(&'b mut self, drawer: &'b mut SecondDrawer<'b>) {
-        drawer.draw_post_process(
-            &self.postprocess.model,
-            &self.postprocess.locals,
-            &self.globals,
-        );
+        drawer.draw_post_process(&self.postprocess.model, &self.globals, 0..3 * 2);
     }
 }

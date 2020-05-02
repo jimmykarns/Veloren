@@ -2124,7 +2124,7 @@ impl Hud {
         events
     }
 
-    pub fn render<'b>(&'b self, drawer: &'b mut SecondDrawer<'b>, globals: &Consts<Globals>) {
+    pub fn render<'b>(&'b self, drawer: &'b mut SecondDrawer<'b>, globals: &'b Consts<Globals>) {
         // Don't show anything if the UI is toggled off.
         if self.show.ui {
             self.ui.render(drawer, Some(globals));

@@ -1,8 +1,8 @@
 use crate::{
     mesh::Meshable,
     render::{
-        Consts, FirstDrawer, FluidPipeline, Globals, Instances, Light, Mesh, Model, Renderer,
-        Shadow, SpriteInstance, SpritePipeline, TerrainLocals, TerrainPipeline, Texture,
+        Consts, FirstDrawer, FluidLocals, FluidPipeline, Globals, Instances, Light, Mesh, Model,
+        Renderer, Shadow, SpriteInstance, SpritePipeline, TerrainLocals, TerrainPipeline, Texture,
     },
 };
 
@@ -17,15 +17,15 @@ use common::{
 use crossbeam::channel;
 use dot_vox::DotVoxData;
 use hashbrown::HashMap;
-use std::{f32, fmt::Debug, i32, marker::PhantomData, time::Duration};
+use std::{f32, fmt::Debug, i32, marker::PhantomData, ops::Range, time::Duration};
 use treeculler::{BVol, Frustum, AABB};
 use vek::*;
 
 struct TerrainChunkData {
     // GPU data
     load_time: f32,
-    opaque_model: Model,
-    fluid_model: Option<Model>,
+    opaque_model: (Model, Range<u32>),
+    fluid_model: Option<(Model, Range<u32>)>,
     sprite_instances: HashMap<(BlockKind, usize), Instances<SpriteInstance>>,
     locals: Consts<TerrainLocals>,
 
@@ -241,8 +241,8 @@ pub struct Terrain<V: RectRasterableVol> {
     mesh_todo: HashMap<Vec2<i32>, ChunkMeshState>,
 
     // GPU data
-    sprite_models: HashMap<(BlockKind, usize), Model>,
-    waves: Texture,
+    sprite_models: HashMap<(BlockKind, usize), (Model, Range<u32>)>,
+    fluid_const: Consts<FluidLocals>,
 
     phantom: PhantomData<V>,
 }
@@ -254,12 +254,15 @@ impl<V: RectRasterableVol> Terrain<V> {
         let (send, recv) = channel::unbounded();
 
         let mut make_model = |s, offset| {
-            renderer.create_model(
-                &Meshable::<SpritePipeline, SpritePipeline>::generate_mesh(
-                    &Segment::from(assets::load_expect::<DotVoxData>(s).as_ref()),
-                    offset,
-                )
-                .0,
+            let mesh = Meshable::<SpritePipeline, SpritePipeline>::generate_mesh(
+                &Segment::from(assets::load_expect::<DotVoxData>(s).as_ref()),
+                offset,
+            )
+            .0;
+
+            (
+                renderer.create_model(&mesh),
+                0..mesh.vertices().len() as u32,
             )
         };
 
@@ -1066,7 +1069,9 @@ impl<V: RectRasterableVol> Terrain<V> {
             ]
             .into_iter()
             .collect(),
-            waves: renderer.create_texture(&assets::load_expect("voxygen.texture.waves"), true),
+            fluid_const: renderer.create_consts_fluid_locals(
+                renderer.create_texture(&assets::load_expect("voxygen.texture.waves"), true),
+            ),
             phantom: PhantomData,
         }
     }
@@ -1286,9 +1291,15 @@ impl<V: RectRasterableVol> Terrain<V> {
                         .unwrap_or(current_time as f32);
                     self.chunks.insert(response.pos, TerrainChunkData {
                         load_time,
-                        opaque_model: renderer.create_model(&response.opaque_mesh),
+                        opaque_model: (
+                            renderer.create_model(&response.opaque_mesh),
+                            0..response.opaque_mesh.vertices().len() as u32,
+                        ),
                         fluid_model: if response.fluid_mesh.vertices().len() > 0 {
-                            Some(renderer.create_model(&response.fluid_mesh))
+                            Some((
+                                renderer.create_model(&response.fluid_mesh),
+                                0..response.fluid_mesh.vertices().len() as u32,
+                            ))
                         } else {
                             None
                         },
@@ -1297,7 +1308,7 @@ impl<V: RectRasterableVol> Terrain<V> {
                             .into_iter()
                             .map(|(kind, instances)| (kind, renderer.create_instances(&instances)))
                             .collect(),
-                        locals: renderer.create_consts(&[TerrainLocals {
+                        locals: renderer.create_consts_terrain_locals(&[TerrainLocals {
                             model_offs: Vec3::from(
                                 response.pos.map2(VolGrid2d::<V>::chunk_size(), |e, sz| {
                                     e as f32 * sz as f32
@@ -1365,9 +1376,9 @@ impl<V: RectRasterableVol> Terrain<V> {
     pub fn render<'b>(
         &'b self,
         drawer: &'b mut FirstDrawer<'b>,
-        globals: &Consts<Globals>,
-        lights: &Consts<Light>,
-        shadows: &Consts<Shadow>,
+        globals: &'b Consts<Globals>,
+        lights: &'b Consts<Light>,
+        shadows: &'b Consts<Shadow>,
         focus_pos: Vec3<f32>,
     ) {
         let focus_chunk = Vec2::from(focus_pos).map2(TerrainChunk::RECT_SIZE, |e: f32, sz| {
@@ -1390,7 +1401,14 @@ impl<V: RectRasterableVol> Terrain<V> {
         // Opaque
         for (_, chunk) in chunk_iter.clone() {
             if chunk.visible {
-                drawer.draw_terrain(&chunk.opaque_model, &chunk.locals, globals, lights, shadows);
+                drawer.draw_terrain(
+                    &chunk.opaque_model.0,
+                    &chunk.locals,
+                    globals,
+                    lights,
+                    shadows,
+                    chunk.opaque_model.1,
+                );
             }
         }
     }
@@ -1398,9 +1416,9 @@ impl<V: RectRasterableVol> Terrain<V> {
     pub fn render_translucent<'b>(
         &'b self,
         drawer: &'b mut FirstDrawer<'b>,
-        globals: &Consts<Globals>,
-        lights: &Consts<Light>,
-        shadows: &Consts<Shadow>,
+        globals: &'b Consts<Globals>,
+        lights: &'b Consts<Light>,
+        shadows: &'b Consts<Shadow>,
         focus_pos: Vec3<f32>,
     ) {
         let focus_chunk = Vec2::from(focus_pos).map2(TerrainChunk::RECT_SIZE, |e: f32, sz| {
@@ -1432,11 +1450,12 @@ impl<V: RectRasterableVol> Terrain<V> {
                 {
                     for (kind, instances) in &chunk.sprite_instances {
                         drawer.draw_sprite(
-                            &self.sprite_models[&kind],
+                            &self.sprite_models[&kind].0,
                             &instances,
                             globals,
                             lights,
                             shadows,
+                            self.sprite_models[&kind].1,
                         );
                     }
                 }
@@ -1451,10 +1470,18 @@ impl<V: RectRasterableVol> Terrain<V> {
                 chunk
                     .fluid_model
                     .as_ref()
-                    .map(|model| (model, &chunk.locals))
+                    .map(|(model, verts)| ((model, verts), &chunk.locals))
             })
             .for_each(|(model, locals)| {
-                drawer.draw_fluid(model, locals, &self.waves, globals, lights, shadows)
+                drawer.draw_fluid(
+                    model.0,
+                    locals,
+                    &self.fluid_const,
+                    globals,
+                    lights,
+                    shadows,
+                    model.1.clone(),
+                )
             });
     }
 }

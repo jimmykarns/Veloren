@@ -47,16 +47,6 @@ impl Vertex {
     }
 }
 
-#[repr(C)]
-#[derive(Copy, Clone, Debug, AsBytes)]
-pub struct Locals {
-    nul: [f32; 4],
-}
-
-impl Locals {
-    pub fn default() -> Self { Self { nul: [0.0; 4] } }
-}
-
 pub struct SkyboxPipeline {
     pub pipeline: wgpu::RenderPipeline,
     pub locals: wgpu::BindGroupLayout,
