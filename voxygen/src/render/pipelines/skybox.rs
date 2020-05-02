@@ -47,9 +47,31 @@ impl Vertex {
     }
 }
 
+pub struct SkyboxLayout {
+    pub locals: wgpu::BindGroupLayout,
+}
+
+impl SkyboxLayout {
+    pub fn new(device: &wgpu::Device) -> Self {
+        Self {
+            locals: Self::locals_layout(device),
+        }
+    }
+
+    fn locals_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            bindings: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                ty: wgpu::BindingType::UniformBuffer { dynamic: false },
+            }],
+        })
+    }
+}
+
 pub struct SkyboxPipeline {
     pub pipeline: wgpu::RenderPipeline,
-    pub locals: wgpu::BindGroupLayout,
 }
 
 impl SkyboxPipeline {
@@ -59,12 +81,11 @@ impl SkyboxPipeline {
         fs_module: &wgpu::ShaderModule,
         sc_desc: &wgpu::SwapChainDescriptor,
         layouts: &GlobalsLayouts,
+        layout: &SkyboxLayout,
     ) -> Self {
-        let locals = Self::locals_layout(device);
-
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                bind_group_layouts: &[&layouts.globals, &locals],
+                bind_group_layouts: &[&layouts.globals, &layout.locals],
             });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -111,19 +132,7 @@ impl SkyboxPipeline {
 
         Self {
             pipeline: render_pipeline,
-            locals,
         }
-    }
-
-    fn locals_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: None,
-            bindings: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
-                ty: wgpu::BindingType::UniformBuffer { dynamic: false },
-            }],
-        })
     }
 }
 

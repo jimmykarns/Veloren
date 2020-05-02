@@ -149,6 +149,14 @@ impl Default for Instance {
     fn default() -> Self { Self::new(Mat4::identity(), Rgb::broadcast(1.0), 0.0) }
 }
 
+pub struct SpriteLayout;
+
+impl SpriteLayout {
+    pub fn new(_device: &wgpu::Device) -> Self {
+        Self
+    }
+}
+
 pub struct SpritePipeline {
     pub pipeline: wgpu::RenderPipeline,
 }
@@ -160,6 +168,7 @@ impl SpritePipeline {
         fs_module: &wgpu::ShaderModule,
         sc_desc: &wgpu::SwapChainDescriptor,
         layouts: &GlobalsLayouts,
+        _layout: &SpriteLayout,
     ) -> Self {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {

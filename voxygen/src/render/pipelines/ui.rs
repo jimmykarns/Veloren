@@ -87,9 +87,48 @@ pub struct Locals {
     pos: [f32; 4],
 }
 
+pub struct UiLayout {
+    pub locals: wgpu::BindGroupLayout,
+}
+
+impl UiLayout {
+    pub fn new(device: &wgpu::Device) -> Self {
+        Self {
+            locals: Self::locals_layout(device),
+        }
+    }
+
+    fn locals_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("UI layout"),
+            bindings: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::UniformBuffer { dynamic: false },
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::SampledTexture {
+                        dimension: wgpu::TextureViewDimension::D2,
+                        //todo
+                        component_type: wgpu::TextureComponentType::Float,
+                        multisampled: false,
+                    },
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler { comparison: false },
+                },
+            ],
+        })
+    }
+}
+
 pub struct UiPipeline {
     pub pipeline: wgpu::RenderPipeline,
-    pub locals: wgpu::BindGroupLayout,
 }
 
 impl UiPipeline {
@@ -99,12 +138,11 @@ impl UiPipeline {
         fs_module: &wgpu::ShaderModule,
         sc_desc: &wgpu::SwapChainDescriptor,
         layouts: &GlobalsLayouts,
+        layout: &UiLayout,
     ) -> Self {
-        let locals = Self::locals_layout(device);
-
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                bind_group_layouts: &[&layouts.globals, &locals],
+                bind_group_layouts: &[&layouts.globals, &layout.locals],
             });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -159,36 +197,7 @@ impl UiPipeline {
 
         Self {
             pipeline: render_pipeline,
-            locals,
         }
-    }
-
-    fn locals_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: None,
-            bindings: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
-                    ty: wgpu::BindingType::UniformBuffer { dynamic: false },
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
-                    ty: wgpu::BindingType::SampledTexture {
-                        dimension: wgpu::TextureViewDimension::D2,
-                        //todo
-                        component_type: wgpu::TextureComponentType::Float,
-                        multisampled: false,
-                    },
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler { comparison: false },
-                },
-            ],
-        })
     }
 }
 

@@ -16,7 +16,7 @@ struct BoneData {
 	mat4 bone_mat;
 };
 
-layout (set = 3, binding = 1,std140)
+layout (set = 4, binding = 1,std140)
 uniform u_bones {
 	BoneData bones[16];
 };

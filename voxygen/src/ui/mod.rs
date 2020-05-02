@@ -128,7 +128,7 @@ impl Ui {
             scale.scale_factor_logical(),
         );
 
-        let empty_tex = renderer.create_dynamic_texture(0, 0);
+        let empty_tex = renderer.create_dynamic_texture(1, 1);
 
         Ok(Self {
             ui,

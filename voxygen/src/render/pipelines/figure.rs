@@ -129,10 +129,47 @@ impl BoneData {
     pub fn default() -> Self { Self::new(Mat4::identity()) }
 }
 
-pub struct FigurePipeline {
-    pub pipeline: wgpu::RenderPipeline,
+pub struct FigureLayout {
     pub locals: wgpu::BindGroupLayout,
     pub bone_data: wgpu::BindGroupLayout,
+}
+
+impl FigureLayout {
+    pub fn new(device: &wgpu::Device) -> Self {
+        Self {
+            locals: Self::locals_layout(device),
+            bone_data: Self::bone_data_layout(device),
+        }
+    }
+
+    fn locals_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            bindings: &[
+                // Locals
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::UniformBuffer { dynamic: false },
+                },
+            ],
+        })
+    }
+
+    fn bone_data_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            bindings: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                ty: wgpu::BindingType::UniformBuffer { dynamic: false },
+            }],
+        })
+    }
+}
+
+pub struct FigurePipeline {
+    pub pipeline: wgpu::RenderPipeline,
 }
 
 impl FigurePipeline {
@@ -142,9 +179,8 @@ impl FigurePipeline {
         fs_module: &wgpu::ShaderModule,
         sc_desc: &wgpu::SwapChainDescriptor,
         layouts: &GlobalsLayouts,
+        layout: &FigureLayout,
     ) -> Self {
-        let locals = Self::locals_layout(device);
-        let bone_data = Self::locals_layout(device);
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -152,8 +188,8 @@ impl FigurePipeline {
                     &layouts.globals,
                     &layouts.light,
                     &layouts.shadow,
-                    &locals,
-                    &bone_data,
+                    &layout.locals,
+                    &layout.bone_data,
                 ],
             });
 
@@ -201,34 +237,7 @@ impl FigurePipeline {
 
         Self {
             pipeline: render_pipeline,
-            locals,
-            bone_data,
         }
-    }
-
-    fn locals_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: None,
-            bindings: &[
-                // Locals
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
-                    ty: wgpu::BindingType::UniformBuffer { dynamic: false },
-                },
-            ],
-        })
-    }
-
-    fn bone_data_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: None,
-            bindings: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
-                ty: wgpu::BindingType::UniformBuffer { dynamic: false },
-            }],
-        })
     }
 }
 

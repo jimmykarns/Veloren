@@ -20,6 +20,18 @@ mod drawer;
 
 pub use drawer::{Drawer, FirstDrawer, SecondDrawer};
 
+/// A type that stores all the layouts associated with this renderer.
+pub struct Layouts {
+    pub(self) global: GlobalsLayouts,
+
+    pub(self) skybox: skybox::SkyboxLayout,
+    pub(self) figure: figure::FigureLayout,
+    pub(self) terrain: terrain::TerrainLayout,
+    pub(self) fluid: fluid::FluidLayout,
+    pub(self) sprite: sprite::SpriteLayout,
+    pub(self) ui: ui::UiLayout,
+    pub(self) postprocess: postprocess::PostProcessLayout,
+}
 
 /// A type that encapsulates rendering state. `Renderer` is central to Voxygen's
 /// rendering subsystem and contains any state necessary to interact with the
@@ -41,7 +53,9 @@ pub struct Renderer {
     depth_stencil_texture: Texture,
     tgt_color_texture: Texture,
 
-    pub(self) globals_layouts: GlobalsLayouts,
+    // pub(self) globals_layouts: GlobalsLayouts,
+    // pub(self) terrain_layout: wgpu::RenderLayout,
+    layouts: Layouts,
 
     pub(self) skybox_pipeline: skybox::SkyboxPipeline,
     pub(self) figure_pipeline: figure::FigurePipeline,
@@ -108,7 +122,16 @@ impl Renderer {
         let depth_stencil_texture = Texture::create_depth_stencil_texture(&device, &sc_desc);
         let tgt_color_texture = Texture::create_multi_sample_texture(&device, &sc_desc, aa_mode);
 
-        let globals_layouts = GlobalsLayouts::new(&device);
+        let layouts = Layouts {
+            global: GlobalsLayouts::new(&device),
+            skybox: skybox::SkyboxLayout::new(&device),
+            figure: figure::FigureLayout::new(&device),
+            terrain: terrain::TerrainLayout::new(&device),
+            fluid: fluid::FluidLayout::new(&device),
+            sprite: sprite::SpriteLayout::new(&device),
+            ui: ui::UiLayout::new(&device),
+            postprocess: postprocess::PostProcessLayout::new(&device),
+        };
 
         let (
             skybox_pipeline,
@@ -125,7 +148,7 @@ impl Renderer {
             cloud_mode,
             fluid_mode,
             &mut shader_reload_indicator,
-            &globals_layouts,
+            &layouts,
         );
 
         Self {
@@ -144,7 +167,8 @@ impl Renderer {
             depth_stencil_texture,
             tgt_color_texture,
 
-            globals_layouts,
+            // globals_layouts,
+            layouts,
 
             skybox_pipeline,
             figure_pipeline,
@@ -241,7 +265,8 @@ impl Renderer {
             self.cloud_mode,
             self.fluid_mode,
             &mut self.shader_reload_indicator,
-            &self.globals_layouts,
+            &self.layouts,
+            // &self.globals_layouts,
         );
 
         self.skybox_pipeline = skybox_pipeline;
@@ -267,7 +292,7 @@ impl Renderer {
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Globals bind group"),
-            layout: &self.globals_layouts.globals,
+            layout: &self.layouts.global.globals,
             bindings: &[
                 wgpu::Binding {
                     binding: 0,
@@ -304,7 +329,7 @@ impl Renderer {
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Light bind group"),
-            layout: &self.globals_layouts.globals,
+            layout: &self.layouts.global.globals,
             bindings: &[wgpu::Binding {
                 binding: 0,
                 resource: wgpu::BindingResource::Buffer {
@@ -331,7 +356,7 @@ impl Renderer {
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Shadow bind group"),
-            layout: &self.globals_layouts.globals,
+            layout: &self.layouts.global.globals,
             bindings: &[wgpu::Binding {
                 binding: 0,
                 resource: wgpu::BindingResource::Buffer {
@@ -358,7 +383,7 @@ impl Renderer {
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Figure locals bind group"),
-            layout: &self.figure_pipeline.locals,
+            layout: &self.layouts.fluid.locals,
             bindings: &[wgpu::Binding {
                 binding: 0,
                 resource: wgpu::BindingResource::Buffer {
@@ -385,7 +410,7 @@ impl Renderer {
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Bone data bind group"),
-            layout: &self.figure_pipeline.bone_data,
+            layout: &self.layouts.figure.bone_data,
             bindings: &[wgpu::Binding {
                 binding: 0,
                 resource: wgpu::BindingResource::Buffer {
@@ -401,7 +426,7 @@ impl Renderer {
     pub fn create_consts_fluid_locals(&self, waves: Texture) -> Consts<FluidLocals> {
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Fluid locals bind group"),
-            layout: &self.fluid_pipeline.locals,
+            layout: &self.layouts.fluid.locals,
             bindings: &[
                 wgpu::Binding {
                     binding: 1,
@@ -434,7 +459,7 @@ impl Renderer {
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Terrain locals bind group"),
-            layout: &self.terrain_pipeline.locals,
+            layout: &self.layouts.terrain.locals,//&self.terrain_pipeline.locals,
             bindings: &[wgpu::Binding {
                 binding: 0,
                 resource: wgpu::BindingResource::Buffer {
@@ -465,7 +490,7 @@ impl Renderer {
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("UI locals bind group"),
-            layout: &self.ui_pipeline.locals,
+            layout: &self.layouts.ui.locals,
             bindings: &[
                 wgpu::Binding {
                     binding: 0,
@@ -613,6 +638,30 @@ impl Renderer {
     }
 }
 
+/* /// Creates all the layouts used to render.
+fn create_layouts(
+    device: &wgpu::Device,
+) -> (
+    skybox::SkyboxLayout,
+    figure::FigureLayout,
+    terrain::TerrainLayout,
+    fluid::FluidLayout,
+    sprite::SpriteLayout,
+    ui::UiLayout,
+    postprocess::PostProcessLayout,
+) {
+    (
+        GlobalsLayouts::new(&device);
+        skybox::SkyboxLayout::new(device),
+        figure::FigureLayout::new(device),
+        terrain::TerrainLayout::new(device),
+        fluid::FluidLayout::new(device),
+        sprite::SpriteLayout::new(device),
+        ui::UiLayout::new(device),
+        postprocess::PostProcessLayout::new(device),
+    )
+} */
+
 /// Creates all the pipelines used to render.
 fn create_pipelines(
     device: &wgpu::Device,
@@ -621,7 +670,8 @@ fn create_pipelines(
     cloud_mode: CloudMode,
     fluid_mode: FluidMode,
     shader_reload_indicator: &mut ReloadIndicator,
-    layouts: &GlobalsLayouts,
+    layouts: &Layouts,
+    // layouts: &GlobalsLayouts,
 ) -> (
     skybox::SkyboxPipeline,
     figure::FigurePipeline,
@@ -732,7 +782,7 @@ fn create_pipelines(
     let fs_module = device.create_shader_module(fs_data.as_slice());
 
     let skybox_pipeline =
-        skybox::SkyboxPipeline::new(device, &vs_module, &fs_module, sc_desc, layouts);
+        skybox::SkyboxPipeline::new(device, &vs_module, &fs_module, sc_desc, &layouts.global, &layouts.skybox);
 
     // // Construct a pipeline for rendering skyboxes
     // let skybox_pipeline = create_pipeline(
@@ -772,7 +822,7 @@ fn create_pipelines(
     let fs_module = device.create_shader_module(fs_data.as_slice());
 
     let figure_pipeline =
-        figure::FigurePipeline::new(device, &vs_module, &fs_module, sc_desc, layouts);
+        figure::FigurePipeline::new(device, &vs_module, &fs_module, sc_desc, &layouts.global, &layouts.figure);
 
     // // Construct a pipeline for rendering figures
     // let figure_pipeline = create_pipeline(
@@ -818,7 +868,7 @@ fn create_pipelines(
     let fs_module = device.create_shader_module(fs_data.as_slice());
 
     let terrain_pipeline =
-        terrain::TerrainPipeline::new(device, &vs_module, &fs_module, sc_desc, layouts);
+        terrain::TerrainPipeline::new(device, &vs_module, &fs_module, sc_desc, &layouts.global, &layouts.terrain);
 
     // // Construct a pipeline for rendering terrain
     // let terrain_pipeline = create_pipeline(
@@ -869,8 +919,9 @@ fn create_pipelines(
         &vs_module,
         &fs_module,
         sc_desc,
-        layouts,
-        &terrain_pipeline.locals,
+        &layouts.global,
+        &layouts.terrain,
+        &layouts.fluid,
     );
 
     // // Construct a pipeline for rendering fluids
@@ -918,7 +969,7 @@ fn create_pipelines(
     let fs_module = device.create_shader_module(fs_data.as_slice());
 
     let sprite_pipeline =
-        sprite::SpritePipeline::new(device, &vs_module, &fs_module, sc_desc, layouts);
+        sprite::SpritePipeline::new(device, &vs_module, &fs_module, sc_desc, &layouts.global, &layouts.sprite);
 
     // // Construct a pipeline for rendering sprites
     // let sprite_pipeline = create_pipeline(
@@ -957,7 +1008,7 @@ fn create_pipelines(
     let fs_data = wgpu::read_spirv(std::io::Cursor::new(fs_spirv.as_binary_u8())).unwrap();
     let fs_module = device.create_shader_module(fs_data.as_slice());
 
-    let ui_pipeline = ui::UiPipeline::new(device, &vs_module, &fs_module, sc_desc, layouts);
+    let ui_pipeline = ui::UiPipeline::new(device, &vs_module, &fs_module, sc_desc, &layouts.global, &layouts.ui);
 
     // // Construct a pipeline for rendering UI elements
     // let ui_pipeline = create_pipeline(
@@ -1003,7 +1054,7 @@ fn create_pipelines(
     let fs_module = device.create_shader_module(fs_data.as_slice());
 
     let postprocess_pipeline =
-        postprocess::PostProcessPipeline::new(device, &vs_module, &fs_module, sc_desc, layouts);
+        postprocess::PostProcessPipeline::new(device, &vs_module, &fs_module, sc_desc, &layouts.global, &layouts.postprocess);
 
     // // Construct a pipeline for rendering our post-processing
     // let postprocess_pipeline = create_pipeline(

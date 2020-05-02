@@ -92,9 +92,31 @@ impl Default for Locals {
     }
 }
 
+pub struct TerrainLayout {
+    pub locals: wgpu::BindGroupLayout,
+}
+
+impl TerrainLayout {
+    pub fn new(device: &wgpu::Device) -> Self {
+        Self {
+            locals: Self::locals_layout(device),
+        }
+    }
+
+    fn locals_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            bindings: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                ty: wgpu::BindingType::UniformBuffer { dynamic: false },
+            }],
+        })
+    }
+}
+
 pub struct TerrainPipeline {
     pub pipeline: wgpu::RenderPipeline,
-    pub locals: wgpu::BindGroupLayout,
 }
 
 impl TerrainPipeline {
@@ -104,12 +126,11 @@ impl TerrainPipeline {
         fs_module: &wgpu::ShaderModule,
         sc_desc: &wgpu::SwapChainDescriptor,
         layouts: &GlobalsLayouts,
+        layout: &super::terrain::TerrainLayout,
     ) -> Self {
-        let locals = Self::locals_layout(device);
-
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                bind_group_layouts: &[&layouts.globals, &layouts.light, &layouts.shadow, &locals],
+                bind_group_layouts: &[&layouts.globals, &layouts.light, &layouts.shadow, &layout.locals],
             });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -156,20 +177,9 @@ impl TerrainPipeline {
 
         Self {
             pipeline: render_pipeline,
-            locals,
         }
     }
 
-    fn locals_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: None,
-            bindings: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
-                ty: wgpu::BindingType::UniformBuffer { dynamic: false },
-            }],
-        })
-    }
 }
 
 impl Pipeline for TerrainPipeline {

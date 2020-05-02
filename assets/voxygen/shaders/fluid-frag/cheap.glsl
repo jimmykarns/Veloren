@@ -4,8 +4,9 @@
 
 layout(location=0) in vec3 f_pos;
 layout(location=1) flat in uint f_pos_norm;
-layout(location=2) in vec3 f_col;
-layout(location=3) in float f_light;
+layout(location=2) in vec3 f_norm;
+layout(location=3) in vec3 f_col;
+layout(location=4) in float f_light;
 
 layout (set = 3, binding = 0,std140)
 uniform u_locals {

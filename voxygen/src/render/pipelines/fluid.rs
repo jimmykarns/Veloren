@@ -86,20 +86,12 @@ impl Vertex {
 #[repr(C)]
 pub struct Locals;
 
-pub struct FluidPipeline {
-    pub pipeline: wgpu::RenderPipeline,
+pub struct FluidLayout {
     pub locals: wgpu::BindGroupLayout,
 }
 
-impl FluidPipeline {
-    pub fn new(
-        device: &wgpu::Device,
-        vs_module: &wgpu::ShaderModule,
-        fs_module: &wgpu::ShaderModule,
-        sc_desc: &wgpu::SwapChainDescriptor,
-        layouts: &GlobalsLayouts,
-        terrain_layout: &wgpu::BindGroupLayout,
-    ) -> Self {
+impl FluidLayout {
+    pub fn new(device: &wgpu::Device) -> Self {
         let locals = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
             bindings: &[
@@ -120,14 +112,35 @@ impl FluidPipeline {
                 },
             ],
         });
+        Self {
+            locals,
+        }
+    }
+
+}
+
+pub struct FluidPipeline {
+    pub pipeline: wgpu::RenderPipeline,
+}
+
+impl FluidPipeline {
+    pub fn new(
+        device: &wgpu::Device,
+        vs_module: &wgpu::ShaderModule,
+        fs_module: &wgpu::ShaderModule,
+        sc_desc: &wgpu::SwapChainDescriptor,
+        layouts: &GlobalsLayouts,
+        terrain_layout: &super::terrain::TerrainLayout,
+        layout: &FluidLayout,
+    ) -> Self {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 bind_group_layouts: &[
                     &layouts.globals,
                     &layouts.light,
                     &layouts.shadow,
-                    terrain_layout,
-                    &locals,
+                    &terrain_layout.locals,
+                    &layout.locals,
                 ],
             });
 
@@ -183,7 +196,6 @@ impl FluidPipeline {
 
         Self {
             pipeline: render_pipeline,
-            locals,
         }
     }
 }
