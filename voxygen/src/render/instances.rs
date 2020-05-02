@@ -8,7 +8,7 @@ pub struct Instances<T: Copy + AsBytes> {
 }
 
 impl<T: Copy + AsBytes> Instances<T> {
-    pub fn new(device: &mut wgpu::Device, len: usize) -> Self {
+    pub fn new(device: &wgpu::Device, len: usize) -> Self {
         let instance_buffer = device
             .create_buffer_mapped(&wgpu::BufferDescriptor {
                 label: None,
@@ -26,7 +26,7 @@ impl<T: Copy + AsBytes> Instances<T> {
 
     pub fn count(&self) -> usize { self.len }
 
-    pub fn update(&mut self, device: &mut wgpu::Device, queue: &mut wgpu::Queue, vals: &[T]) {
+    pub fn update(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, vals: &[T]) {
         let mut encoder =
             device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 

@@ -20,6 +20,7 @@ mod drawer;
 
 pub use drawer::{Drawer, FirstDrawer, SecondDrawer};
 
+
 /// A type that encapsulates rendering state. `Renderer` is central to Voxygen's
 /// rendering subsystem and contains any state necessary to interact with the
 /// GPU, along with pipeline state objects (PSOs) needed to renderer different
@@ -234,8 +235,8 @@ impl Renderer {
             ui_pipeline,
             postprocess_pipeline,
         ) = create_pipelines(
-            &mut self.device,
-            &mut self.sc_desc,
+            &self.device,
+            &self.sc_desc,
             self.aa_mode,
             self.cloud_mode,
             self.fluid_mode,
@@ -252,7 +253,7 @@ impl Renderer {
         self.postprocess_pipeline = postprocess_pipeline;
     }
 
-    pub fn create_consts_globals(&mut self, vals: &[Globals]) -> Consts<Globals> {
+    pub fn create_consts_globals(&self, vals: &[Globals]) -> Consts<Globals> {
         let len = std::mem::size_of_val(vals);
 
         let buf = self
@@ -289,7 +290,7 @@ impl Renderer {
         self.create_consts_internal(len, vals, Some(buf), bind_group)
     }
 
-    pub fn create_consts_light(&mut self, vals: &[Light]) -> Consts<Light> {
+    pub fn create_consts_light(&self, vals: &[Light]) -> Consts<Light> {
         let len = std::mem::size_of_val(vals);
 
         let buf = self
@@ -316,7 +317,7 @@ impl Renderer {
         self.create_consts_internal(len, vals, Some(buf), bind_group)
     }
 
-    pub fn create_consts_shadows(&mut self, vals: &[Shadow]) -> Consts<Shadow> {
+    pub fn create_consts_shadows(&self, vals: &[Shadow]) -> Consts<Shadow> {
         let len = std::mem::size_of_val(vals);
 
         let buf = self
@@ -343,7 +344,7 @@ impl Renderer {
         self.create_consts_internal(len, vals, Some(buf), bind_group)
     }
 
-    pub fn create_consts_figure_locals(&mut self, vals: &[FigureLocals]) -> Consts<FigureLocals> {
+    pub fn create_consts_figure_locals(&self, vals: &[FigureLocals]) -> Consts<FigureLocals> {
         let len = std::mem::size_of_val(vals);
 
         let buf = self
@@ -370,7 +371,7 @@ impl Renderer {
         self.create_consts_internal(len, vals, Some(buf), bind_group)
     }
 
-    pub fn create_consts_bone_data(&mut self, vals: &[FigureBoneData]) -> Consts<FigureBoneData> {
+    pub fn create_consts_bone_data(&self, vals: &[FigureBoneData]) -> Consts<FigureBoneData> {
         let len = std::mem::size_of_val(vals);
 
         let buf = self
@@ -397,7 +398,7 @@ impl Renderer {
         self.create_consts_internal(len, vals, Some(buf), bind_group)
     }
 
-    pub fn create_consts_fluid_locals(&mut self, waves: Texture) -> Consts<FluidLocals> {
+    pub fn create_consts_fluid_locals(&self, waves: Texture) -> Consts<FluidLocals> {
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Fluid locals bind group"),
             layout: &self.fluid_pipeline.locals,
@@ -417,7 +418,7 @@ impl Renderer {
     }
 
     pub fn create_consts_terrain_locals(
-        &mut self,
+        &self,
         vals: &[TerrainLocals],
     ) -> Consts<TerrainLocals> {
         let len = std::mem::size_of_val(vals);
@@ -447,7 +448,7 @@ impl Renderer {
     }
 
     pub fn create_consts_ui_locals(
-        &mut self,
+        &self,
         vals: &[UiLocals],
         tex: &Texture,
     ) -> Consts<UiLocals> {
@@ -488,67 +489,67 @@ impl Renderer {
     }
 
     fn create_consts_internal<T: Copy + AsBytes>(
-        &mut self,
+        &self,
         len: usize,
         vals: &[T],
         buf: Option<wgpu::Buffer>,
         bind_group: wgpu::BindGroup,
     ) -> Consts<T> {
         let mut consts = Consts::new(len, buf, bind_group);
-        consts.update(&mut self.device, &mut self.queue, vals);
+        consts.update(&self.device, &self.queue, vals);
         consts
     }
 
     /// Update a set of constants with the provided values.
-    pub fn update_consts<T: Copy + AsBytes>(&mut self, consts: &mut Consts<T>, vals: &[T]) {
-        consts.update(&mut self.device, &mut self.queue, vals)
+    pub fn update_consts<T: Copy + AsBytes>(&self, consts: &mut Consts<T>, vals: &[T]) {
+        consts.update(&self.device, &self.queue, vals)
     }
 
     /// Create a new set of instances with the provided values.
-    pub fn create_instances<T: Copy + AsBytes>(&mut self, vals: &[T]) -> Instances<T> {
-        let mut instances = Instances::new(&mut self.device, std::mem::size_of_val(vals));
-        instances.update(&mut self.device, &mut self.queue, vals);
+    pub fn create_instances<T: Copy + AsBytes>(&self, vals: &[T]) -> Instances<T> {
+        let mut instances = Instances::new(&self.device, std::mem::size_of_val(vals));
+        instances.update(&self.device, &self.queue, vals);
         instances
     }
 
     /// Create a new model from the provided mesh.
     pub fn create_model<P: Pipeline>(&self, mesh: &Mesh<P>) -> Model {
         let mut model = Model::new(&self.device, std::mem::size_of_val(mesh.vertices()));
-        model.update(&mut self.device, &mut self.queue, mesh, 0);
+        model.update(&self.device, &self.queue, mesh, 0);
         model
     }
 
     /// Create a new dynamic model with the specified size.
-    pub fn create_dynamic_model(&mut self, size: usize) -> Model {
-        Model::new(&mut self.device, size)
+    pub fn create_dynamic_model(&self, size: usize) -> Model {
+        Model::new(&self.device, size)
     }
 
     /// Update a dynamic model with a mesh and a offset.
-    pub fn update_model<P: Pipeline>(&mut self, model: &mut Model, mesh: &Mesh<P>, offset: usize) {
-        model.update(&mut self.device, &mut self.queue, mesh, offset)
+    pub fn update_model<P: Pipeline>(&self, model: &mut Model, mesh: &Mesh<P>, offset: usize) {
+        model.update(&self.device, &self.queue, mesh, offset)
     }
 
     /// Create a new texture from the provided image.
-    pub fn create_texture(&mut self, image: &image::DynamicImage, tile: bool) -> Texture {
-        let (texture, cmds) = Texture::from_image(&mut self.device, image, tile);
+    pub fn create_texture(&self, image: &image::DynamicImage, tile: bool) -> Texture {
+        let (texture, cmds) = Texture::from_image(&self.device, image, tile);
         self.queue.submit(&[cmds]);
         texture
     }
 
     /// Create a new texture from the provided image.
-    pub fn create_dynamic_texture(&mut self, width: u32, height: u32) -> Texture {
-        Texture::new_dynamic(&mut self.device, width, height)
+    pub fn create_dynamic_texture(&self, width: u32, height: u32) -> Texture {
+        Texture::new_dynamic(&self.device, width, height)
     }
 
     /// Update a texture with the provided offset, size, and data.
     pub fn update_texture(
-        &mut self,
+        &self,
         texture: &Texture,
         offset: [u16; 2],
         size: [u16; 2],
         data: &[u8],
     ) {
-        let cmd = texture.update(&mut self.device, data, size, offset);
+        let cmd = texture.update(&self.device, data, size, offset);
         self.queue.submit(&[cmd]);
     }
 

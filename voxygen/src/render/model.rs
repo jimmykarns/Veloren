@@ -28,8 +28,8 @@ impl Model {
 
     pub fn update<P: Pipeline>(
         &mut self,
-        device: &mut wgpu::Device,
-        queue: &mut wgpu::Queue,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
         mesh: &Mesh<P>,
         offset: usize,
     ) {

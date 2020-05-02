@@ -72,7 +72,7 @@ pub struct SceneData<'a> {
 
 impl Scene {
     /// Create a new `Scene` with default parameters.
-    pub fn new(renderer: &mut Renderer) -> Self {
+    pub fn new(renderer: &Renderer) -> Self {
         let resolution = renderer.get_resolution().map(|e| e as f32);
 
         Self {
@@ -341,9 +341,9 @@ impl Scene {
     }
 
     /// Render the scene using the provided `Renderer`.
-    pub fn first_render<'a, 'b: 'a>(
-        &'b mut self,
-        drawer: &'a mut FirstDrawer<'a>,
+    pub fn first_render<'b>(
+        &'b self,
+        drawer: &mut FirstDrawer<'b>,
         state: &State,
         player_entity: EcsEntity,
         tick: u64,
@@ -380,7 +380,7 @@ impl Scene {
     }
 
     /// Render the scene using the provided `Renderer`.
-    pub fn second_render<'b: 'a, 'a>(&'b mut self, drawer: &'a mut SecondDrawer<'a>) {
+    pub fn second_render<'b>(&'b self, drawer: &mut SecondDrawer<'b>) {
         drawer.draw_post_process(&self.postprocess.model, &self.globals, 0..3 * 2)
     }
 }

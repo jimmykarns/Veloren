@@ -1327,7 +1327,7 @@ impl CharSelectionUi {
         events
     }
 
-    pub fn render<'b>(&'b self, drawer: &'b mut SecondDrawer<'b>, globals: &'b Consts<Globals>) {
+    pub fn render<'b>(&'b self, drawer: &mut SecondDrawer<'b>, globals: &'b Consts<Globals>) {
         self.ui.render(drawer, Some(globals));
     }
 }

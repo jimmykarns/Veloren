@@ -56,9 +56,34 @@ impl<Skel: Skeleton> FigureModelCache<Skel> {
         }
     }
 
+    /// NOTE: Returns None if a model is not found; this presumably mean that maintain() did
+    /// not add the model that's expected to be rendered.
+    pub fn get_model(
+        &self,
+        renderer: &Renderer,
+        body: Body,
+        equipment: Option<&Equipment>,
+        tick: u64,
+        camera_mode: CameraMode,
+        character_state: Option<&CharacterState>,
+    ) -> Option<&((Model, std::ops::Range<u32>), Skel::Attr)> {
+        let key = if equipment.is_some() {
+            FigureKey::Complex(
+                body,
+                equipment.cloned(),
+                camera_mode,
+                character_state.map(|cs| CharacterStateCacheKey::from(cs)),
+            )
+        } else {
+            FigureKey::Simple(body)
+        };
+
+        self.models.get(&key).map(|(model, _)| model)
+    }
+
     pub fn get_or_create_model(
         &mut self,
-        renderer: &mut Renderer,
+        renderer: &Renderer,
         body: Body,
         equipment: Option<&Equipment>,
         tick: u64,

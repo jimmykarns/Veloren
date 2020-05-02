@@ -248,7 +248,7 @@ pub struct Terrain<V: RectRasterableVol> {
 }
 
 impl<V: RectRasterableVol> Terrain<V> {
-    pub fn new(renderer: &mut Renderer) -> Self {
+    pub fn new(renderer: &Renderer) -> Self {
         // Create a new mpsc (Multiple Produced, Single Consumer) pair for communicating
         // with worker threads that are meshing chunks.
         let (send, recv) = channel::unbounded();
@@ -1079,7 +1079,7 @@ impl<V: RectRasterableVol> Terrain<V> {
     /// Maintain terrain data. To be called once per tick.
     pub fn maintain(
         &mut self,
-        renderer: &mut Renderer,
+        renderer: &Renderer,
         scene_data: &SceneData,
         focus_pos: Vec3<f32>,
         loaded_distance: f32,
@@ -1375,7 +1375,7 @@ impl<V: RectRasterableVol> Terrain<V> {
 
     pub fn render<'b>(
         &'b self,
-        drawer: &'b mut FirstDrawer<'b>,
+        drawer: &mut FirstDrawer<'b>,
         globals: &'b Consts<Globals>,
         lights: &'b Consts<Light>,
         shadows: &'b Consts<Shadow>,
@@ -1407,7 +1407,7 @@ impl<V: RectRasterableVol> Terrain<V> {
                     globals,
                     lights,
                     shadows,
-                    chunk.opaque_model.1,
+                    chunk.opaque_model.1.clone(),
                 );
             }
         }
@@ -1415,7 +1415,7 @@ impl<V: RectRasterableVol> Terrain<V> {
 
     pub fn render_translucent<'b>(
         &'b self,
-        drawer: &'b mut FirstDrawer<'b>,
+        drawer: &mut FirstDrawer<'b>,
         globals: &'b Consts<Globals>,
         lights: &'b Consts<Light>,
         shadows: &'b Consts<Shadow>,
@@ -1455,7 +1455,7 @@ impl<V: RectRasterableVol> Terrain<V> {
                             globals,
                             lights,
                             shadows,
-                            self.sprite_models[&kind].1,
+                            self.sprite_models[&kind].1.clone(),
                         );
                     }
                 }

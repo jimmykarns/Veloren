@@ -200,9 +200,9 @@ impl Scene {
         );
     }
 
-    pub fn first_render<'b: 'a, 'a>(
+    pub fn first_render<'b>(
         &'b mut self,
-        drawer: &'a mut FirstDrawer<'a>,
+        drawer: &mut FirstDrawer<'b>,
         tick: u64,
         body: Option<humanoid::Body>,
         equipment: &Equipment,
@@ -246,7 +246,7 @@ impl Scene {
         }
     }
 
-    pub fn second_render<'b>(&'b mut self, drawer: &'b mut SecondDrawer<'b>) {
+    pub fn second_render<'b>(&'b self, drawer: &mut SecondDrawer<'b>) {
         drawer.draw_post_process(&self.postprocess.model, &self.globals, 0..3 * 2);
     }
 }
