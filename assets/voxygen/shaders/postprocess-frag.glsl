@@ -6,11 +6,6 @@
 
 layout(location=0) in vec2 f_pos;
 
-layout (set = 1, binding = 0,std140)
-uniform u_locals {
-	vec4 nul;
-};
-
 layout(location=0) out vec4 tgt_color;
 
 vec3 rgb2hsv(vec3 c) {
@@ -37,7 +32,7 @@ void main() {
 	}
 
 
-	vec4 aa_color = aa_apply(src_color, uv * screen_res.xy, screen_res.xy);
+	vec4 aa_color = aa_apply(uv * screen_res.xy, screen_res.xy);
 
 	//vec4 hsva_color = vec4(rgb2hsv(fxaa_color.rgb), fxaa_color.a);
 	//hsva_color.y *= 1.45;

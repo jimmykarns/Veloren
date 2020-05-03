@@ -136,7 +136,8 @@ impl Ui {
             image_map: Map::new(),
             draw_commands: Vec::new(),
             model: renderer.create_dynamic_model(100),
-            interface_locals: renderer.create_consts_ui_locals(&[UiLocals::default()], &cache.glyph_cache_tex()),
+            interface_locals: renderer
+                .create_consts_ui_locals(&[UiLocals::default()], &cache.glyph_cache_tex()),
             cache,
             default_globals: renderer.create_consts_globals(&[Globals::default()]),
             ingame_locals: Vec::new(),
@@ -278,7 +279,8 @@ impl Ui {
             self.cache.resize_graphic_cache(renderer);
             // Resize glyph cache
             self.cache.resize_glyph_cache(renderer).unwrap();
-            self.interface_locals = renderer.create_consts_ui_locals(&[UiLocals::default()], &self.cache.glyph_cache_tex());
+            self.interface_locals = renderer
+                .create_consts_ui_locals(&[UiLocals::default()], &self.cache.glyph_cache_tex());
 
             self.need_cache_resize = false;
         }
@@ -334,10 +336,7 @@ impl Ui {
         }
         macro_rules! draw_image {
             ($world_pos:expr, $tex:expr) => {
-                let locals = renderer.create_consts_ui_locals(
-                    &[$world_pos.into()],
-                    $tex,
-                );
+                let locals = renderer.create_consts_ui_locals(&[$world_pos.into()], $tex);
                 if self.ingame_locals.len() > ingame_local_index {
                     self.ingame_locals[ingame_local_index] = locals;
                 } else {
@@ -347,7 +346,7 @@ impl Ui {
                 self.draw_commands
                     .push(DrawCommand::WorldPos(Some(ingame_local_index)));
                 ingame_local_index += 1;
-            }
+            };
         }
 
         while let Some(prim) = primitives.next() {
@@ -742,9 +741,7 @@ impl Ui {
                                 world_pos = Vec4::from_point(parameters.pos);
                                 let tex = match current_state {
                                     State::Plain => self.cache.glyph_cache_tex(),
-                                    State::Image(id) => {
-                                        self.cache.graphic_cache().get_tex(id)
-                                    },
+                                    State::Image(id) => self.cache.graphic_cache().get_tex(id),
                                 };
                                 /* if self.ingame_locals.len() > ingame_local_index {
                                     renderer.update_consts(
@@ -855,17 +852,23 @@ impl Ui {
                     if let DrawKind::Plain = kind {
                         locals = &self.interface_locals;
                     }
-                    /* let tex = match kind {
-                        DrawKind::Image(tex_id) => self.cache.graphic_cache().get_tex(*tex_id),
-                        DrawKind::Plain => self.cache.glyph_cache_tex(),
-                    };
+                    /* let locals = match kind {
+                        DrawKind::Image(tex_id) => &self.interface_locals, /* self.cache.graphic_cache().get_tex(*tex_id), */
+                        DrawKind::Plain => &self.interface_locals,
+                    }; */
+                    /*
                     let new_locals = renderer.create_consts_ui_locals(&[locals], &tex);
                     renderer.update_consts(locals, &[new_locals);
                                         &self.ingame_locals[ingame_local_index],
                                         &[world_pos.into()],
                                     ); */
 
-                    drawer.draw_ui(&self.model, scissor, locals, /*globals, */verts.clone());
+                    drawer.draw_ui(
+                        &self.model,
+                        scissor,
+                        locals,
+                        /* globals, */ verts.clone(),
+                    );
                 },
             }
         }

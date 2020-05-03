@@ -1,4 +1,5 @@
-layout (set = 1, binding = 1) uniform sampler2D src_color;
+layout (set = 1, binding = 0) uniform texture2D t_src_color;
+layout (set = 1, binding = 1) uniform sampler s_src_color;
 
 const float FXAA_SCALE = 1.25;
 
@@ -118,6 +119,9 @@ void texcoords(vec2 fragCoord, vec2 resolution,
 	v_rgbM = vec2(fragCoord * inverseVP);
 }
 
+sampler2D get_sampler() {
+	return sampler2D(t_src_color,s_src_color);
+}
 
 vec4 aa_apply(sampler2D tex, vec2 fragCoord, vec2 resolution) {
 	mediump vec2 v_rgbNW;

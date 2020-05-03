@@ -130,7 +130,10 @@ impl Renderer {
             fluid: fluid::FluidLayout::new(&device),
             sprite: sprite::SpriteLayout::new(&device),
             ui: ui::UiLayout::new(&device),
-            postprocess: postprocess::PostProcessLayout::new(&device),
+            postprocess: postprocess::PostProcessLayout::new(&device, match aa_mode {
+                AaMode::None | AaMode::SsaaX4 | AaMode::Fxaa => false,
+                _ => true,
+            }),
         };
 
         let (
@@ -447,10 +450,7 @@ impl Renderer {
         self.create_consts_internal(0, &[], None, bind_group)
     }
 
-    pub fn create_consts_terrain_locals(
-        &self,
-        vals: &[TerrainLocals],
-    ) -> Consts<TerrainLocals> {
+    pub fn create_consts_terrain_locals(&self, vals: &[TerrainLocals]) -> Consts<TerrainLocals> {
         let len = std::mem::size_of_val(vals);
 
         log::debug!("Bind create_consts_terrain_locals");
@@ -465,7 +465,7 @@ impl Renderer {
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Terrain locals bind group"),
-            layout: &self.layouts.terrain.locals,//&self.terrain_pipeline.locals,
+            layout: &self.layouts.terrain.locals, //&self.terrain_pipeline.locals,
             bindings: &[wgpu::Binding {
                 binding: 0,
                 resource: wgpu::BindingResource::Buffer {
@@ -478,11 +478,7 @@ impl Renderer {
         self.create_consts_internal(len, vals, Some(buf), bind_group)
     }
 
-    pub fn create_consts_ui_locals(
-        &self,
-        vals: &[UiLocals],
-        tex: &Texture,
-    ) -> Consts<UiLocals> {
+    pub fn create_consts_ui_locals(&self, vals: &[UiLocals], tex: &Texture) -> Consts<UiLocals> {
         let len = std::mem::size_of_val(vals);
 
         log::debug!("Bind create_consts_ui_locals");
@@ -552,9 +548,7 @@ impl Renderer {
     }
 
     /// Create a new dynamic model with the specified size.
-    pub fn create_dynamic_model(&self, size: usize) -> Model {
-        Model::new(&self.device, size)
-    }
+    pub fn create_dynamic_model(&self, size: usize) -> Model { Model::new(&self.device, size) }
 
     /// Update a dynamic model with a mesh and a offset.
     pub fn update_model<P: Pipeline>(&self, model: &mut Model, mesh: &Mesh<P>, offset: usize) {
@@ -574,13 +568,7 @@ impl Renderer {
     }
 
     /// Update a texture with the provided offset, size, and data.
-    pub fn update_texture(
-        &self,
-        texture: &Texture,
-        offset: [u16; 2],
-        size: [u16; 2],
-        data: &[u8],
-    ) {
+    pub fn update_texture(&self, texture: &Texture, offset: [u16; 2], size: [u16; 2], data: &[u8]) {
         let cmd = texture.update(&self.device, data, size, offset);
         self.queue.submit(&[cmd]);
     }
@@ -633,14 +621,30 @@ impl Renderer {
     pub fn drawer(&mut self) -> Drawer {
         let mut encoder = Some(self.device.create_command_encoder(
             &wgpu::CommandEncoderDescriptor {
-                label: Some("First render pass encoder"),
+                label: Some("Render pass encoder"),
             },
         ));
+
+        let postprocess_locals = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("PostProcess bind group"),
+            layout: &self.layouts.postprocess.locals,
+            bindings: &[
+                wgpu::Binding {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&self.tgt_color_texture.view),
+                },
+                wgpu::Binding {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&self.tgt_color_texture.sampler),
+                },
+            ],
+        });
 
         Drawer {
             encoder,
             tex: self.swap_chain.get_next_texture().unwrap(),
             renderer: self,
+            postprocess_locals,
         }
     }
 }
@@ -788,8 +792,14 @@ fn create_pipelines(
     let fs_data = wgpu::read_spirv(std::io::Cursor::new(fs_spirv.as_binary_u8())).unwrap();
     let fs_module = device.create_shader_module(fs_data.as_slice());
 
-    let skybox_pipeline =
-        skybox::SkyboxPipeline::new(device, &vs_module, &fs_module, sc_desc, &layouts.global, &layouts.skybox);
+    let skybox_pipeline = skybox::SkyboxPipeline::new(
+        device,
+        &vs_module,
+        &fs_module,
+        sc_desc,
+        &layouts.global,
+        &layouts.skybox,
+    );
 
     // // Construct a pipeline for rendering skyboxes
     // let skybox_pipeline = create_pipeline(
@@ -828,8 +838,14 @@ fn create_pipelines(
     let fs_data = wgpu::read_spirv(std::io::Cursor::new(fs_spirv.as_binary_u8())).unwrap();
     let fs_module = device.create_shader_module(fs_data.as_slice());
 
-    let figure_pipeline =
-        figure::FigurePipeline::new(device, &vs_module, &fs_module, sc_desc, &layouts.global, &layouts.figure);
+    let figure_pipeline = figure::FigurePipeline::new(
+        device,
+        &vs_module,
+        &fs_module,
+        sc_desc,
+        &layouts.global,
+        &layouts.figure,
+    );
 
     // // Construct a pipeline for rendering figures
     // let figure_pipeline = create_pipeline(
@@ -874,8 +890,14 @@ fn create_pipelines(
     let fs_data = wgpu::read_spirv(std::io::Cursor::new(fs_spirv.as_binary_u8())).unwrap();
     let fs_module = device.create_shader_module(fs_data.as_slice());
 
-    let terrain_pipeline =
-        terrain::TerrainPipeline::new(device, &vs_module, &fs_module, sc_desc, &layouts.global, &layouts.terrain);
+    let terrain_pipeline = terrain::TerrainPipeline::new(
+        device,
+        &vs_module,
+        &fs_module,
+        sc_desc,
+        &layouts.global,
+        &layouts.terrain,
+    );
 
     // // Construct a pipeline for rendering terrain
     // let terrain_pipeline = create_pipeline(
@@ -975,8 +997,14 @@ fn create_pipelines(
     let fs_data = wgpu::read_spirv(std::io::Cursor::new(fs_spirv.as_binary_u8())).unwrap();
     let fs_module = device.create_shader_module(fs_data.as_slice());
 
-    let sprite_pipeline =
-        sprite::SpritePipeline::new(device, &vs_module, &fs_module, sc_desc, &layouts.global, &layouts.sprite);
+    let sprite_pipeline = sprite::SpritePipeline::new(
+        device,
+        &vs_module,
+        &fs_module,
+        sc_desc,
+        &layouts.global,
+        &layouts.sprite,
+    );
 
     // // Construct a pipeline for rendering sprites
     // let sprite_pipeline = create_pipeline(
@@ -1015,7 +1043,14 @@ fn create_pipelines(
     let fs_data = wgpu::read_spirv(std::io::Cursor::new(fs_spirv.as_binary_u8())).unwrap();
     let fs_module = device.create_shader_module(fs_data.as_slice());
 
-    let ui_pipeline = ui::UiPipeline::new(device, &vs_module, &fs_module, sc_desc, &layouts.global, &layouts.ui);
+    let ui_pipeline = ui::UiPipeline::new(
+        device,
+        &vs_module,
+        &fs_module,
+        sc_desc,
+        &layouts.global,
+        &layouts.ui,
+    );
 
     // // Construct a pipeline for rendering UI elements
     // let ui_pipeline = create_pipeline(
@@ -1060,8 +1095,14 @@ fn create_pipelines(
     let fs_data = wgpu::read_spirv(std::io::Cursor::new(fs_spirv.as_binary_u8())).unwrap();
     let fs_module = device.create_shader_module(fs_data.as_slice());
 
-    let postprocess_pipeline =
-        postprocess::PostProcessPipeline::new(device, &vs_module, &fs_module, sc_desc, &layouts.global, &layouts.postprocess);
+    let postprocess_pipeline = postprocess::PostProcessPipeline::new(
+        device,
+        &vs_module,
+        &fs_module,
+        sc_desc,
+        &layouts.global,
+        &layouts.postprocess,
+    );
 
     // // Construct a pipeline for rendering our post-processing
     // let postprocess_pipeline = create_pipeline(

@@ -14,6 +14,7 @@ pub struct Drawer<'a> {
     pub(super) encoder: Option<wgpu::CommandEncoder>,
     pub(super) renderer: &'a mut Renderer,
     pub(super) tex: wgpu::SwapChainOutput,
+    pub(super) postprocess_locals: wgpu::BindGroup,
 }
 
 impl<'a> Drawer<'a> {
@@ -60,12 +61,12 @@ impl<'a> Drawer<'a> {
                         resolve_target: None,
                         load_op: wgpu::LoadOp::Clear,
                         store_op: wgpu::StoreOp::Store,
-                        clear_color: wgpu::Color::TRANSPARENT/*wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }*/,
+                        clear_color: wgpu::Color::TRANSPARENT, /*wgpu::Color {
+                                                                   r: 0.1,
+                                                                   g: 0.2,
+                                                                   b: 0.3,
+                                                                   a: 1.0,
+                                                               }*/
                     }],
                     depth_stencil_attachment: Some(
                         wgpu::RenderPassDepthStencilAttachmentDescriptor {
@@ -83,6 +84,7 @@ impl<'a> Drawer<'a> {
         SecondDrawer {
             render_pass,
             renderer: &self.renderer,
+            postprocess_locals: &self.postprocess_locals,
         }
     }
 }
@@ -130,6 +132,7 @@ impl<'a> FirstDrawer<'a> {
         self.render_pass.set_bind_group(1, &lights.bind_group, &[]);
         self.render_pass.set_bind_group(2, &shadows.bind_group, &[]);
         self.render_pass.set_bind_group(3, &locals.bind_group, &[]);
+        self.render_pass.set_bind_group(4, &bones.bind_group, &[]);
         self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
         self.render_pass.draw(verts, 0..1);
     }
@@ -197,6 +200,7 @@ impl<'a> FirstDrawer<'a> {
 pub struct SecondDrawer<'a> {
     pub(super) render_pass: wgpu::RenderPass<'a>,
     pub renderer: &'a Renderer,
+    pub postprocess_locals: &'a wgpu::BindGroup,
 }
 
 impl<'a> SecondDrawer<'a> {
@@ -209,14 +213,13 @@ impl<'a> SecondDrawer<'a> {
         self.render_pass
             .set_pipeline(&self.renderer.postprocess_pipeline.pipeline);
         self.render_pass.set_bind_group(0, &globals.bind_group, &[]);
+        self.render_pass
+            .set_bind_group(1, self.postprocess_locals, &[]);
         self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
         self.render_pass.draw(verts, 0..1);
     }
 
-    pub fn start_draw_ui<'b: 'a>(
-        &mut self,
-        globals: &'b Consts<Globals>,
-    ) {
+    pub fn start_draw_ui<'b: 'a>(&mut self, globals: &'b Consts<Globals>) {
         self.render_pass
             .set_pipeline(&self.renderer.ui_pipeline.pipeline);
         self.render_pass.set_bind_group(0, &globals.bind_group, &[]);

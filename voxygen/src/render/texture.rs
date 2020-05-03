@@ -72,7 +72,7 @@ impl Texture {
         let desc = wgpu::TextureDescriptor {
             label: None,
             format: wgpu::TextureFormat::Bgra8UnormSrgb,
-            usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
+            usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT | wgpu::TextureUsage::SAMPLED,
             size: wgpu::Extent3d {
                 width,
                 height,
@@ -140,7 +140,11 @@ impl Texture {
             usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
         });
 
-        log::debug!("Texture::from_image: ({:?} × {:?} * 4)", dimensions.0, dimensions.1);
+        log::debug!(
+            "Texture::from_image: ({:?} × {:?} * 4)",
+            dimensions.0,
+            dimensions.1
+        );
         let buffer = device.create_buffer_with_data(&rgba, wgpu::BufferUsage::COPY_SRC);
 
         let mut encoder =
