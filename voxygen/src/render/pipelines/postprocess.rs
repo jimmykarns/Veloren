@@ -55,7 +55,7 @@ pub struct PostProcessLayout {
 impl PostProcessLayout {
     pub fn new(device: &wgpu::Device, multisampled: bool) -> Self {
         Self {
-            locals: Self::locals_layout(device,multisampled),
+            locals: Self::locals_layout(device, multisampled),
         }
     }
 

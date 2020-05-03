@@ -131,7 +131,12 @@ impl TerrainPipeline {
     ) -> Self {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                bind_group_layouts: &[&layouts.globals, &layouts.light, &layouts.shadow, &layout.locals],
+                bind_group_layouts: &[
+                    &layouts.globals,
+                    &layouts.light,
+                    &layouts.shadow,
+                    &layout.locals,
+                ],
             });
 
         let samples = match aa_mode {
@@ -189,7 +194,6 @@ impl TerrainPipeline {
             pipeline: render_pipeline,
         }
     }
-
 }
 
 impl Pipeline for TerrainPipeline {

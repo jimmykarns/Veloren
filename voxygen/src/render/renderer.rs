@@ -52,6 +52,7 @@ pub struct Renderer {
 
     depth_stencil_texture: Texture,
     tgt_color_texture: Texture,
+    win_depth_stencil_texture: Texture,
 
     // pub(self) globals_layouts: GlobalsLayouts,
     // pub(self) terrain_layout: wgpu::RenderLayout,
@@ -111,7 +112,7 @@ impl Renderer {
             height: size.height,
             present_mode: wgpu::PresentMode::Mailbox,
         };
-        let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
+        let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
         // Noise texture
         let (noise_texture, cmds) =
@@ -119,8 +120,11 @@ impl Renderer {
         queue.submit(&[cmds]);
         // Noise Texture End
 
-        let depth_stencil_texture = Texture::create_depth_stencil_texture(&device, &sc_desc);
+        let depth_stencil_texture =
+            Texture::create_depth_stencil_texture(&device, &sc_desc, aa_mode);
         let tgt_color_texture = Texture::create_multi_sample_texture(&device, &sc_desc, aa_mode);
+        let win_depth_stencil_texture =
+            Texture::create_depth_stencil_texture(&device, &sc_desc, AaMode::None);
 
         let layouts = Layouts {
             global: GlobalsLayouts::new(&device),
@@ -169,6 +173,7 @@ impl Renderer {
 
             depth_stencil_texture,
             tgt_color_texture,
+            win_depth_stencil_texture,
 
             // globals_layouts,
             layouts,
@@ -230,9 +235,11 @@ impl Renderer {
         self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
 
         self.depth_stencil_texture =
-            Texture::create_depth_stencil_texture(&self.device, &self.sc_desc);
+            Texture::create_depth_stencil_texture(&self.device, &self.sc_desc, self.aa_mode);
         self.tgt_color_texture =
             Texture::create_multi_sample_texture(&self.device, &self.sc_desc, self.aa_mode);
+        self.win_depth_stencil_texture =
+            Texture::create_depth_stencil_texture(&self.device, &self.sc_desc, AaMode::None);
 
         self.flush();
     }
@@ -619,11 +626,12 @@ impl Renderer {
     }
 
     pub fn drawer(&mut self) -> Drawer {
-        let mut encoder = Some(self.device.create_command_encoder(
-            &wgpu::CommandEncoderDescriptor {
-                label: Some("Render pass encoder"),
-            },
-        ));
+        let encoder = Some(
+            self.device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Render pass encoder"),
+                }),
+        );
 
         let postprocess_locals = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("PostProcess bind group"),

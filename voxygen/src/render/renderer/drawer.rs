@@ -61,16 +61,11 @@ impl<'a> Drawer<'a> {
                         resolve_target: None,
                         load_op: wgpu::LoadOp::Clear,
                         store_op: wgpu::StoreOp::Store,
-                        clear_color: wgpu::Color::TRANSPARENT, /*wgpu::Color {
-                                                                   r: 0.1,
-                                                                   g: 0.2,
-                                                                   b: 0.3,
-                                                                   a: 1.0,
-                                                               }*/
+                        clear_color: wgpu::Color::TRANSPARENT,
                     }],
                     depth_stencil_attachment: Some(
                         wgpu::RenderPassDepthStencilAttachmentDescriptor {
-                            attachment: &self.renderer.depth_stencil_texture.view,
+                            attachment: &self.renderer.win_depth_stencil_texture.view,
                             depth_load_op: wgpu::LoadOp::Load,
                             depth_store_op: wgpu::StoreOp::Store,
                             clear_depth: 1.0,

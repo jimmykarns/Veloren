@@ -16,19 +16,29 @@ impl Texture {
     pub fn create_depth_stencil_texture(
         device: &wgpu::Device,
         sc_desc: &wgpu::SwapChainDescriptor,
+        aa_mode: AaMode,
     ) -> Self {
+        let (width, height, samples) = match aa_mode {
+            AaMode::None | AaMode::Fxaa => (sc_desc.width, sc_desc.height, 1),
+            // TODO: Ensure sampling in the shader is exactly between the 4 texels
+            AaMode::SsaaX4 => (sc_desc.width * 2, sc_desc.height * 2, 1),
+            AaMode::MsaaX4 => (sc_desc.width, sc_desc.height, 4),
+            AaMode::MsaaX8 => (sc_desc.width, sc_desc.height, 8),
+            AaMode::MsaaX16 => (sc_desc.width, sc_desc.height, 16),
+        };
+
         let desc = wgpu::TextureDescriptor {
             label: None,
             format: Self::DEPTH_FORMAT,
             usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
             size: wgpu::Extent3d {
-                width: sc_desc.width,
-                height: sc_desc.height,
+                width,
+                height,
                 depth: 1,
             },
             array_layer_count: 1,
             mip_level_count: 1,
-            sample_count: 1,
+            sample_count: samples,
             dimension: wgpu::TextureDimension::D2,
         };
         let texture = device.create_texture(&desc);
