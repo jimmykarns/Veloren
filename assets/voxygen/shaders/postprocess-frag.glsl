@@ -25,7 +25,7 @@ vec3 hsv2rgb(vec3 c) {
 }
 
 void main() {
-	vec2 uv = (f_pos + 1.0) * 0.5;
+	highp vec2 uv = (f_pos + 1.0) * 0.5;
 
 	if (medium.x == 1u) {
 		uv = clamp(uv + vec2(sin(uv.y * 16.0 + tick.x), sin(uv.x * 24.0 + tick.x)) * 0.005, 0, 1);
