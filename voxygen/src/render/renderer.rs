@@ -329,7 +329,7 @@ impl Renderer {
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Light bind group"),
-            layout: &self.layouts.global.globals,
+            layout: &self.layouts.global.light,
             bindings: &[wgpu::Binding {
                 binding: 0,
                 resource: wgpu::BindingResource::Buffer {
@@ -356,7 +356,7 @@ impl Renderer {
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Shadow bind group"),
-            layout: &self.layouts.global.globals,
+            layout: &self.layouts.global.shadow,
             bindings: &[wgpu::Binding {
                 binding: 0,
                 resource: wgpu::BindingResource::Buffer {
@@ -383,7 +383,7 @@ impl Renderer {
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Figure locals bind group"),
-            layout: &self.layouts.fluid.locals,
+            layout: &self.layouts.figure.locals,
             bindings: &[wgpu::Binding {
                 binding: 0,
                 resource: wgpu::BindingResource::Buffer {

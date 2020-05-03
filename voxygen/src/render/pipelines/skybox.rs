@@ -81,11 +81,11 @@ impl SkyboxPipeline {
         fs_module: &wgpu::ShaderModule,
         sc_desc: &wgpu::SwapChainDescriptor,
         layouts: &GlobalsLayouts,
-        layout: &SkyboxLayout,
+        _layout: &SkyboxLayout,
     ) -> Self {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                bind_group_layouts: &[&layouts.globals, &layout.locals],
+                bind_group_layouts: &[&layouts.globals/*, &layout.locals*/],
             });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
