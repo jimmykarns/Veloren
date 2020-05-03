@@ -1,5 +1,5 @@
 use super::{
-    super::{util::arr_to_mat, Pipeline, DEPTH_FORMAT},
+    super::{util::arr_to_mat, AaMode, Pipeline, DEPTH_FORMAT},
     Globals, GlobalsLayouts, Light, Shadow,
 };
 use vek::*;
@@ -180,7 +180,16 @@ impl FigurePipeline {
         sc_desc: &wgpu::SwapChainDescriptor,
         layouts: &GlobalsLayouts,
         layout: &FigureLayout,
+        aa_mode: AaMode,
     ) -> Self {
+        let samples = match aa_mode {
+            AaMode::None | AaMode::Fxaa => 1,
+            // TODO: Ensure sampling in the shader is exactly between the 4 texels
+            AaMode::SsaaX4 => 1,
+            AaMode::MsaaX4 => 4,
+            AaMode::MsaaX8 => 8,
+            AaMode::MsaaX16 => 16,
+        };
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -230,7 +239,7 @@ impl FigurePipeline {
                 index_format: wgpu::IndexFormat::Uint16,
                 vertex_buffers: &[Vertex::desc()],
             },
-            sample_count: 1,
+            sample_count: samples,
             sample_mask: !0,
             alpha_to_coverage_enabled: false,
         });

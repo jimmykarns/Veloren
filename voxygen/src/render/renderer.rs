@@ -799,6 +799,7 @@ fn create_pipelines(
         sc_desc,
         &layouts.global,
         &layouts.skybox,
+        aa_mode,
     );
 
     // // Construct a pipeline for rendering skyboxes
@@ -845,6 +846,7 @@ fn create_pipelines(
         sc_desc,
         &layouts.global,
         &layouts.figure,
+        aa_mode,
     );
 
     // // Construct a pipeline for rendering figures
@@ -897,6 +899,7 @@ fn create_pipelines(
         sc_desc,
         &layouts.global,
         &layouts.terrain,
+        aa_mode,
     );
 
     // // Construct a pipeline for rendering terrain
@@ -951,6 +954,7 @@ fn create_pipelines(
         &layouts.global,
         &layouts.terrain,
         &layouts.fluid,
+        aa_mode,
     );
 
     // // Construct a pipeline for rendering fluids
@@ -1004,6 +1008,7 @@ fn create_pipelines(
         sc_desc,
         &layouts.global,
         &layouts.sprite,
+        aa_mode,
     );
 
     // // Construct a pipeline for rendering sprites

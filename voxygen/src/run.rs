@@ -40,16 +40,16 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
                         "Time outside voxygen cleared: {} us",
                         timer.elapsed().as_nanos() as f32 / 1000.0 - handle_time / 1000.0
                     ); */
-                    // global_state.window.window().request_redraw();
+                    global_state.window.window().request_redraw();
                     handle_main_events_cleared(&mut states, control_flow, &mut global_state);
                     timer = std::time::Instant::now();
                     handle_time = 0.0;
                 }
                 polled_twice = !polled_twice;
             },
-            /* winit::event::Event::RedrawRequested(_) => {
+            winit::event::Event::RedrawRequested(_) => {
                 global_state.maintain(global_state.clock.get_last_delta().as_secs_f32());
-            }, */
+            },
             winit::event::Event::WindowEvent { event, .. } => {
                 let start = std::time::Instant::now();
                 global_state

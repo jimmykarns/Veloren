@@ -1,5 +1,5 @@
 use super::{
-    super::{Pipeline, DEPTH_FORMAT},
+    super::{AaMode, Pipeline, DEPTH_FORMAT},
     Globals, GlobalsLayouts, Light, Shadow,
 };
 use std::ops::Mul;
@@ -127,11 +127,21 @@ impl TerrainPipeline {
         sc_desc: &wgpu::SwapChainDescriptor,
         layouts: &GlobalsLayouts,
         layout: &super::terrain::TerrainLayout,
+        aa_mode: AaMode,
     ) -> Self {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 bind_group_layouts: &[&layouts.globals, &layouts.light, &layouts.shadow, &layout.locals],
             });
+
+        let samples = match aa_mode {
+            AaMode::None | AaMode::Fxaa => 1,
+            // TODO: Ensure sampling in the shader is exactly between the 4 texels
+            AaMode::SsaaX4 => 1,
+            AaMode::MsaaX4 => 4,
+            AaMode::MsaaX8 => 8,
+            AaMode::MsaaX16 => 16,
+        };
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             layout: &render_pipeline_layout,
@@ -170,7 +180,7 @@ impl TerrainPipeline {
                 index_format: wgpu::IndexFormat::Uint16,
                 vertex_buffers: &[Vertex::desc()],
             },
-            sample_count: 1,
+            sample_count: samples,
             sample_mask: !0,
             alpha_to_coverage_enabled: false,
         });
