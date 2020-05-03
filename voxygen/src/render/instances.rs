@@ -9,6 +9,7 @@ pub struct Instances<T: Copy + AsBytes> {
 
 impl<T: Copy + AsBytes> Instances<T> {
     pub fn new(device: &wgpu::Device, len: usize) -> Self {
+        log::debug!("Bind Instances::new()");
         let instance_buffer = device
             .create_buffer_mapped(&wgpu::BufferDescriptor {
                 label: None,
@@ -30,6 +31,7 @@ impl<T: Copy + AsBytes> Instances<T> {
         let mut encoder =
             device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
+        log::debug!("Create instances::update: {:?}", std::mem::size_of_val(vals));
         let staging_buffer = device.create_buffer_with_data(
             vals.iter()
                 .map(|v| v.as_bytes())

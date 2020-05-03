@@ -28,5 +28,4 @@ void main() {
     } else if (f_mode == uint(2)) {
         tgt_color = f_color;
     }
-    tgt_color = vec4(1.0, 1.0, 1.0, 1.0);
 }

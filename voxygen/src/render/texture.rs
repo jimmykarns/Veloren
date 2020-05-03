@@ -140,6 +140,7 @@ impl Texture {
             usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
         });
 
+        log::debug!("Texture::from_image: ({:?} × {:?} * 4)", dimensions.0, dimensions.1);
         let buffer = device.create_buffer_with_data(&rgba, wgpu::BufferUsage::COPY_SRC);
 
         let mut encoder =
@@ -248,34 +249,37 @@ impl Texture {
         size: [u16; 2],
         offset: [u16; 2],
     ) -> wgpu::CommandBuffer {
-        let buffer = device.create_buffer_with_data(data, wgpu::BufferUsage::COPY_SRC);
-
         let mut encoder =
             device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
-        encoder.copy_buffer_to_texture(
-            wgpu::BufferCopyView {
-                buffer: &buffer,
-                offset: 0,
-                bytes_per_row: 4 * size[0] as u32,
-                rows_per_image: size[1] as u32,
-            },
-            wgpu::TextureCopyView {
-                texture: &self.texture,
-                mip_level: 0,
-                array_layer: 0,
-                origin: wgpu::Origin3d {
-                    x: offset[0] as u32,
-                    y: offset[1] as u32,
-                    z: 0,
+        if size[0] > 0 && size[1] > 0 {
+            log::debug!("Texture::update: {:?} × {:?} * 4", size[0], size[1]);
+            let buffer = device.create_buffer_with_data(data, wgpu::BufferUsage::COPY_SRC);
+
+            encoder.copy_buffer_to_texture(
+                wgpu::BufferCopyView {
+                    buffer: &buffer,
+                    offset: 0,
+                    bytes_per_row: 4 * size[0] as u32,
+                    rows_per_image: size[1] as u32,
                 },
-            },
-            wgpu::Extent3d {
-                width: size[0] as u32,
-                height: size[1] as u32,
-                depth: 1,
-            },
-        );
+                wgpu::TextureCopyView {
+                    texture: &self.texture,
+                    mip_level: 0,
+                    array_layer: 0,
+                    origin: wgpu::Origin3d {
+                        x: offset[0] as u32,
+                        y: offset[1] as u32,
+                        z: 0,
+                    },
+                },
+                wgpu::Extent3d {
+                    width: size[0] as u32,
+                    height: size[1] as u32,
+                    depth: 1,
+                },
+            );
+        }
 
         let cmd_buffer = encoder.finish();
 

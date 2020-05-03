@@ -94,7 +94,7 @@ impl Renderer {
         ))
         .unwrap();
 
-        println!("Rocking {:?}", adapter.get_info());
+        log::info!("Rocking {:?}", adapter.get_info());
 
         let (device, queue) =
             futures::executor::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
@@ -281,6 +281,7 @@ impl Renderer {
     pub fn create_consts_globals(&self, vals: &[Globals]) -> Consts<Globals> {
         let len = std::mem::size_of_val(vals);
 
+        log::debug!("Bind consts_globabls");
         let buf = self
             .device
             .create_buffer_mapped(&wgpu::BufferDescriptor {
@@ -318,6 +319,7 @@ impl Renderer {
     pub fn create_consts_light(&self, vals: &[Light]) -> Consts<Light> {
         let len = std::mem::size_of_val(vals);
 
+        log::debug!("Bind consts_light");
         let buf = self
             .device
             .create_buffer_mapped(&wgpu::BufferDescriptor {
@@ -345,6 +347,7 @@ impl Renderer {
     pub fn create_consts_shadows(&self, vals: &[Shadow]) -> Consts<Shadow> {
         let len = std::mem::size_of_val(vals);
 
+        log::debug!("Bind consts_shadows");
         let buf = self
             .device
             .create_buffer_mapped(&wgpu::BufferDescriptor {
@@ -372,6 +375,7 @@ impl Renderer {
     pub fn create_consts_figure_locals(&self, vals: &[FigureLocals]) -> Consts<FigureLocals> {
         let len = std::mem::size_of_val(vals);
 
+        log::debug!("Bind consts_figure_locals");
         let buf = self
             .device
             .create_buffer_mapped(&wgpu::BufferDescriptor {
@@ -399,6 +403,7 @@ impl Renderer {
     pub fn create_consts_bone_data(&self, vals: &[FigureBoneData]) -> Consts<FigureBoneData> {
         let len = std::mem::size_of_val(vals);
 
+        log::debug!("Bind create_consts_bone_data");
         let buf = self
             .device
             .create_buffer_mapped(&wgpu::BufferDescriptor {
@@ -429,11 +434,11 @@ impl Renderer {
             layout: &self.layouts.fluid.locals,
             bindings: &[
                 wgpu::Binding {
-                    binding: 1,
+                    binding: 0,
                     resource: wgpu::BindingResource::TextureView(&waves.view),
                 },
                 wgpu::Binding {
-                    binding: 2,
+                    binding: 1,
                     resource: wgpu::BindingResource::Sampler(&waves.sampler),
                 },
             ],
@@ -448,6 +453,7 @@ impl Renderer {
     ) -> Consts<TerrainLocals> {
         let len = std::mem::size_of_val(vals);
 
+        log::debug!("Bind create_consts_terrain_locals");
         let buf = self
             .device
             .create_buffer_mapped(&wgpu::BufferDescriptor {
@@ -479,6 +485,7 @@ impl Renderer {
     ) -> Consts<UiLocals> {
         let len = std::mem::size_of_val(vals);
 
+        log::debug!("Bind create_consts_ui_locals");
         let buf = self
             .device
             .create_buffer_mapped(&wgpu::BufferDescriptor {
@@ -526,7 +533,7 @@ impl Renderer {
     }
 
     /// Update a set of constants with the provided values.
-    pub fn update_consts<T: Copy + AsBytes>(&self, consts: &mut Consts<T>, vals: &[T]) {
+    pub fn update_consts<T: Copy + AsBytes>(&self, consts: &Consts<T>, vals: &[T]) {
         consts.update(&self.device, &self.queue, vals)
     }
 

@@ -60,7 +60,12 @@ impl<'a> Drawer<'a> {
                         resolve_target: None,
                         load_op: wgpu::LoadOp::Clear,
                         store_op: wgpu::StoreOp::Store,
-                        clear_color: wgpu::Color::TRANSPARENT,
+                        clear_color: wgpu::Color::TRANSPARENT/*wgpu::Color {
+                            r: 0.1,
+                            g: 0.2,
+                            b: 0.3,
+                            a: 1.0,
+                        }*/,
                     }],
                     depth_stencil_attachment: Some(
                         wgpu::RenderPassDepthStencilAttachmentDescriptor {
@@ -208,19 +213,25 @@ impl<'a> SecondDrawer<'a> {
         self.render_pass.draw(verts, 0..1);
     }
 
+    pub fn start_draw_ui<'b: 'a>(
+        &mut self,
+        globals: &'b Consts<Globals>,
+    ) {
+        self.render_pass
+            .set_pipeline(&self.renderer.ui_pipeline.pipeline);
+        self.render_pass.set_bind_group(0, &globals.bind_group, &[]);
+    }
+
     pub fn draw_ui<'b: 'a>(
         &mut self,
         model: &'b Model,
         scissor: Aabr<u16>,
         locals: &'b Consts<ui::Locals>,
-        globals: &'b Consts<Globals>,
+        /* globals: &'b Consts<Globals>, */
         verts: Range<u32>,
     ) {
         let Aabr { min, max } = scissor;
 
-        self.render_pass
-            .set_pipeline(&self.renderer.ui_pipeline.pipeline);
-        self.render_pass.set_bind_group(0, &globals.bind_group, &[]);
         self.render_pass.set_bind_group(1, &locals.bind_group, &[]);
         self.render_pass.set_vertex_buffer(0, &model.vbuf, 0, 0);
         self.render_pass.set_scissor_rect(

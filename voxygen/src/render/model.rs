@@ -10,6 +10,7 @@ pub struct Model {
 
 impl Model {
     pub fn new(device: &wgpu::Device, size: usize) -> Self {
+        log::debug!("Bind Model::new: {:?}", size);
         let vbuf = device
             .create_buffer_mapped(&wgpu::BufferDescriptor {
                 label: None,
@@ -37,6 +38,7 @@ impl Model {
             device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
         if self.size < std::mem::size_of_val(mesh.vertices()) {
+            log::debug!("Bind Model::update");
             *Arc::get_mut(&mut self.vbuf).unwrap() = device
                 .create_buffer_mapped(&wgpu::BufferDescriptor {
                     label: None,
@@ -48,6 +50,7 @@ impl Model {
             self.size = std::mem::size_of_val(mesh.vertices());
         }
 
+        log::debug!("Bind Model::update (stage): {:?}", std::mem::size_of_val(mesh.vertices()));
         let staging_buffer = device.create_buffer_with_data(
             mesh.vertices()
                 .iter()

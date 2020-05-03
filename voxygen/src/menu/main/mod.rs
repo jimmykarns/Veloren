@@ -231,6 +231,8 @@ impl PlayState for MainMenuState {
     fn name(&self) -> &'static str { "Title" }
 
     fn render(&mut self, renderer: &mut Renderer) {
+        // renderer.drawer().first_render();
+
         self.main_menu_ui
             .render(&mut renderer.drawer().second_render());
     }

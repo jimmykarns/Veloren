@@ -24,7 +24,11 @@ impl<T: Copy + AsBytes> Consts<T> {
     pub fn len(&self) -> usize { self.len }
 
     /// Update the GPU-side value represented by this constant handle.
-    pub fn update(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, vals: &[T]) {
+    pub fn update(&self, device: &wgpu::Device, queue: &wgpu::Queue, vals: &[T]) {
+        if std::mem::size_of_val(vals) == 0 {
+            return;
+        }
+        log::debug!("Consts::update: {:?}", std::mem::size_of_val(vals));
         if let Some(buf) = self.buf.as_ref() {
             let mut encoder =
                 device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
