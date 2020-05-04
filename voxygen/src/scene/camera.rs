@@ -102,8 +102,7 @@ impl Camera {
             0.0, 0.0, 0.5, 1.0,
         );
 
-        self.dependents.view_mat = opengl_to_wgpu_matrix
-            * Mat4::<f32>::identity()
+        self.dependents.view_mat = Mat4::<f32>::identity()
             * Mat4::translation_3d(-Vec3::unit_z() * dist)
             * Mat4::rotation_z(self.ori.z)
             * Mat4::rotation_x(self.ori.y)

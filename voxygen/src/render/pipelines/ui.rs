@@ -180,7 +180,7 @@ impl UiPipeline {
             depth_stencil_state: Some(wgpu::DepthStencilStateDescriptor {
                 format: DEPTH_FORMAT,
                 depth_write_enabled: false,
-                depth_compare: wgpu::CompareFunction::/*Less*/Always,
+                depth_compare: wgpu::CompareFunction::LessEqual,
                 stencil_front: wgpu::StencilStateFaceDescriptor::IGNORE,
                 stencil_back: wgpu::StencilStateFaceDescriptor::IGNORE,
                 stencil_read_mask: !0,

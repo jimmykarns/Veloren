@@ -22,9 +22,9 @@ void main() {
 
     if (w_pos.w == 1.0) {
         f_uv = v_uv;
-        // Fixed scale In-game element      
-        vec4 projected_pos = proj_mat * view_mat * vec4(w_pos.xyz, 1.0); 
-        gl_Position = vec4(projected_pos.xy / projected_pos.w + v_pos, 0.0, 1.0); 
+        // Fixed scale In-game element
+        vec4 projected_pos = proj_mat * view_mat * vec4(w_pos.xyz, 1.0);
+        gl_Position = vec4(projected_pos.xy / projected_pos.w + v_pos, 0.0, 1.0);
     } else if (v_mode == uint(3)) {
         // HACK: North facing source rectangle.
         vec2 look_at_dir = normalize(vec2(-view_mat[0][2], -view_mat[1][2]));

@@ -195,7 +195,7 @@ impl SpritePipeline {
             }),
             rasterization_state: Some(wgpu::RasterizationStateDescriptor {
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: wgpu::CullMode::Back,
+                cull_mode: wgpu::CullMode::Front,
                 depth_bias: 0,
                 depth_bias_slope_scale: 0.0,
                 depth_bias_clamp: 0.0,
@@ -218,7 +218,7 @@ impl SpritePipeline {
             depth_stencil_state: Some(wgpu::DepthStencilStateDescriptor {
                 format: DEPTH_FORMAT,
                 depth_write_enabled: true,
-                depth_compare: wgpu::CompareFunction::Less,
+                depth_compare: wgpu::CompareFunction::LessEqual,
                 stencil_front: wgpu::StencilStateFaceDescriptor::IGNORE,
                 stencil_back: wgpu::StencilStateFaceDescriptor::IGNORE,
                 stencil_read_mask: !0,

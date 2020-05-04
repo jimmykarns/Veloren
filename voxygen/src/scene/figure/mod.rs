@@ -113,6 +113,9 @@ impl FigureMgr {
             .get(scene_data.player_entity)
             .map_or(Vec3::zero(), |pos| pos.0);
 
+        let character_state_storage = state.read_storage::<common::comp::CharacterState>();
+        let character_state = character_state_storage.get(scene_data.player_entity);
+
         for (entity, pos, ori, scale, body, character, last_character, stats) in (
             &ecs.entities(),
             &ecs.read_storage::<Pos>(),
@@ -126,6 +129,14 @@ impl FigureMgr {
             .join()
         {
             let ori = ori.copied().unwrap_or(Ori(Vec3::unit_y()));
+
+            let is_player = entity == scene_data.player_entity;
+            let player_camera_mode = if is_player {
+                camera.get_mode()
+            } else {
+                CameraMode::default()
+            };
+            let character_state = if is_player { character_state } else { None };
 
             // Don't process figures outside the vd
             let vd_frac = Vec2::from(pos.0 - player_pos)
@@ -394,8 +405,8 @@ impl FigureMgr {
                             *body,
                             stats.map(|s| &s.equipment),
                             tick,
-                            CameraMode::default(),
-                            None,
+                            player_camera_mode,
+                            character_state,
                         )
                         .1;
 
@@ -544,8 +555,8 @@ impl FigureMgr {
                             *body,
                             stats.map(|s| &s.equipment),
                             tick,
-                            CameraMode::default(),
-                            None,
+                            player_camera_mode,
+                            character_state,
                         )
                         .1;
 
@@ -615,8 +626,8 @@ impl FigureMgr {
                             *body,
                             stats.map(|s| &s.equipment),
                             tick,
-                            CameraMode::default(),
-                            None,
+                            player_camera_mode,
+                            character_state,
                         )
                         .1;
 
@@ -686,8 +697,8 @@ impl FigureMgr {
                             *body,
                             stats.map(|s| &s.equipment),
                             tick,
-                            CameraMode::default(),
-                            None,
+                            player_camera_mode,
+                            character_state,
                         )
                         .1;
 
@@ -755,8 +766,8 @@ impl FigureMgr {
                             *body,
                             stats.map(|s| &s.equipment),
                             tick,
-                            CameraMode::default(),
-                            None,
+                            player_camera_mode,
+                            character_state,
                         )
                         .1;
 
@@ -824,8 +835,8 @@ impl FigureMgr {
                             *body,
                             stats.map(|s| &s.equipment),
                             tick,
-                            CameraMode::default(),
-                            None,
+                            player_camera_mode,
+                            character_state,
                         )
                         .1;
 
@@ -893,8 +904,8 @@ impl FigureMgr {
                             *body,
                             stats.map(|s| &s.equipment),
                             tick,
-                            CameraMode::default(),
-                            None,
+                            player_camera_mode,
+                            character_state,
                         )
                         .1;
 
@@ -962,8 +973,8 @@ impl FigureMgr {
                             *body,
                             stats.map(|s| &s.equipment),
                             tick,
-                            CameraMode::default(),
-                            None,
+                            player_camera_mode,
+                            character_state,
                         )
                         .1;
 
@@ -1031,8 +1042,8 @@ impl FigureMgr {
                             *body,
                             stats.map(|s| &s.equipment),
                             tick,
-                            CameraMode::default(),
-                            None,
+                            player_camera_mode,
+                            character_state,
                         )
                         .1;
 
@@ -1100,8 +1111,8 @@ impl FigureMgr {
                             *body,
                             stats.map(|s| &s.equipment),
                             tick,
-                            CameraMode::default(),
-                            None,
+                            player_camera_mode,
+                            character_state,
                         )
                         .1;
 
@@ -1166,6 +1177,17 @@ impl FigureMgr {
                         .object_states
                         .entry(entity)
                         .or_insert_with(|| FigureState::new(renderer, ObjectSkeleton::new()));
+
+                    // Call just for the side effect of creating the model.
+                    let _ = self.model_cache
+                        .get_or_create_model(
+                            renderer,
+                            *body,
+                            stats.map(|s| &s.equipment),
+                            tick,
+                            player_camera_mode,
+                            character_state,
+                        );
 
                     state.skeleton = state.skeleton_mut().clone();
                     state.update(
@@ -1270,6 +1292,7 @@ impl FigureMgr {
                 biped_large_states,
                 object_states,
             } = self;
+
             if let Some((locals, bone_consts, (model, verts))) = match body {
                 Body::Humanoid(_) => character_states
                     .get(&entity)

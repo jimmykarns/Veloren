@@ -66,10 +66,10 @@ impl<'a> Drawer<'a> {
                     depth_stencil_attachment: Some(
                         wgpu::RenderPassDepthStencilAttachmentDescriptor {
                             attachment: &self.renderer.win_depth_stencil_texture.view,
-                            depth_load_op: wgpu::LoadOp::Load,
+                            depth_load_op: wgpu::LoadOp::Clear,
                             depth_store_op: wgpu::StoreOp::Store,
                             clear_depth: 1.0,
-                            stencil_load_op: wgpu::LoadOp::Load,
+                            stencil_load_op: wgpu::LoadOp::Clear,
                             stencil_store_op: wgpu::StoreOp::Store,
                             clear_stencil: 0,
                         },
