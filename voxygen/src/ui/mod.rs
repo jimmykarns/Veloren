@@ -323,17 +323,6 @@ impl Ui {
 
         // Switches to the `Plain` state and completes the previous `Command` if not
         // already in the `Plain` state.
-        macro_rules! switch_to_plain_state {
-            () => {
-                if let State::Image(id) = current_state {
-                    self.draw_commands
-                        .push(DrawCommand::image(start..mesh.vertices().len() as u32, id));
-                    start = mesh.vertices().len() as u32;
-                    current_state = State::Plain;
-                    world_pos = Vec4::default();
-                }
-            };
-        }
         macro_rules! draw_image {
             ($world_pos:expr, $tex:expr) => {
                 let locals = renderer.create_consts_ui_locals(&[$world_pos.into()], $tex);
@@ -346,6 +335,25 @@ impl Ui {
                 self.draw_commands
                     .push(DrawCommand::WorldPos(Some(ingame_local_index)));
                 ingame_local_index += 1;
+            };
+        }
+        macro_rules! switch_to_plain_state {
+            ($world_pos:expr, $tex:expr, $no_scissor:expr, $no_displacement:expr) => {
+                if let State::Image(id) = current_state {
+                    if $no_scissor && $no_displacement {
+                        self.draw_commands
+                            .push(DrawCommand::image(start..mesh.vertices().len() as u32, id));
+                    }
+                    if $world_pos == Vec4::default() {
+                        draw_image!($world_pos, $tex);
+                    } else {
+                        self.draw_commands.push(DrawCommand::WorldPos(None));
+                    }
+                    start = mesh.vertices().len() as u32;
+                    current_state = State::Plain;
+                } else if !$no_displacement {
+                    draw_image!($world_pos, $tex);
+                }
             };
         }
 
@@ -384,13 +392,14 @@ impl Ui {
                     Aabr::new_empty(Vec2::zero())
                 }
             };
-            if new_scissor != current_scissor {
+            let no_scissor = new_scissor == current_scissor;
+            if !no_scissor {
                 // Finish the current command.
                 let next = match current_state {
                     State::Plain => DrawCommand::plain(start..mesh.vertices().len() as u32),
                     State::Image(id) => {
-                        let tex = self.cache.graphic_cache().get_tex(id);
-                        draw_image!(world_pos, tex);
+                        // let tex = self.cache.graphic_cache().get_tex(id);
+                        // draw_image!(world_pos, tex);
                         DrawCommand::image(start..mesh.vertices().len() as u32, id)
                     },
                 };
@@ -402,30 +411,32 @@ impl Ui {
                 self.draw_commands.push(DrawCommand::Scissor(new_scissor));
             }
 
-            match placement {
+            let no_displacement = match placement {
                 // No primitives left to place in the world at the current position, go back to
                 // drawing the interface
                 Placement::InWorld(0, _) => {
                     placement = Placement::Interface;
                     // Finish current state
-                    let cmd = match current_state {
-                        State::Plain => DrawCommand::plain(start..mesh.vertices().len() as u32),
-                        State::Image(id) => {
-                            let tex = self.cache.graphic_cache().get_tex(id);
-                            draw_image!(world_pos, tex);
-                            DrawCommand::image(start..mesh.vertices().len() as u32, id)
-                        },
-                    };
-                    self.draw_commands.push(cmd);
+                    if no_scissor {
+                        let cmd = match current_state {
+                            State::Plain => DrawCommand::plain(start..mesh.vertices().len() as u32),
+                            State::Image(id) => {
+                                DrawCommand::image(start..mesh.vertices().len() as u32, id)
+                            },
+                        };
+                        self.draw_commands.push(cmd);
+                    }
                     start = mesh.vertices().len() as u32;
                     // Push new position command
                     self.draw_commands.push(DrawCommand::WorldPos(None));
+                    world_pos = Vec4::default();
+                    true
                 },
                 // Primitives still left to draw ingame
                 Placement::InWorld(num_prims, visible) => match kind {
                     // Other types aren't drawn & shouldn't decrement the number of primitives left
                     // to draw ingame
-                    PrimitiveKind::Other(_) => {},
+                    PrimitiveKind::Other(_) => false,
                     // Decrement the number of primitives left
                     _ => {
                         placement = Placement::InWorld(num_prims - 1, visible);
@@ -433,10 +444,11 @@ impl Ui {
                         if !visible {
                             continue;
                         }
+                        false
                     },
                 },
-                Placement::Interface => {},
-            }
+                Placement::Interface => true,
+            };
 
             // Functions for converting for conrod scalar coords to GL vertex coords (-1.0
             // to 1.0).
@@ -564,24 +576,34 @@ impl Ui {
                         None => continue,
                     };
 
-                    match current_state {
+                    let is_new_texture = match current_state {
                         // Switch to the image state if we are not in it already.
                         State::Plain => {
-                            self.draw_commands
-                                .push(DrawCommand::plain(start..mesh.vertices().len() as u32));
+                            if no_scissor {
+                                self.draw_commands
+                                    .push(DrawCommand::plain(start..mesh.vertices().len() as u32));
+                            }
                             start = mesh.vertices().len() as u32;
                             current_state = State::Image(tex_id);
+                            true
                         },
                         // If the image is cached in a different texture switch to the new one
                         State::Image(id) if id != tex_id => {
-                            let tex = self.cache.graphic_cache().get_tex(id);
-                            draw_image!(world_pos, tex);
-                            self.draw_commands
-                                .push(DrawCommand::image(start..mesh.vertices().len() as u32, id));
+                            if no_scissor {
+                                self.draw_commands.push(DrawCommand::image(
+                                    start..mesh.vertices().len() as u32,
+                                    id,
+                                ));
+                            }
                             start = mesh.vertices().len() as u32;
                             current_state = State::Image(tex_id);
+                            true
                         },
-                        State::Image(_) => {},
+                        State::Image(_) => false,
+                    };
+                    if no_displacement || is_new_texture {
+                        let tex = self.cache.graphic_cache().get_tex(tex_id);
+                        draw_image!(world_pos, tex);
                     }
 
                     mesh.push_quad(create_ui_quad(gl_aabr, uv_aabr, color, match *rotation {
@@ -597,10 +619,12 @@ impl Ui {
                     text,
                     font_id,
                 } => {
-                    switch_to_plain_state!();
-
                     let positioned_glyphs = text.positioned_glyphs(p_scale_factor as f32);
+
                     let (glyph_cache, cache_tex) = self.cache.glyph_cache_mut_and_tex();
+
+                    switch_to_plain_state!(world_pos, cache_tex, no_scissor, no_displacement);
+
                     // Queue the glyphs to be cached.
                     for glyph in positioned_glyphs {
                         glyph_cache.queue_glyph(font_id.index(), glyph.clone());
@@ -656,7 +680,12 @@ impl Ui {
                         continue;
                     }
 
-                    switch_to_plain_state!();
+                    switch_to_plain_state!(
+                        world_pos,
+                        self.cache.glyph_cache_tex(),
+                        no_scissor,
+                        no_displacement
+                    );
 
                     mesh.push_quad(create_ui_quad(
                         gl_aabr(rect),
@@ -676,7 +705,12 @@ impl Ui {
                         continue;
                     }
 
-                    switch_to_plain_state!();
+                    switch_to_plain_state!(
+                        world_pos,
+                        self.cache.glyph_cache_tex(),
+                        no_scissor,
+                        no_displacement
+                    );
 
                     for tri in triangles {
                         let p1 = Vec2::new(vx(tri[0][0]), vy(tri[0][1]));
@@ -698,15 +732,13 @@ impl Ui {
                     }
                 },
                 PrimitiveKind::Other(container) => {
-                    if container.type_id == std::any::TypeId::of::<widgets::ingame::State>() {
+                    if let Some(state_and_style) = container
+                        .state_and_style::<widgets::ingame::State, widgets::ingame::Style>()
+                    {
                         // Calculate the scale factor to pixels at this 3d point using the camera.
                         if let Some(view_projection_mat) = view_projection_mat {
                             // Retrieve world position
-                            let parameters = container
-                                .state_and_style::<widgets::ingame::State, widgets::ingame::Style>()
-                                .unwrap()
-                                .state
-                                .parameters;
+                            let parameters = state_and_style.state.parameters;
 
                             let pos_on_screen = (view_projection_mat
                                 * Vec4::from_point(parameters.pos))
@@ -723,46 +755,9 @@ impl Ui {
                             };
                             // Don't process ingame elements outside the frustum
                             placement = if visible {
-                                // Finish current state
-                                let cmd = match current_state {
-                                    State::Plain => {
-                                        DrawCommand::plain(start..mesh.vertices().len() as u32)
-                                    },
-                                    State::Image(id) => {
-                                        let tex = self.cache.graphic_cache().get_tex(id);
-                                        draw_image!(world_pos, tex);
-                                        DrawCommand::image(start..mesh.vertices().len() as u32, id)
-                                    },
-                                };
-                                self.draw_commands.push(cmd);
-                                start = mesh.vertices().len() as u32;
-
-                                // Push new position command
-                                world_pos = Vec4::from_point(parameters.pos);
-                                let tex = match current_state {
-                                    State::Plain => self.cache.glyph_cache_tex(),
-                                    State::Image(id) => self.cache.graphic_cache().get_tex(id),
-                                };
-                                /* if self.ingame_locals.len() > ingame_local_index {
-                                    renderer.update_consts(
-                                        &self.ingame_locals[ingame_local_index],
-                                        &[world_pos.into()],
-                                    );
-                                } else {
-                                    self.ingame_locals.push(renderer.create_consts_ui_locals(
-                                        &[world_pos.into()],
-                                        match current_state {
-                                            State::Plain => self.cache.glyph_cache_tex(),
-                                            State::Image(id) => {
-                                                self.cache.graphic_cache().get_tex(id)
-                                            },
-                                        },
-                                    ));
-                                } */
-                                draw_image!(world_pos, tex);
-                                // self.draw_commands
-                                //     .push(DrawCommand::WorldPos(Some(ingame_local_index)));
-                                // ingame_local_index += 1;
+                                if parameters.num != 1 {
+                                    panic!("Should never happen, and not currently supported.");
+                                }
 
                                 Placement::InWorld(parameters.num, true)
                             } else {
@@ -849,26 +844,7 @@ impl Ui {
                     locals = index.map_or(&self.interface_locals, |i| &self.ingame_locals[i]);
                 },
                 DrawCommand::Draw { kind, verts } => {
-                    if let DrawKind::Plain = kind {
-                        locals = &self.interface_locals;
-                    }
-                    /* let locals = match kind {
-                        DrawKind::Image(tex_id) => &self.interface_locals, /* self.cache.graphic_cache().get_tex(*tex_id), */
-                        DrawKind::Plain => &self.interface_locals,
-                    }; */
-                    /*
-                    let new_locals = renderer.create_consts_ui_locals(&[locals], &tex);
-                    renderer.update_consts(locals, &[new_locals);
-                                        &self.ingame_locals[ingame_local_index],
-                                        &[world_pos.into()],
-                                    ); */
-
-                    drawer.draw_ui(
-                        &self.model,
-                        scissor,
-                        locals,
-                        /* globals, */ verts.clone(),
-                    );
+                    drawer.draw_ui(&self.model, scissor, locals, verts.clone());
                 },
             }
         }

@@ -787,7 +787,5 @@ impl MainMenuUi {
         events
     }
 
-    pub fn render<'a>(&'a self, drawer: &mut SecondDrawer<'a>) {
-        self.ui.render(drawer, None);
-    }
+    pub fn render<'a>(&'a self, drawer: &mut SecondDrawer<'a>) { self.ui.render(drawer, None); }
 }

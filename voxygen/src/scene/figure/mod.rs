@@ -1306,22 +1306,24 @@ impl FigureMgr {
                             .0,
                     ))
                 }),
-                Body::QuadrupedMedium(_) => quadruped_medium_states.get(&entity).and_then(|state| {
-                    Some((
-                        state.locals(),
-                        state.bone_consts(),
-                        &quadruped_medium_model_cache
-                            .get_model(
-                                drawer.renderer,
-                                *body,
-                                stats,
-                                tick,
-                                player_camera_mode,
-                                character_state,
-                            )?
-                            .0,
-                    ))
-                }),
+                Body::QuadrupedMedium(_) => {
+                    quadruped_medium_states.get(&entity).and_then(|state| {
+                        Some((
+                            state.locals(),
+                            state.bone_consts(),
+                            &quadruped_medium_model_cache
+                                .get_model(
+                                    drawer.renderer,
+                                    *body,
+                                    stats,
+                                    tick,
+                                    player_camera_mode,
+                                    character_state,
+                                )?
+                                .0,
+                        ))
+                    })
+                },
                 Body::BirdMedium(_) => bird_medium_states.get(&entity).and_then(|state| {
                     Some((
                         state.locals(),

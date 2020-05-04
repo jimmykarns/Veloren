@@ -56,8 +56,8 @@ impl<Skel: Skeleton> FigureModelCache<Skel> {
         }
     }
 
-    /// NOTE: Returns None if a model is not found; this presumably mean that maintain() did
-    /// not add the model that's expected to be rendered.
+    /// NOTE: Returns None if a model is not found; this presumably mean that
+    /// maintain() did not add the model that's expected to be rendered.
     pub fn get_model(
         &self,
         renderer: &Renderer,

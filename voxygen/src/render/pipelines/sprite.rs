@@ -152,9 +152,7 @@ impl Default for Instance {
 pub struct SpriteLayout;
 
 impl SpriteLayout {
-    pub fn new(_device: &wgpu::Device) -> Self {
-        Self
-    }
+    pub fn new(_device: &wgpu::Device) -> Self { Self }
 }
 
 pub struct SpritePipeline {

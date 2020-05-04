@@ -112,11 +112,8 @@ impl FluidLayout {
                 },
             ],
         });
-        Self {
-            locals,
-        }
+        Self { locals }
     }
-
 }
 
 pub struct FluidPipeline {

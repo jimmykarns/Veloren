@@ -50,7 +50,10 @@ impl Model {
             self.size = std::mem::size_of_val(mesh.vertices());
         }
 
-        log::debug!("Bind Model::update (stage): {:?}", std::mem::size_of_val(mesh.vertices()));
+        log::debug!(
+            "Bind Model::update (stage): {:?}",
+            std::mem::size_of_val(mesh.vertices())
+        );
         let staging_buffer = device.create_buffer_with_data(
             mesh.vertices()
                 .iter()
