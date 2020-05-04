@@ -54,11 +54,13 @@ use std::{
 };
 use vek::*;
 
+#[derive(Debug)]
 enum DrawKind {
     Image(TexId),
     // Text and non-textured geometry
     Plain,
 }
+#[derive(Debug)]
 enum DrawCommand {
     Draw { kind: DrawKind, verts: Range<u32> },
     Scissor(Aabr<u16>),
@@ -580,8 +582,11 @@ impl Ui {
                         // Switch to the image state if we are not in it already.
                         State::Plain => {
                             if no_scissor {
-                                self.draw_commands
-                                    .push(DrawCommand::plain(start..mesh.vertices().len() as u32));
+                                if (start..mesh.vertices().len() as u32).len() != 0 {
+                                    self.draw_commands.push(DrawCommand::plain(
+                                        start..mesh.vertices().len() as u32,
+                                    ));
+                                }
                             }
                             start = mesh.vertices().len() as u32;
                             current_state = State::Image(tex_id);
@@ -771,6 +776,7 @@ impl Ui {
                           * multicolor with id {:?}", id);} */
             }
         }
+
         // Enter the final command.
         let cmd = match current_state {
             State::Plain => DrawCommand::plain(start..mesh.vertices().len() as u32),

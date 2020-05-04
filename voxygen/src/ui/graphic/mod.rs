@@ -46,7 +46,7 @@ const GRAPHIC_CACHE_RELATIVE_SIZE: u16 = 1;
 pub struct Id(u32);
 
 // TODO these can become invalid when clearing the cache
-#[derive(PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub struct TexId(usize);
 
 type Parameters = (Id, Vec2<u16>);
