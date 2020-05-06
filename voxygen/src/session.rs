@@ -704,7 +704,7 @@ impl PlayState for SessionState {
 
             self.scene.second_render(&mut drawer);
             // Draw the UI to the screen
-            self.hud.render(&mut drawer, self.scene.globals());
+            //self.hud.render(&mut drawer, self.scene.globals());
         }
     }
 }
