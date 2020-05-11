@@ -297,6 +297,13 @@ pub enum Event {
     ChangeAutoWalkBehavior(PressBehavior),
     ChangeStopAutoWalkOnInput(bool),
     CraftRecipe(String),
+    SelectEntity(specs::Entity),
+    InviteMember(common::sync::Uid),
+    AcceptInvite,
+    RejectInvite,
+    KickMember(common::sync::Uid),
+    LeaveGroup,
+    AssignLeader(common::sync::Uid),
 }
 
 // TODO: Are these the possible layouts we want?
@@ -1847,6 +1854,7 @@ impl Hud {
                 &self.imgs,
                 &self.fonts,
                 &self.voxygen_i18n,
+                info.selected_entity,
             )
             .set(self.ids.social_window, ui_widgets)
             {
@@ -1855,6 +1863,13 @@ impl Hud {
                     social::Event::ChangeSocialTab(social_tab) => {
                         self.show.open_social_tab(social_tab)
                     },
+                    social::Event::Select(e) => events.push(Event::SelectEntity(e)),
+                    social::Event::Invite(uid) => events.push(Event::InviteMember(uid)),
+                    social::Event::Accept => events.push(Event::AcceptInvite),
+                    social::Event::Reject => events.push(Event::RejectInvite),
+                    social::Event::Kick(uid) => events.push(Event::KickMember(uid)),
+                    social::Event::LeaveGroup => events.push(Event::LeaveGroup),
+                    social::Event::AssignLeader(uid) => events.push(Event::AssignLeader(uid)),
                 }
             }
         }

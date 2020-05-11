@@ -943,6 +943,27 @@ impl PlayState for SessionState {
                     HudEvent::CraftRecipe(r) => {
                         self.client.borrow_mut().craft_recipe(&r);
                     },
+                    HudEvent::SelectEntity(entity) => {
+                        self.selected_entity = Some(entity)
+                    }
+                    HudEvent::InviteMember(uid) => {
+                       self.client.borrow_mut().send_group_invite(uid);
+                    }
+                    HudEvent::AcceptInvite => {
+                       self.client.borrow_mut().accept_group_invite();
+                    }
+                    HudEvent::RejectInvite => {
+                       self.client.borrow_mut().reject_group_invite();
+                    }
+                    HudEvent::KickMember(uid) => {
+                       self.client.borrow_mut().kick_from_group(uid);
+                    }
+                    HudEvent::LeaveGroup => {
+                       self.client.borrow_mut().leave_group();
+                    }
+                    HudEvent::AssignLeader(uid) => {
+                       self.client.borrow_mut().assign_group_leader(uid);
+                    }
                 }
             }
 

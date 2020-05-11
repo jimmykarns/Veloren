@@ -2,6 +2,7 @@ use super::{img_ids::Imgs, Show, TEXT_COLOR, TEXT_COLOR_3, UI_MAIN};
 
 use crate::{i18n::VoxygenLocalization, ui::fonts::ConrodVoxygenFonts};
 use client::{self, Client};
+use common::sync::Uid;
 use conrod_core::{
     color,
     widget::{self, Button, Image, Rectangle, Scrollbar, Text},
@@ -42,6 +43,8 @@ pub struct Social<'a> {
     fonts: &'a ConrodVoxygenFonts,
     localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
 
+    selected_entity: Option<specs::Entity>,
+
     #[conrod(common_builder)]
     common: widget::CommonBuilder,
 }
@@ -53,6 +56,7 @@ impl<'a> Social<'a> {
         imgs: &'a Imgs,
         fonts: &'a ConrodVoxygenFonts,
         localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
+        selected_entity: Option<specs::Entity>,
     ) -> Self {
         Self {
             show,
@@ -60,6 +64,7 @@ impl<'a> Social<'a> {
             imgs,
             fonts,
             localized_strings,
+            selected_entity,
             common: widget::CommonBuilder::default(),
         }
     }
@@ -68,6 +73,13 @@ impl<'a> Social<'a> {
 pub enum Event {
     Close,
     ChangeSocialTab(SocialTab),
+    Select(specs::Entity),
+    Invite(Uid),
+    Accept,
+    Reject,
+    Kick(Uid),
+    LeaveGroup,
+    AssignLeader(Uid),
 }
 
 impl<'a> Widget for Social<'a> {
@@ -194,6 +206,10 @@ impl<'a> Widget for Social<'a> {
             .font_id(self.fonts.cyri.conrod_id)
             .color(TEXT_COLOR)
             .set(ids.online_title, ui);
+
+            // Store uid of last clicked player entry
+            let mut clicked_player_uid = None::<()>;
+
             for (i, player_info) in players.enumerate() {
                 Text::new(&format!(
                     "[{}] {}",
@@ -208,6 +224,16 @@ impl<'a> Widget for Social<'a> {
                 .font_id(self.fonts.cyri.conrod_id)
                 .color(TEXT_COLOR)
                 .set(ids.player_names[i], ui);
+            }
+
+            // If not in a group show invite button if entity is selected
+            match self.client.group_leader() {
+                // You are the leader, more buttons!
+                Some(uid) if self.client.uid() == Some(uid) => {},
+                // You are in a group, yay friends!
+                Some(leader) => {},
+                // You are not in a group, use invite to form one
+                None => {},
             }
         }
 
