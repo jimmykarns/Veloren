@@ -116,6 +116,7 @@ impl EntityInfo {
             },
             Body::Dragon(body) => Some(get_npc_name(&NPC_NAMES.dragon, body.species)),
             Body::QuadrupedLow(body) => Some(get_npc_name(&NPC_NAMES.quadruped_low, body.species)),
+            Body::Snake(body) => Some(get_npc_name(&NPC_NAMES.snake, body.species)),
             _ => None,
         }
         .map(|s| {

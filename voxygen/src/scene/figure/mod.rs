@@ -17,7 +17,7 @@ use anim::{
     bird_small::BirdSmallSkeleton, character::CharacterSkeleton, critter::CritterSkeleton,
     dragon::DragonSkeleton, fish_medium::FishMediumSkeleton, fish_small::FishSmallSkeleton,
     golem::GolemSkeleton, object::ObjectSkeleton, quadruped_low::QuadrupedLowSkeleton,
-    quadruped_medium::QuadrupedMediumSkeleton, quadruped_small::QuadrupedSmallSkeleton, Animation,
+    quadruped_medium::QuadrupedMediumSkeleton, quadruped_small::QuadrupedSmallSkeleton, snake::SnakeSkeleton, Animation,
     Skeleton,
 };
 use common::{
@@ -53,6 +53,7 @@ pub struct FigureMgr {
     fish_small_model_cache: FigureModelCache<FishSmallSkeleton>,
     biped_large_model_cache: FigureModelCache<BipedLargeSkeleton>,
     golem_model_cache: FigureModelCache<GolemSkeleton>,
+    snake_model_cache: FigureModelCache<SnakeSkeleton>,
     character_states: HashMap<EcsEntity, FigureState<CharacterSkeleton>>,
     quadruped_small_states: HashMap<EcsEntity, FigureState<QuadrupedSmallSkeleton>>,
     quadruped_medium_states: HashMap<EcsEntity, FigureState<QuadrupedMediumSkeleton>>,
@@ -65,6 +66,7 @@ pub struct FigureMgr {
     fish_small_states: HashMap<EcsEntity, FigureState<FishSmallSkeleton>>,
     biped_large_states: HashMap<EcsEntity, FigureState<BipedLargeSkeleton>>,
     golem_states: HashMap<EcsEntity, FigureState<GolemSkeleton>>,
+    snake_states: HashMap<EcsEntity, FigureState<SnakeSkeleton>>,
     object_states: HashMap<EcsEntity, FigureState<ObjectSkeleton>>,
 }
 
@@ -84,6 +86,7 @@ impl FigureMgr {
             fish_small_model_cache: FigureModelCache::new(),
             biped_large_model_cache: FigureModelCache::new(),
             golem_model_cache: FigureModelCache::new(),
+            snake_model_cache: FigureModelCache::new(),
             character_states: HashMap::new(),
             quadruped_small_states: HashMap::new(),
             quadruped_medium_states: HashMap::new(),
@@ -96,6 +99,7 @@ impl FigureMgr {
             fish_small_states: HashMap::new(),
             biped_large_states: HashMap::new(),
             golem_states: HashMap::new(),
+            snake_states: HashMap::new(),
             object_states: HashMap::new(),
         }
     }
@@ -113,6 +117,7 @@ impl FigureMgr {
         self.fish_small_model_cache.clean(tick);
         self.biped_large_model_cache.clean(tick);
         self.golem_model_cache.clean(tick);
+        self.snake_model_cache.clean(tick);
     }
 
     #[allow(clippy::redundant_pattern_matching)] // TODO: Pending review in #587
@@ -294,6 +299,9 @@ impl FigureMgr {
                     Body::Golem(_) => {
                         self.biped_large_states.remove(&entity);
                     },
+                    Body::Snake(_) => {
+                        self.snake_states.remove(&entity);
+                    },
                     Body::Object(_) => {
                         self.object_states.remove(&entity);
                     },
@@ -361,6 +369,11 @@ impl FigureMgr {
                             .get_mut(&entity)
                             .map(|state| state.visible = false);
                     },
+                    Body::Snake(_) => {
+                        self.snake_states
+                            .get_mut(&entity)
+                            .map(|state| state.visible = false);
+                    },
                     Body::Object(_) => {
                         self.object_states
                             .get_mut(&entity)
@@ -420,6 +433,9 @@ impl FigureMgr {
                                 .map(|state| state.lpindex),
                             Body::Golem(_) => {
                                 self.golem_states.get(&entity).map(|state| state.lpindex)
+                            },
+                            Body::Snake(_) => {
+                                self.snake_states.get(&entity).map(|state| state.lpindex)
                             },
                             Body::Object(_) => {
                                 self.object_states.get(&entity).map(|state| state.lpindex)
@@ -498,6 +514,12 @@ impl FigureMgr {
                     },
                     Body::Golem(_) => {
                         self.golem_states.get_mut(&entity).map(|state| {
+                            state.lpindex = lpindex;
+                            state.visible = false
+                        });
+                    },
+                    Body::Snake(_) => {
+                        self.snake_states.get_mut(&entity).map(|state| {
                             state.lpindex = lpindex;
                             state.visible = false
                         });
@@ -1722,6 +1744,89 @@ impl FigureMgr {
                         is_player,
                     );
                 },
+                Body::Snake(_) => {
+                    let skeleton_attr = &self
+                        .snake_model_cache
+                        .get_or_create_model(
+                            renderer,
+                            *body,
+                            loadout,
+                            tick,
+                            CameraMode::default(),
+                            None,
+                        )
+                        .1;
+
+                    let state = self
+                        .snake_states
+                        .entry(entity)
+                        .or_insert_with(|| {
+                            FigureState::new(renderer, SnakeSkeleton::new())
+                        });
+
+                    let (character, last_character) = match (character, last_character) {
+                        (Some(c), Some(l)) => (c, l),
+                        _ => continue,
+                    };
+
+                    if !character.same_variant(&last_character.0) {
+                        state.state_time = 0.0;
+                    }
+
+                    let target_base = match (
+                        physics.on_ground,
+                        vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
+                        physics.in_fluid,                                 // In water
+                    ) {
+                        // Standing
+                        (true, false, false) => {
+                            anim::snake::IdleAnimation::update_skeleton(
+                                &SnakeSkeleton::new(),
+                                time,
+                                state.state_time,
+                                &mut state_animation_rate,
+                                skeleton_attr,
+                            )
+                        },
+                        // Running
+                        (true, true, false) => {
+                            anim::snake::RunAnimation::update_skeleton(
+                                &SnakeSkeleton::new(),
+                                (vel.0.magnitude(), time),
+                                state.state_time,
+                                &mut state_animation_rate,
+                                skeleton_attr,
+                            )
+                        },
+                        // In air
+                        (false, _, false) => {
+                            anim::snake::JumpAnimation::update_skeleton(
+                                &SnakeSkeleton::new(),
+                                (vel.0.magnitude(), time),
+                                state.state_time,
+                                &mut state_animation_rate,
+                                skeleton_attr,
+                            )
+                        },
+
+                        // TODO!
+                        _ => state.skeleton_mut().clone(),
+                    };
+
+                    state.skeleton.interpolate(&target_base, dt);
+                    state.update(
+                        renderer,
+                        pos.0,
+                        ori,
+                        scale,
+                        col,
+                        dt,
+                        state_animation_rate,
+                        lpindex,
+                        true,
+                        is_player,
+                    );
+                },
                 Body::Object(_) => {
                     let state = self
                         .object_states
@@ -1772,6 +1877,8 @@ impl FigureMgr {
         self.biped_large_states
             .retain(|entity, _| ecs.entities().is_alive(*entity));
         self.golem_states
+            .retain(|entity, _| ecs.entities().is_alive(*entity));
+        self.snake_states
             .retain(|entity, _| ecs.entities().is_alive(*entity));
         self.object_states
             .retain(|entity, _| ecs.entities().is_alive(*entity));
@@ -1917,6 +2024,7 @@ impl FigureMgr {
             fish_small_model_cache,
             biped_large_model_cache,
             golem_model_cache,
+            snake_model_cache,
             character_states,
             quadruped_small_states,
             quadruped_medium_states,
@@ -1929,6 +2037,7 @@ impl FigureMgr {
             fish_small_states,
             biped_large_states,
             golem_states,
+            snake_states,
             object_states,
         } = self;
         if let Some((locals, bone_consts, model)) = match body {
@@ -2127,6 +2236,22 @@ impl FigureMgr {
                         .0,
                 )
             }),
+            Body::Snake(_) => snake_states.get(&entity).map(|state| {
+                (
+                    state.locals(),
+                    state.bone_consts(),
+                    &snake_model_cache
+                        .get_or_create_model(
+                            renderer,
+                            *body,
+                            loadout,
+                            tick,
+                            player_camera_mode,
+                            character_state,
+                        )
+                        .0,
+                )
+            }),
             Body::Object(_) => object_states.get(&entity).map(|state| {
                 (
                     state.locals(),
@@ -2184,6 +2309,7 @@ impl FigureMgr {
             + self.fish_small_states.len()
             + self.biped_large_states.len()
             + self.golem_states.len()
+            + self.snake_states.len()
             + self.object_states.len()
     }
 
@@ -2239,6 +2365,7 @@ impl FigureMgr {
                 .filter(|(_, c)| c.visible)
                 .count()
             + self.golem_states.iter().filter(|(_, c)| c.visible).count()
+            + self.snake_states.iter().filter(|(_, c)| c.visible).count()
             + self.object_states.iter().filter(|(_, c)| c.visible).count()
     }
 }

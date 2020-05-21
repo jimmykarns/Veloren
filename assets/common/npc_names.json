@@ -607,5 +607,19 @@
                 "generic": "Pangolin"
             }
         }
+    },
+    "snake": {
+        "body": {
+            "keyword": "snake",
+            "names": [
+                "Kaa"
+            ]
+        },
+        "species": {
+            "cobra": {
+                "keyword": "cobra",
+                "generic": "Cobra"
+            }
+        }
     }
 }

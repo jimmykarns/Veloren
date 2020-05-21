@@ -759,6 +759,72 @@ impl<Skel: Skeleton> FigureModelCache<Skel> {
                     None,
                 ]
             },
+            Body::Snake(body) => {
+                let snake_central_spec = SnakeCenterSpec::load_watched(manifest_indicator);
+
+                [
+                    Some(snake_central_spec.mesh_head(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
+                    Some(snake_central_spec.mesh_jaw(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
+                    Some(snake_central_spec.mesh_body0(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
+                    Some(snake_central_spec.mesh_body1(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
+                    Some(snake_central_spec.mesh_body2(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
+                    Some(snake_central_spec.mesh_body3(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
+                    Some(snake_central_spec.mesh_body4(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
+                    Some(snake_central_spec.mesh_body5(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
+                    Some(snake_central_spec.mesh_body6(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
+                    Some(snake_central_spec.mesh_body7(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
+                    Some(snake_central_spec.mesh_body8(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ]
+            },
             Body::Object(object) => [
                 Some(mesh_object(object, generate_mesh)),
                 None,

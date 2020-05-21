@@ -16,6 +16,7 @@ pub mod object;
 pub mod quadruped_low;
 pub mod quadruped_medium;
 pub mod quadruped_small;
+pub mod snake;
 
 #[cfg(feature = "use-dyn-lib")]
 pub use dyn_lib::init;

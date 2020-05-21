@@ -19,6 +19,7 @@ use common::{
         quadruped_low::{BodyType as QLBodyType, Species as QLSpecies},
         quadruped_medium::{BodyType as QMBodyType, Species as QMSpecies},
         quadruped_small::{BodyType as QSBodyType, Species as QSSpecies},
+        snake::{BodyType as SBodyType, Species as SSpecies},
         Loadout,
     },
     figure::{DynaUnionizer, MatSegment, Material, Segment},
@@ -3313,6 +3314,280 @@ impl QuadrupedLowLateralSpec {
         let lateral = graceful_load_segment(&spec.back_right.lateral.0);
 
         generate_mesh(&lateral, Vec3::from(spec.back_right.offset))
+    }
+}
+
+///
+
+#[derive(Serialize, Deserialize)]
+pub struct SnakeCenterSpec(HashMap<(SSpecies, SBodyType), SidedSCenterVoxSpec>);
+
+#[derive(Serialize, Deserialize)]
+struct SidedSCenterVoxSpec {
+    head: SnakeCenterSubSpec,
+    jaw: SnakeCenterSubSpec,
+    body0: SnakeCenterSubSpec,
+    body1: SnakeCenterSubSpec,
+    body2: SnakeCenterSubSpec,
+    body3: SnakeCenterSubSpec,
+    body4: SnakeCenterSubSpec,
+    body5: SnakeCenterSubSpec,
+    body6: SnakeCenterSubSpec,
+    body7: SnakeCenterSubSpec,
+    body8: SnakeCenterSubSpec,
+}
+#[derive(Serialize, Deserialize)]
+struct SnakeCenterSubSpec {
+    offset: [f32; 3], // Should be relative to initial origin
+    center: VoxSimple,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SnakeLateralSpec(HashMap<(SSpecies, SBodyType), SidedGLateralVoxSpec>);
+
+impl Asset for SnakeCenterSpec {
+    const ENDINGS: &'static [&'static str] = &["ron"];
+
+    fn parse(buf_reader: BufReader<File>) -> Result<Self, assets::Error> {
+        ron::de::from_reader(buf_reader).map_err(assets::Error::parse_error)
+    }
+}
+
+impl SnakeCenterSpec {
+    pub fn load_watched(indicator: &mut ReloadIndicator) -> Arc<Self> {
+        assets::load_watched::<Self>("voxygen.voxel.snake_central_manifest", indicator)
+            .unwrap()
+    }
+
+    pub fn mesh_head(
+        &self,
+        species: SSpecies,
+        body_type: SBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No head specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.head.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.head.offset))
+    }
+
+    pub fn mesh_jaw(
+        &self,
+        species: SSpecies,
+        body_type: SBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No jaw specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.jaw.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.jaw.offset))
+    }
+
+    pub fn mesh_body0(
+        &self,
+        species: SSpecies,
+        body_type: SBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body0 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body0.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.body0.offset))
+    }
+
+    pub fn mesh_body1(
+        &self,
+        species: SSpecies,
+        body_type: SBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body1 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body1.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.body1.offset))
+    }
+
+    pub fn mesh_body2(
+        &self,
+        species: SSpecies,
+        body_type: SBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body2 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body2.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.body2.offset))
+    }
+
+    pub fn mesh_body3(
+        &self,
+        species: SSpecies,
+        body_type: SBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body3 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body3.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.body3.offset))
+    }
+
+    pub fn mesh_body4(
+        &self,
+        species: SSpecies,
+        body_type: SBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body4 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body4.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.body4.offset))
+    }
+
+    pub fn mesh_body5(
+        &self,
+        species: SSpecies,
+        body_type: SBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body5 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body5.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.body5.offset))
+    }
+
+    pub fn mesh_body6(
+        &self,
+        species: SSpecies,
+        body_type: SBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body6 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body6.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.body6.offset))
+    }
+
+    pub fn mesh_body7(
+        &self,
+        species: SSpecies,
+        body_type: SBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body7 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body7.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.body7.offset))
+    }
+
+    pub fn mesh_body8(
+        &self,
+        species: SSpecies,
+        body_type: SBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body8 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body8.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.body8.offset))
     }
 }
 

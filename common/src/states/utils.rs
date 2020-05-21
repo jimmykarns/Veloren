@@ -43,6 +43,7 @@ impl Body {
             Body::Golem(_) => 130.0,
             Body::Critter(_) => 65.0,
             Body::QuadrupedLow(_) => 120.0,
+            Body::Snake(_) => 80.0,
         }
     }
 }

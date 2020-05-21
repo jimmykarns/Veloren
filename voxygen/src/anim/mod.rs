@@ -11,7 +11,7 @@ pub mod golem;
 pub mod object;
 pub mod quadruped_medium;
 pub mod quadruped_small;
-pub mod quadruped_low;
+pub mod snake;
 
 use crate::render::FigureBoneData;
 use vek::*;

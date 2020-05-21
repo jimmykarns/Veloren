@@ -1,0 +1,94 @@
+({
+    (Cobra, Male): (
+        head: (
+            offset: (-4.5, -4.0, -4.0),
+            center: ("npc.cobra.male.head"),
+        ),
+        jaw: (
+            offset: (-4.5, -4.0, -4.0),
+            center: ("npc.cobra.male.jaw"),
+        ),
+        body0: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.male.body0"),
+        ),
+        body1: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.male.body1"),
+        ),
+        body2: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.male.body2"),
+        ),
+        body3: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.male.body3"),
+        ),
+        body4: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.male.body4"),
+        ),
+        body5: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.male.body5"),
+        ),
+        body6: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.male.body6"),
+        ),
+        body7: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.male.body7"),
+        ),
+        body8: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.male.body8"),
+        ),
+    ),
+    (Cobra, Female): (
+        head: (
+            offset: (-4.5, -4.0, -4.0),
+            center: ("npc.cobra.female.head"),
+        ),
+        jaw: (
+            offset: (-4.5, -4.0, -4.0),
+            center: ("npc.cobra.female.jaw"),
+        ),
+        body0: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.female.body0"),
+        ),
+        body1: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.female.body1"),
+        ),
+        body2: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.female.body2"),
+        ),
+        body3: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.female.body3"),
+        ),
+        body4: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.female.body4"),
+        ),
+        body5: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.female.body5"),
+        ),
+        body6: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.female.body6"),
+        ),
+        body7: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.female.body7"),
+        ),
+        body8: (
+            offset: (-4.5, -6.0, -4.0),
+            center: ("npc.cobra.female.body8"),
+        ),
+    ),
+})
