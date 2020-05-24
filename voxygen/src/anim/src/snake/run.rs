@@ -66,7 +66,7 @@ impl Animation for RunAnimation {
             skeleton_attr.jaw.1 + wave_slow * 0.2,
         );
         next.jaw.ori = Quaternion::rotation_x(wave_slow * 0.05);
-        next.jaw.scale = Vec3::one() * 0.98;
+        next.jaw.scale = Vec3::one() / 11.0;
 
         next.body0.offset = Vec3::new(
             0.0,
@@ -75,7 +75,7 @@ impl Animation for RunAnimation {
         );
         next.body0.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x)
             * Quaternion::rotation_x(tailmove.y);
-        next.body0.scale = Vec3::one();
+        next.body0.scale = Vec3::one() / 11.0;
 
         next.body1.offset = Vec3::new(
             0.0,

@@ -29,24 +29,18 @@ impl Animation for IdleAnimation {
         let look = Vec2::new(
             ((global_time + anim_time) as f32 / 8.0)
                 .floor()
-                .mul(7331.0)
                 .sin()
                 * 0.5,
             ((global_time + anim_time) as f32 / 8.0)
                 .floor()
-                .mul(1337.0)
                 .sin()
                 * 0.25,
         );
         let tailmove = Vec2::new(
             ((global_time + anim_time) as f32 / 2.0)
-                .floor()
-                .mul(7331.0)
                 .sin()
                 * 0.25,
             ((global_time + anim_time) as f32 / 2.0)
-                .floor()
-                .mul(1337.0)
                 .sin()
                 * 0.125,
         );
@@ -58,7 +52,7 @@ impl Animation for IdleAnimation {
         ) / 11.0;
         next.head.ori =
             Quaternion::rotation_z(0.8 * look.x) * Quaternion::rotation_x(0.8 * look.y);
-        next.head.scale = Vec3::one() / 10.98;
+        next.head.scale = Vec3::one() / 11.0;
 
         next.jaw.offset = Vec3::new(
             0.0,
@@ -66,87 +60,78 @@ impl Animation for IdleAnimation {
             skeleton_attr.jaw.1 + wave_slow * 0.2,
         );
         next.jaw.ori = Quaternion::rotation_x(wave_slow * 0.05);
-        next.jaw.scale = Vec3::one() * 0.98;
+        next.jaw.scale = Vec3::one();
 
         next.body0.offset = Vec3::new(
             0.0,
             skeleton_attr.body0.0,
-            skeleton_attr.body0.1 + wave_ultra_slow * 0.6,
+            skeleton_attr.body0.1,
         );
-        next.body0.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x)
-            * Quaternion::rotation_x(tailmove.y);
+        next.body0.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x);
         next.body0.scale = Vec3::one();
 
         next.body1.offset = Vec3::new(
             0.0,
             skeleton_attr.body1.0,
-            skeleton_attr.body1.1 + wave_ultra_slow * 0.6,
+            skeleton_attr.body1.1,
         );
-        next.body1.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x)
-            * Quaternion::rotation_x(tailmove.y);
+        next.body1.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x);
         next.body1.scale = Vec3::one();
 
         next.body2.offset = Vec3::new(
             0.0,
             skeleton_attr.body2.0,
-            skeleton_attr.body2.1 + wave_ultra_slow * 0.6,
+            skeleton_attr.body2.1,
         );
-        next.body2.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x)
-            * Quaternion::rotation_x(tailmove.y);
+        next.body2.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x);
         next.body2.scale = Vec3::one();
 
         next.body3.offset = Vec3::new(
             0.0,
             skeleton_attr.body3.0,
-            skeleton_attr.body3.1 + wave_ultra_slow * 0.6,
+            skeleton_attr.body3.1,
         );
-        next.body3.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x)
-            * Quaternion::rotation_x(tailmove.y);
+        next.body3.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x);
         next.body3.scale = Vec3::one();
 
         next.body4.offset = Vec3::new(
             0.0,
             skeleton_attr.body4.0,
-            skeleton_attr.body4.1 + wave_ultra_slow * 0.6,
+            skeleton_attr.body4.1,
         );
-        next.body4.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x)
-            * Quaternion::rotation_x(tailmove.y);
+        next.body4.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x);
         next.body4.scale = Vec3::one();
 
         next.body5.offset = Vec3::new(
             0.0,
             skeleton_attr.body5.0,
-            skeleton_attr.body5.1 + wave_ultra_slow * 0.6,
+            skeleton_attr.body5.1,
         );
-        next.body5.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x)
-            * Quaternion::rotation_x(tailmove.y);
+        next.body5.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x);
         next.body5.scale = Vec3::one();
 
         next.body6.offset = Vec3::new(
             0.0,
             skeleton_attr.body6.0,
-            skeleton_attr.body6.1 + wave_ultra_slow * 0.6,
+            skeleton_attr.body6.1,
         );
-        next.body6.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x)
-            * Quaternion::rotation_x(tailmove.y);
+        next.body6.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x);
         next.body6.scale = Vec3::one();
 
         next.body7.offset = Vec3::new(
             0.0,
             skeleton_attr.body7.0,
-            skeleton_attr.body7.1 + wave_ultra_slow * 0.6,
+            skeleton_attr.body7.1,
         );
-        next.body7.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x)
-            * Quaternion::rotation_x(tailmove.y);
+        next.body7.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x);
         next.body7.scale = Vec3::one();
 
         next.body8.offset = Vec3::new(
             0.0,
             skeleton_attr.body8.0,
-            skeleton_attr.body8.1 + wave_ultra_slow * 0.6,
+            skeleton_attr.body8.1,
         );
-        next.body8.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x)
-            * Quaternion::rotation_x(tailmove.y);
+        next.body8.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x);
         next.body8.scale = Vec3::one();
 
         next

@@ -46,15 +46,67 @@ impl Skeleton for SnakeSkeleton {
             [
                 FigureBoneData::new(head_mat),
                 FigureBoneData::new(head_mat * self.jaw.compute_base_matrix()),
-                FigureBoneData::new(self.body0.compute_base_matrix()),
-                FigureBoneData::new(self.body0.compute_base_matrix() * self.body1.compute_base_matrix()),
-                FigureBoneData::new(self.body1.compute_base_matrix() * self.body2.compute_base_matrix()),
-                FigureBoneData::new(self.body2.compute_base_matrix() * self.body3.compute_base_matrix()),
-                FigureBoneData::new(self.body3.compute_base_matrix() * self.body4.compute_base_matrix()),
-                FigureBoneData::new(self.body4.compute_base_matrix() * self.body5.compute_base_matrix()),
-                FigureBoneData::new(self.body5.compute_base_matrix() * self.body6.compute_base_matrix()),
-                FigureBoneData::new(self.body6.compute_base_matrix() * self.body7.compute_base_matrix()),
-                FigureBoneData::new(self.body7.compute_base_matrix() * self.body8.compute_base_matrix()),
+                FigureBoneData::new(self.body0.compute_base_matrix() * head_mat),
+                FigureBoneData::new(
+                    self.body0.compute_base_matrix()
+                        * self.body1.compute_base_matrix(),
+                ),
+                FigureBoneData::new(
+                    self.body0.compute_base_matrix()
+                        * self.body1.compute_base_matrix()
+                        * self.body2.compute_base_matrix(),
+                ),
+                FigureBoneData::new(
+                    self.body0.compute_base_matrix()
+                        * self.body1.compute_base_matrix()
+                        * self.body2.compute_base_matrix()
+                        * self.body3.compute_base_matrix(),
+                ),
+                FigureBoneData::new(
+                    self.body0.compute_base_matrix()
+                        * self.body1.compute_base_matrix()
+                        * self.body2.compute_base_matrix()
+                        * self.body3.compute_base_matrix()
+                        * self.body4.compute_base_matrix(),
+                ),
+                FigureBoneData::new(
+                    self.body0.compute_base_matrix()
+                        * self.body1.compute_base_matrix()
+                        * self.body2.compute_base_matrix()
+                        * self.body3.compute_base_matrix()
+                        * self.body4.compute_base_matrix()
+                        * self.body5.compute_base_matrix(),
+                ),
+                FigureBoneData::new(
+                    self.body0.compute_base_matrix()
+                        * self.body1.compute_base_matrix()
+                        * self.body2.compute_base_matrix()
+                        * self.body3.compute_base_matrix()
+                        * self.body4.compute_base_matrix()
+                        * self.body5.compute_base_matrix()
+                        * self.body6.compute_base_matrix(),
+                ),
+                FigureBoneData::new(
+                    self.body0.compute_base_matrix()
+                        * self.body1.compute_base_matrix()
+                        * self.body2.compute_base_matrix()
+                        * self.body3.compute_base_matrix()
+                        * self.body4.compute_base_matrix()
+                        * self.body5.compute_base_matrix()
+                        * self.body6.compute_base_matrix()
+                        * self.body7.compute_base_matrix(),
+                ),
+                FigureBoneData::new(
+                    self.body0.compute_base_matrix()
+                        * self.body1.compute_base_matrix()
+                        * self.body2.compute_base_matrix()
+                        * self.body3.compute_base_matrix()
+                        * self.body4.compute_base_matrix()
+                        * self.body5.compute_base_matrix()
+                        * self.body6.compute_base_matrix()
+                        * self.body7.compute_base_matrix()
+                        * self.body8.compute_base_matrix(),
+                ),
                 FigureBoneData::default(),
                 FigureBoneData::default(),
                 FigureBoneData::default(),
@@ -130,37 +182,37 @@ impl<'a> From<&'a comp::snake::Body> for SkeletonAttr {
         use comp::snake::Species::*;
         Self {
             head: match (body.species, body.body_type) {
-                (Cobra, _) => (12.0, 16.0),
+                (Cobra, _) => (0.0, 16.0),
             },
             jaw: match (body.species, body.body_type) {
-                (Cobra, _) => (3.0, -5.0),
+                (Cobra, _) => (0.0, 14.0),
             },
             body0: match (body.species, body.body_type) {
-                (Cobra, _) => (3.0, -5.0),
+                (Cobra, _) => (-10.0, 0.0),
             },
             body1: match (body.species, body.body_type) {
-                (Cobra, _) => (3.0, -5.0),
+                (Cobra, _) => (-10.0, 0.0),
             },
             body2: match (body.species, body.body_type) {
-                (Cobra, _) => (3.0, -5.0),
+                (Cobra, _) => (-10.0, 0.0),
             },
             body3: match (body.species, body.body_type) {
-                (Cobra, _) => (3.0, -5.0),
+                (Cobra, _) => (-10.0, 0.0),
             },
             body4: match (body.species, body.body_type) {
-                (Cobra, _) => (3.0, -5.0),
+                (Cobra, _) => (-10.0, 0.0),
             },
             body5: match (body.species, body.body_type) {
-                (Cobra, _) => (3.0, -5.0),
+                (Cobra, _) => (-10.0, 0.0),
             },
             body6: match (body.species, body.body_type) {
-                (Cobra, _) => (3.0, -5.0),
+                (Cobra, _) => (-10.0, 0.0),
             },
             body7: match (body.species, body.body_type) {
-                (Cobra, _) => (3.0, -5.0),
+                (Cobra, _) => (-10.0, 0.0),
             },
             body8: match (body.species, body.body_type) {
-                (Cobra, _) => (3.0, -5.0),
+                (Cobra, _) => (-10.0, 0.0),
             },
             height: match (body.species, body.body_type) {
                 (Cobra, _) => (1.2),
