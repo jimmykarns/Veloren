@@ -5,9 +5,9 @@ use super::{
     Show, CRITICAL_HP_COLOR, LOW_HP_COLOR, TEXT_COLOR, UI_HIGHLIGHT_0, UI_MAIN, XP_COLOR,
 };
 use crate::{
-    i18n::VoxygenLocalization,
+    i18n::Localization,
     ui::{
-        fonts::ConrodVoxygenFonts,
+        fonts::Fonts,
         slot::{ContentSize, SlotMaker},
         ImageFrame, Tooltip, TooltipManager, Tooltipable,
     },
@@ -85,14 +85,14 @@ pub struct Bag<'a> {
     client: &'a Client,
     imgs: &'a Imgs,
     item_imgs: &'a ItemImgs,
-    fonts: &'a ConrodVoxygenFonts,
+    fonts: &'a Fonts,
     #[conrod(common_builder)]
     common: widget::CommonBuilder,
     rot_imgs: &'a ImgsRot,
     tooltip_manager: &'a mut TooltipManager,
     slot_manager: &'a mut SlotManager,
     _pulse: f32,
-    localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
+    localized_strings: &'a Localization,
 
     stats: &'a Stats,
     show: &'a Show,
@@ -104,12 +104,12 @@ impl<'a> Bag<'a> {
         client: &'a Client,
         imgs: &'a Imgs,
         item_imgs: &'a ItemImgs,
-        fonts: &'a ConrodVoxygenFonts,
+        fonts: &'a Fonts,
         rot_imgs: &'a ImgsRot,
         tooltip_manager: &'a mut TooltipManager,
         slot_manager: &'a mut SlotManager,
         pulse: f32,
-        localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
+        localized_strings: &'a Localization,
         stats: &'a Stats,
         show: &'a Show,
     ) -> Self {

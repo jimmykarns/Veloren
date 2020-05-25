@@ -3,9 +3,9 @@ use super::{
     TEXT_COLOR,
 };
 use crate::{
-    i18n::{list_localizations, LanguageMetadata, VoxygenLocalization},
+    i18n::{list_localizations, LanguageMetadata, Localization},
     render::{AaMode, CloudMode, FluidMode},
-    ui::{fonts::ConrodVoxygenFonts, ImageSlider, ScaleMode, ToggleButton},
+    ui::{fonts::Fonts, ImageSlider, ScaleMode, ToggleButton},
     window::GameInput,
     GlobalState,
 };
@@ -177,8 +177,8 @@ pub struct SettingsWindow<'a> {
     global_state: &'a GlobalState,
     show: &'a Show,
     imgs: &'a Imgs,
-    fonts: &'a ConrodVoxygenFonts,
-    localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
+    fonts: &'a Fonts,
+    localized_strings: &'a Localization,
     #[conrod(common_builder)]
     common: widget::CommonBuilder,
 }
@@ -188,8 +188,8 @@ impl<'a> SettingsWindow<'a> {
         global_state: &'a GlobalState,
         show: &'a Show,
         imgs: &'a Imgs,
-        fonts: &'a ConrodVoxygenFonts,
-        localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
+        fonts: &'a Fonts,
+        localized_strings: &'a Localization,
     ) -> Self {
         Self {
             global_state,

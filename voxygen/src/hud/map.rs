@@ -3,8 +3,8 @@ use super::{
     Show, TEXT_COLOR, UI_HIGHLIGHT_0, UI_MAIN,
 };
 use crate::{
-    i18n::VoxygenLocalization,
-    ui::{fonts::ConrodVoxygenFonts, img_ids},
+    i18n::Localization,
+    ui::{fonts::Fonts, img_ids},
 };
 use client::{self, Client};
 use common::{comp, terrain::TerrainChunkSize, vol::RectVolSize};
@@ -39,11 +39,11 @@ pub struct Map<'a> {
     world_map: &'a (img_ids::Rotations, Vec2<u32>),
     imgs: &'a Imgs,
     rot_imgs: &'a ImgsRot,
-    fonts: &'a ConrodVoxygenFonts,
+    fonts: &'a Fonts,
     #[conrod(common_builder)]
     common: widget::CommonBuilder,
     _pulse: f32,
-    localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
+    localized_strings: &'a Localization,
 }
 impl<'a> Map<'a> {
     #[allow(clippy::too_many_arguments)] // TODO: Pending review in #587
@@ -53,9 +53,9 @@ impl<'a> Map<'a> {
         imgs: &'a Imgs,
         rot_imgs: &'a ImgsRot,
         world_map: &'a (img_ids::Rotations, Vec2<u32>),
-        fonts: &'a ConrodVoxygenFonts,
+        fonts: &'a Fonts,
         pulse: f32,
-        localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
+        localized_strings: &'a Localization,
     ) -> Self {
         Self {
             _show: show,

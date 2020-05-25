@@ -2,7 +2,7 @@ use super::{
     img_ids::Imgs, BROADCAST_COLOR, FACTION_COLOR, GAME_UPDATE_COLOR, GROUP_COLOR, KILL_COLOR,
     META_COLOR, PRIVATE_COLOR, SAY_COLOR, TELL_COLOR, TEXT_COLOR,
 };
-use crate::{ui::fonts::ConrodVoxygenFonts, GlobalState};
+use crate::{ui::fonts::Fonts, GlobalState};
 use client::{cmd, Client, Event as ClientEvent};
 use common::{msg::validate_chat_msg, ChatType};
 use conrod_core::{
@@ -39,7 +39,7 @@ pub struct Chat<'a> {
 
     global_state: &'a GlobalState,
     imgs: &'a Imgs,
-    fonts: &'a ConrodVoxygenFonts,
+    fonts: &'a Fonts,
 
     #[conrod(common_builder)]
     common: widget::CommonBuilder,
@@ -53,7 +53,7 @@ impl<'a> Chat<'a> {
         new_messages: &'a mut VecDeque<ClientEvent>,
         global_state: &'a GlobalState,
         imgs: &'a Imgs,
-        fonts: &'a ConrodVoxygenFonts,
+        fonts: &'a Fonts,
     ) -> Self {
         Self {
             new_messages,
@@ -450,12 +450,7 @@ fn do_tab_completion(cursor: usize, input: &str, word: &str) -> (String, usize) 
     }
 }
 
-fn cursor_offset_to_index(
-    offset: usize,
-    text: &str,
-    ui: &Ui,
-    fonts: &ConrodVoxygenFonts,
-) -> Option<Index> {
+fn cursor_offset_to_index(offset: usize, text: &str, ui: &Ui, fonts: &Fonts) -> Option<Index> {
     // This moves the cursor to the given offset. Conrod is a pain.
     //let iter = cursor::xys_per_line_from_text(&text, &[], &font, font_size,
     // Justify::Left, Align::Start, 2.0, Rect{x: Range{start: 0.0, end: width}, y:

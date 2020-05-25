@@ -5,7 +5,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
 };
-use veloren_voxygen::i18n::VoxygenLocalization;
+use veloren_voxygen::i18n::Localization;
 
 /// List localization files as a PathBuf vector
 fn i18n_files(i18n_dir: &Path) -> Vec<PathBuf> {
@@ -71,7 +71,7 @@ fn read_file_from_path<'a>(
 
 fn generate_key_version<'a>(
     repo: &'a git2::Repository,
-    localization: &VoxygenLocalization,
+    localization: &Localization,
     path: &std::path::Path,
     file_blob: &git2::Blob,
 ) -> HashMap<String, LocalizationEntryState> {
@@ -162,7 +162,7 @@ fn test_all_localizations<'a>() {
 
     // Read HEAD for the reference language file
     let i18n_en_blob = read_file_from_path(&repo, &head_ref, &en_i18n_path);
-    let loc: VoxygenLocalization =
+    let loc: Localization =
         from_bytes(i18n_en_blob.content()).expect("Expect to parse the RON file");
     let i18n_references: HashMap<String, LocalizationEntryState> =
         generate_key_version(&repo, &loc, &en_i18n_path, &i18n_en_blob);
@@ -179,7 +179,7 @@ fn test_all_localizations<'a>() {
 
         // Find the localization entry state
         let current_blob = read_file_from_path(&repo, &head_ref, &relfile);
-        let current_loc: VoxygenLocalization =
+        let current_loc: Localization =
             from_bytes(current_blob.content()).expect("Expect to parse the RON file");
         let mut current_i18n = generate_key_version(&repo, &current_loc, &relfile, &current_blob);
         for (ref_key, ref_state) in i18n_references.iter() {

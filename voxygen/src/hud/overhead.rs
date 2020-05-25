@@ -1,8 +1,8 @@
 use super::{img_ids::Imgs, HP_COLOR, LOW_HP_COLOR, MANA_COLOR};
 use crate::{
-    i18n::VoxygenLocalization,
+    i18n::Localization,
     settings::GameplaySettings,
-    ui::{fonts::ConrodVoxygenFonts, Ingameable},
+    ui::{fonts::Fonts, Ingameable},
 };
 use common::comp::{Energy, SpeechBubble, Stats};
 use conrod_core::{
@@ -52,9 +52,9 @@ pub struct Overhead<'a> {
     own_level: u32,
     settings: &'a GameplaySettings,
     pulse: f32,
-    voxygen_i18n: &'a std::sync::Arc<VoxygenLocalization>,
+    i18n: &'a Localization,
     imgs: &'a Imgs,
-    fonts: &'a ConrodVoxygenFonts,
+    fonts: &'a Fonts,
     #[conrod(common_builder)]
     common: widget::CommonBuilder,
 }
@@ -69,9 +69,9 @@ impl<'a> Overhead<'a> {
         own_level: u32,
         settings: &'a GameplaySettings,
         pulse: f32,
-        voxygen_i18n: &'a std::sync::Arc<VoxygenLocalization>,
+        i18n: &'a Localization,
         imgs: &'a Imgs,
-        fonts: &'a ConrodVoxygenFonts,
+        fonts: &'a Fonts,
     ) -> Self {
         Self {
             name,
@@ -81,7 +81,7 @@ impl<'a> Overhead<'a> {
             own_level,
             settings,
             pulse,
-            voxygen_i18n,
+            i18n,
             imgs,
             fonts,
             common: widget::CommonBuilder::default(),
@@ -145,8 +145,7 @@ impl<'a> Widget for Overhead<'a> {
         // Speech bubble
         if let Some(bubble) = self.bubble {
             let dark_mode = self.settings.speech_bubble_dark_mode;
-            let localizer =
-                |s: String, i| -> String { self.voxygen_i18n.get_variation(&s, i).to_string() };
+            let localizer = |s: String, i| -> String { self.i18n.get_variation(&s, i).to_string() };
             let bubble_contents: String = bubble.message(localizer);
 
             let mut text = Text::new(&bubble_contents)

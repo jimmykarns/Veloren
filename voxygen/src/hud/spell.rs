@@ -1,5 +1,5 @@
 use super::{img_ids::Imgs, Show, TEXT_COLOR, UI_MAIN};
-use crate::ui::fonts::ConrodVoxygenFonts;
+use crate::ui::fonts::Fonts;
 use conrod_core::{
     color,
     widget::{self, Button, Image, Rectangle, Text},
@@ -8,7 +8,7 @@ use conrod_core::{
 
 use client::{self, Client};
 
-use crate::i18n::VoxygenLocalization;
+use crate::i18n::Localization;
 
 widget_ids! {
     pub struct Ids {
@@ -26,8 +26,8 @@ pub struct Spell<'a> {
     _client: &'a Client,
 
     imgs: &'a Imgs,
-    fonts: &'a ConrodVoxygenFonts,
-    localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
+    fonts: &'a Fonts,
+    localized_strings: &'a Localization,
 
     #[conrod(common_builder)]
     common: widget::CommonBuilder,
@@ -38,8 +38,8 @@ impl<'a> Spell<'a> {
         show: &'a Show,
         _client: &'a Client,
         imgs: &'a Imgs,
-        fonts: &'a ConrodVoxygenFonts,
-        localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
+        fonts: &'a Fonts,
+        localized_strings: &'a Localization,
     ) -> Self {
         Self {
             _show: show,

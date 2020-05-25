@@ -5,7 +5,7 @@
 
 use veloren_voxygen::{
     audio::{self, AudioFrontend},
-    i18n::{self, i18n_asset_key, VoxygenLocalization},
+    i18n::{self, i18n_asset_key, Localization},
     logging,
     menu::main::MainMenuState,
     profile::Profile,
@@ -61,7 +61,7 @@ fn main() {
     };
 
     // Try to load the localization and log missing entries
-    let localized_strings = load::<VoxygenLocalization>(&i18n_asset_key(
+    let localized_strings = load::<Localization>(&i18n_asset_key(
         &global_state.settings.language.selected_language,
     ))
     .unwrap_or_else(|e| {
@@ -72,7 +72,7 @@ fn main() {
             "Impossible to load language: change to the default language (English) instead.",
         );
         global_state.settings.language.selected_language = i18n::REFERENCE_LANG.to_owned();
-        load_expect::<VoxygenLocalization>(&i18n_asset_key(
+        load_expect::<Localization>(&i18n_asset_key(
             &global_state.settings.language.selected_language,
         ))
     });

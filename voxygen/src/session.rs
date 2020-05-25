@@ -1,7 +1,7 @@
 use crate::{
     ecs::MyEntity,
     hud::{DebugInfo, Event as HudEvent, Hud, HudInfo, PressBehavior},
-    i18n::{i18n_asset_key, VoxygenLocalization},
+    i18n::{i18n_asset_key, Localization},
     key_state::KeyState,
     menu::char_selection::CharSelectionState,
     scene::{camera, Scene, SceneData},
@@ -139,7 +139,7 @@ impl PlayState for SessionState {
 
         // Keep a watcher on the language
         let mut localization_watcher = watch::ReloadIndicator::new();
-        let mut localized_strings = load_watched::<VoxygenLocalization>(
+        let mut localized_strings = load_watched::<Localization>(
             &i18n_asset_key(&global_state.settings.language.selected_language),
             &mut localization_watcher,
         )
@@ -813,7 +813,7 @@ impl PlayState for SessionState {
                     HudEvent::ChangeLanguage(new_language) => {
                         global_state.settings.language.selected_language =
                             new_language.language_identifier;
-                        localized_strings = load_watched::<VoxygenLocalization>(
+                        localized_strings = load_watched::<Localization>(
                             &i18n_asset_key(&global_state.settings.language.selected_language),
                             &mut localization_watcher,
                         )

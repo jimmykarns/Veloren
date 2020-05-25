@@ -47,11 +47,11 @@ impl Font {
 }
 
 /// Store font metadata
-pub type VoxygenFonts = HashMap<String, Font>;
+pub type Fonts = HashMap<String, Font>;
 
 /// Store internationalization data
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct VoxygenLocalization {
+pub struct Localization {
     /// A map storing the localized texts
     ///
     /// Localized content can be accessed using a String key.
@@ -67,12 +67,12 @@ pub struct VoxygenLocalization {
     pub convert_utf8_to_ascii: bool,
 
     /// Font configuration is stored here
-    pub fonts: VoxygenFonts,
+    pub fonts: Fonts,
 
     pub metadata: LanguageMetadata,
 }
 
-impl VoxygenLocalization {
+impl Localization {
     /// Get a localized text from the given key
     ///
     /// If the key is not present in the localization object
@@ -100,7 +100,7 @@ impl VoxygenLocalization {
     /// Return the missing keys compared to the reference language
     pub fn list_missing_entries(&self) -> (HashSet<String>, HashSet<String>) {
         let reference_localization =
-            load_expect::<VoxygenLocalization>(i18n_asset_key(REFERENCE_LANG).as_ref());
+            load_expect::<Localization>(i18n_asset_key(REFERENCE_LANG).as_ref());
 
         let reference_string_keys: HashSet<_> =
             reference_localization.string_map.keys().cloned().collect();
@@ -139,14 +139,14 @@ impl VoxygenLocalization {
     }
 }
 
-impl Asset for VoxygenLocalization {
+impl Asset for Localization {
     const ENDINGS: &'static [&'static str] = &["ron"];
 
     /// Load the translations located in the input buffer and convert them
-    /// into a `VoxygenLocalization` object.
+    /// into a `Localization` object.
     #[allow(clippy::into_iter_on_ref)] // TODO: Pending review in #587
     fn parse(buf_reader: BufReader<File>) -> Result<Self, assets::Error> {
-        let mut asked_localization: VoxygenLocalization =
+        let mut asked_localization: Localization =
             from_reader(buf_reader).map_err(assets::Error::parse_error)?;
 
         // Update the text if UTF-8 to ASCII conversion is enabled
@@ -166,10 +166,10 @@ impl Asset for VoxygenLocalization {
     }
 }
 
-/// Load all the available languages located in the Voxygen asset directory
+/// Load all the available languages located in the voxygen asset directory
 pub fn list_localizations() -> Vec<LanguageMetadata> {
     let voxygen_locales_assets = "voxygen.i18n.*";
-    let lang_list = load_glob::<VoxygenLocalization>(voxygen_locales_assets).unwrap();
+    let lang_list = load_glob::<Localization>(voxygen_locales_assets).unwrap();
     lang_list.iter().map(|e| (*e).metadata.clone()).collect()
 }
 

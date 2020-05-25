@@ -44,7 +44,7 @@ impl PlayState for MainMenuState {
         // Reset singleplayer server if it was running already
         global_state.singleplayer = None;
 
-        let localized_strings = load_expect::<crate::i18n::VoxygenLocalization>(
+        let localized_strings = load_expect::<crate::i18n::Localization>(
             &crate::i18n::i18n_asset_key(&global_state.settings.language.selected_language),
         );
 

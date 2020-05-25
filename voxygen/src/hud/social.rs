@@ -1,6 +1,6 @@
 use super::{img_ids::Imgs, Show, TEXT_COLOR, TEXT_COLOR_3, UI_MAIN};
 
-use crate::{i18n::VoxygenLocalization, ui::fonts::ConrodVoxygenFonts};
+use crate::{i18n::Localization, ui::fonts::Fonts};
 use client::{self, Client};
 use conrod_core::{
     color,
@@ -39,8 +39,8 @@ pub struct Social<'a> {
     show: &'a Show,
     client: &'a Client,
     imgs: &'a Imgs,
-    fonts: &'a ConrodVoxygenFonts,
-    localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
+    fonts: &'a Fonts,
+    localized_strings: &'a Localization,
 
     #[conrod(common_builder)]
     common: widget::CommonBuilder,
@@ -51,8 +51,8 @@ impl<'a> Social<'a> {
         show: &'a Show,
         client: &'a Client,
         imgs: &'a Imgs,
-        fonts: &'a ConrodVoxygenFonts,
-        localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
+        fonts: &'a Fonts,
+        localized_strings: &'a Localization,
     ) -> Self {
         Self {
             show,
