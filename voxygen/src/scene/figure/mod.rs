@@ -1792,7 +1792,7 @@ impl FigureMgr {
                         (true, true, false) => {
                             anim::snake::RunAnimation::update_skeleton(
                                 &SnakeSkeleton::new(),
-                                (vel.0.magnitude(), time),
+                                (vel.0.magnitude(), ori, state.last_ori, time),
                                 state.state_time,
                                 &mut state_animation_rate,
                                 skeleton_attr,

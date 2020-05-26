@@ -46,31 +46,31 @@ impl Skeleton for SnakeSkeleton {
             [
                 FigureBoneData::new(head_mat),
                 FigureBoneData::new(head_mat * self.jaw.compute_base_matrix()),
-                FigureBoneData::new(self.body0.compute_base_matrix() * head_mat),
+                FigureBoneData::new(head_mat*self.body0.compute_base_matrix()),
                 FigureBoneData::new(
-                    self.body0.compute_base_matrix()
+                    head_mat*self.body0.compute_base_matrix()
                         * self.body1.compute_base_matrix(),
                 ),
                 FigureBoneData::new(
-                    self.body0.compute_base_matrix()
+                    head_mat*self.body0.compute_base_matrix()
                         * self.body1.compute_base_matrix()
                         * self.body2.compute_base_matrix(),
                 ),
                 FigureBoneData::new(
-                    self.body0.compute_base_matrix()
+                    head_mat*self.body0.compute_base_matrix()
                         * self.body1.compute_base_matrix()
                         * self.body2.compute_base_matrix()
                         * self.body3.compute_base_matrix(),
                 ),
                 FigureBoneData::new(
-                    self.body0.compute_base_matrix()
+                    head_mat*self.body0.compute_base_matrix()
                         * self.body1.compute_base_matrix()
                         * self.body2.compute_base_matrix()
                         * self.body3.compute_base_matrix()
                         * self.body4.compute_base_matrix(),
                 ),
                 FigureBoneData::new(
-                    self.body0.compute_base_matrix()
+                    head_mat*self.body0.compute_base_matrix()
                         * self.body1.compute_base_matrix()
                         * self.body2.compute_base_matrix()
                         * self.body3.compute_base_matrix()
@@ -78,7 +78,7 @@ impl Skeleton for SnakeSkeleton {
                         * self.body5.compute_base_matrix(),
                 ),
                 FigureBoneData::new(
-                    self.body0.compute_base_matrix()
+                    head_mat*self.body0.compute_base_matrix()
                         * self.body1.compute_base_matrix()
                         * self.body2.compute_base_matrix()
                         * self.body3.compute_base_matrix()
@@ -87,7 +87,7 @@ impl Skeleton for SnakeSkeleton {
                         * self.body6.compute_base_matrix(),
                 ),
                 FigureBoneData::new(
-                    self.body0.compute_base_matrix()
+                    head_mat*self.body0.compute_base_matrix()
                         * self.body1.compute_base_matrix()
                         * self.body2.compute_base_matrix()
                         * self.body3.compute_base_matrix()
@@ -97,7 +97,7 @@ impl Skeleton for SnakeSkeleton {
                         * self.body7.compute_base_matrix(),
                 ),
                 FigureBoneData::new(
-                    self.body0.compute_base_matrix()
+                    head_mat*self.body0.compute_base_matrix()
                         * self.body1.compute_base_matrix()
                         * self.body2.compute_base_matrix()
                         * self.body3.compute_base_matrix()
@@ -182,10 +182,10 @@ impl<'a> From<&'a comp::snake::Body> for SkeletonAttr {
         use comp::snake::Species::*;
         Self {
             head: match (body.species, body.body_type) {
-                (Cobra, _) => (0.0, 16.0),
+                (Cobra, _) => (0.0, 0.0),
             },
             jaw: match (body.species, body.body_type) {
-                (Cobra, _) => (0.0, 14.0),
+                (Cobra, _) => (0.0, 0.0),
             },
             body0: match (body.species, body.body_type) {
                 (Cobra, _) => (-10.0, 0.0),
