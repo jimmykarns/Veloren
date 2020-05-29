@@ -224,6 +224,7 @@ impl IcedState {
             .press_image(self.imgs.button_press)
             .text_color(TEXT_COLOR)
             .disabled_text_color(DISABLED_TEXT_COLOR);
+
         let buttons = Column::with_children(vec![
             self.servers_button.view(
                 i18n.get("common.servers"),
@@ -424,7 +425,7 @@ impl MainMenuUi {
             .unwrap()
             .read_to_end(&mut buf)
             .unwrap();
-            glyph_brush::rusttype::Font::from_bytes(buf).unwrap()
+            ui::ice::Font::try_from_vec(buf).unwrap()
         };
 
         let mut ice_ui = IcedUi::new(window, ice_font).unwrap();

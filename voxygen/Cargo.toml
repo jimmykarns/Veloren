@@ -34,9 +34,9 @@ conrod_core = { git = "https://gitlab.com/veloren/conrod.git", branch = "pre-win
 conrod_winit = { git = "https://gitlab.com/veloren/conrod.git", branch = "pre-winit-20" }
 euc = { git = "https://github.com/zesterer/euc.git" }
 guillotiere = { git = "https://github.com/Imberflur/guillotiere" }
-iced = {package = "iced_native", git = "https://github.com/Imberflur/iced", branch = "text-clone"}
+iced = {package = "iced_native", git = "https://github.com/Imberflur/iced"}
 window_clipboard = "0.1.1"
-glyph_brush = "0.6.3"
+glyph_brush = "0.7.0"
 
 # ECS
 specs = "0.15.1"
