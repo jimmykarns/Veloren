@@ -85,7 +85,7 @@ impl<BodyMeta, SpeciesMeta> core::ops::Index<NpcKind> for AllBodies<BodyMeta, Sp
             NpcKind::Rat => &self.critter.body,
             NpcKind::Reddragon => &self.dragon.body,
             NpcKind::Crocodile => &self.quadruped_low.body,
-            NpcKind::Cobra => &self.snake.body,
+            NpcKind::Python => &self.snake.body,
         }
     }
 }

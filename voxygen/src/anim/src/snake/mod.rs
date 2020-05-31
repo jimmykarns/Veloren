@@ -13,6 +13,7 @@ use vek::Vec3;
 pub struct SnakeSkeleton {
     head: Bone,
     jaw: Bone,
+    tongue: Bone,
     body0: Bone,
     body1: Bone,
     body2: Bone,
@@ -22,6 +23,7 @@ pub struct SnakeSkeleton {
     body6: Bone,
     body7: Bone,
     body8: Bone,
+    body9: Bone,
 }
 
 impl SnakeSkeleton {
@@ -46,7 +48,8 @@ impl Skeleton for SnakeSkeleton {
             [
                 FigureBoneData::new(head_mat),
                 FigureBoneData::new(head_mat * self.jaw.compute_base_matrix()),
-                FigureBoneData::new(head_mat*self.body0.compute_base_matrix()),
+                FigureBoneData::new(head_mat * self.tongue.compute_base_matrix()),
+                FigureBoneData::new(head_mat * self.body0.compute_base_matrix()),
                 FigureBoneData::new(
                     head_mat*self.body0.compute_base_matrix()
                         * self.body1.compute_base_matrix(),
@@ -107,8 +110,18 @@ impl Skeleton for SnakeSkeleton {
                         * self.body7.compute_base_matrix()
                         * self.body8.compute_base_matrix(),
                 ),
-                FigureBoneData::default(),
-                FigureBoneData::default(),
+                FigureBoneData::new(
+                    head_mat*self.body0.compute_base_matrix()
+                        * self.body1.compute_base_matrix()
+                        * self.body2.compute_base_matrix()
+                        * self.body3.compute_base_matrix()
+                        * self.body4.compute_base_matrix()
+                        * self.body5.compute_base_matrix()
+                        * self.body6.compute_base_matrix()
+                        * self.body7.compute_base_matrix()
+                        * self.body8.compute_base_matrix()
+                        * self.body9.compute_base_matrix(),
+                ),
                 FigureBoneData::default(),
                 FigureBoneData::default(),
                 FigureBoneData::default(),
@@ -120,6 +133,7 @@ impl Skeleton for SnakeSkeleton {
     fn interpolate(&mut self, target: &Self, dt: f32) {
         self.head.interpolate(&target.head, dt);
         self.jaw.interpolate(&target.jaw, dt);
+        self.tongue.interpolate(&target.tongue, dt);
         self.body0.interpolate(&target.body0, dt);
         self.body1.interpolate(&target.body1, dt);
         self.body2.interpolate(&target.body2, dt);
@@ -129,12 +143,14 @@ impl Skeleton for SnakeSkeleton {
         self.body6.interpolate(&target.body6, dt);
         self.body7.interpolate(&target.body7, dt);
         self.body8.interpolate(&target.body8, dt);
+        self.body9.interpolate(&target.body9, dt);
     }
 }
 
 pub struct SkeletonAttr {
     head: (f32, f32),
     jaw: (f32, f32),
+    tongue: (f32, f32),
     body0: (f32, f32),
     body1: (f32, f32),
     body2: (f32, f32),
@@ -144,6 +160,7 @@ pub struct SkeletonAttr {
     body6: (f32, f32),
     body7: (f32, f32),
     body8: (f32, f32),
+    body9: (f32, f32),
     height: f32,
 }
 
@@ -161,8 +178,9 @@ impl<'a> std::convert::TryFrom<&'a comp::Body> for SkeletonAttr {
 impl Default for SkeletonAttr {
     fn default() -> Self {
         Self {
-            head: (0.0, 0.0),
+            head: (0.0, 1.0),
             jaw: (0.0, 0.0),
+            tongue: (0.0, 0.0),
             body0: (0.0, 0.0),
             body1: (0.0, 0.0),
             body2: (0.0, 0.0),
@@ -172,6 +190,7 @@ impl Default for SkeletonAttr {
             body6: (0.0, 0.0),
             body7: (0.0, 0.0),
             body8: (0.0, 0.0),
+            body9: (0.0, 0.0),
             height: (0.0),
         }
     }
@@ -182,40 +201,46 @@ impl<'a> From<&'a comp::snake::Body> for SkeletonAttr {
         use comp::snake::Species::*;
         Self {
             head: match (body.species, body.body_type) {
-                (Cobra, _) => (0.0, 0.0),
+                (Python, _) => (0.0, 1.0),
             },
             jaw: match (body.species, body.body_type) {
-                (Cobra, _) => (0.0, 0.0),
+                (Python, _) => (1.0, -1.0),
+            },
+            tongue: match (body.species, body.body_type) {
+                (Python, _) => (0.0, 0.5),
             },
             body0: match (body.species, body.body_type) {
-                (Cobra, _) => (-10.0, 0.0),
+                (Python, _) => (0.0, -1.0),
             },
             body1: match (body.species, body.body_type) {
-                (Cobra, _) => (-10.0, 0.0),
+                (Python, _) => (-7.0, 0.0),
             },
             body2: match (body.species, body.body_type) {
-                (Cobra, _) => (-10.0, 0.0),
+                (Python, _) => (-7.0, 0.0),
             },
             body3: match (body.species, body.body_type) {
-                (Cobra, _) => (-10.0, 0.0),
+                (Python, _) => (-7.0, 0.0),
             },
             body4: match (body.species, body.body_type) {
-                (Cobra, _) => (-10.0, 0.0),
+                (Python, _) => (-7.0, 0.0),
             },
             body5: match (body.species, body.body_type) {
-                (Cobra, _) => (-10.0, 0.0),
+                (Python, _) => (-7.0, 0.0),
             },
             body6: match (body.species, body.body_type) {
-                (Cobra, _) => (-10.0, 0.0),
+                (Python, _) => (-7.0, 0.0),
             },
             body7: match (body.species, body.body_type) {
-                (Cobra, _) => (-10.0, 0.0),
+                (Python, _) => (-7.0, 0.0),
             },
             body8: match (body.species, body.body_type) {
-                (Cobra, _) => (-10.0, 0.0),
+                (Python, _) => (-9.0, 0.0),
+            },
+            body9: match (body.species, body.body_type) {
+                (Python, _) => (-5.0, 0.0),
             },
             height: match (body.species, body.body_type) {
-                (Cobra, _) => (1.2),
+                (Python, _) => (1.2),
             },
         }
     }

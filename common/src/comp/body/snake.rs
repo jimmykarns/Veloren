@@ -27,7 +27,7 @@ impl From<Body> for super::Body {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[repr(u32)]
 pub enum Species {
-    Cobra = 0,
+    Python = 0,
 }
 
 /// Data representing per-species generic data.
@@ -35,7 +35,7 @@ pub enum Species {
 /// NOTE: Deliberately don't (yet?) implement serialize.
 #[derive(Clone, Debug, Deserialize)]
 pub struct AllSpecies<SpeciesMeta> {
-    pub cobra: SpeciesMeta,
+    pub python: SpeciesMeta,
 
 }
 
@@ -45,13 +45,13 @@ impl<'a, SpeciesMeta> core::ops::Index<&'a Species> for AllSpecies<SpeciesMeta> 
     #[inline]
     fn index(&self, &index: &'a Species) -> &Self::Output {
         match index {
-            Species::Cobra => &self.cobra,
+            Species::Python => &self.python,
         }
     }
 }
 
 pub const ALL_SPECIES: [Species; 1] = [
-    Species::Cobra,
+    Species::Python,
 ];
 
 impl<'a, SpeciesMeta: 'a> IntoIterator for &'a AllSpecies<SpeciesMeta> {

@@ -149,6 +149,15 @@ impl Animation for JumpAnimation {
             * Quaternion::rotation_x(tailmove.y);
         next.body8.scale = Vec3::one();
 
+        next.body9.offset = Vec3::new(
+            0.0,
+            skeleton_attr.body9.0,
+            skeleton_attr.body9.1 + wave_ultra_slow * 0.6,
+        );
+        next.body9.ori = Quaternion::rotation_z(0.0 + wave_slow * 0.2 + tailmove.x)
+            * Quaternion::rotation_x(tailmove.y);
+        next.body9.scale = Vec3::one();
+
         next
     }
 }

@@ -1,94 +1,110 @@
 ({
-    (Cobra, Male): (
+    (Python, Male): (
         head: (
-            offset: (-2.0, 0.0, 0.0),
-            center: ("npc.cobra.male.head"),
+            offset: (-2.5, 0.0, 0.0),
+            center: ("npc.python.male.head"),
         ),
         jaw: (
-            offset: (-2.0, 0.0, 0.0),
-            center: ("npc.cobra.male.jaw"),
+            offset: (-2.5, 0.0, 0.0),
+            center: ("npc.python.male.jaw"),
+        ),
+        tongue: (
+            offset: (-1.5, 0.0, 0.0),
+            center: ("npc.python.male.tongue"),
         ),
         body0: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.male.body0"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.male.body0"),
         ),
         body1: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.male.body1"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.male.body1"),
         ),
         body2: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.male.body2"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.male.body2"),
         ),
         body3: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.male.body3"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.male.body3"),
         ),
         body4: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.male.body4"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.male.body4"),
         ),
         body5: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.male.body5"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.male.body5"),
         ),
         body6: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.male.body6"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.male.body6"),
         ),
         body7: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.male.body7"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.male.body7"),
         ),
         body8: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.male.body8"),
+            offset: (-1.5, -9.0, 0.0),
+            center: ("npc.python.male.body8"),
+        ),
+        body9: (
+            offset: (-0.5, -5.0, 0.0),
+            center: ("npc.python.male.body9"),
         ),
     ),
-    (Cobra, Female): (
+    (Python, Female): (
         head: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.female.head"),
+            offset: (-2.5, 0.0, 0.0),
+            center: ("npc.python.female.head"),
         ),
         jaw: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.female.jaw"),
+            offset: (-2.5, 0.0, 0.0),
+            center: ("npc.python.female.jaw"),
+        ),
+        tongue: (
+            offset: (-1.5, 0.0, 0.0),
+            center: ("npc.python.female.tongue"),
         ),
         body0: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.female.body0"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.female.body0"),
         ),
         body1: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.female.body1"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.female.body1"),
         ),
         body2: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.female.body2"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.female.body2"),
         ),
         body3: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.female.body3"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.female.body3"),
         ),
         body4: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.female.body4"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.female.body4"),
         ),
         body5: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.female.body5"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.female.body5"),
         ),
         body6: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.female.body6"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.female.body6"),
         ),
         body7: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.female.body7"),
+            offset: (-2.5, -7.0, 0.0),
+            center: ("npc.python.female.body7"),
         ),
         body8: (
-            offset: (-2.0, -10.0, 0.0),
-            center: ("npc.cobra.female.body8"),
+            offset: (-1.5, -9.0, 0.0),
+            center: ("npc.python.female.body8"),
+        ),
+        body9: (
+            offset: (-0.5, -5.0, 0.0),
+            center: ("npc.python.female.body9"),
         ),
     ),
 })

@@ -773,6 +773,11 @@ impl<Skel: Skeleton> FigureModelCache<Skel> {
                         body.body_type,
                         generate_mesh,
                     )),
+                    Some(snake_central_spec.mesh_tongue(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
                     Some(snake_central_spec.mesh_body0(
                         body.species,
                         body.body_type,
@@ -818,8 +823,11 @@ impl<Skel: Skeleton> FigureModelCache<Skel> {
                         body.body_type,
                         generate_mesh,
                     )),
-                    None,
-                    None,
+                    Some(snake_central_spec.mesh_body9(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
                     None,
                     None,
                     None,

@@ -3326,6 +3326,7 @@ pub struct SnakeCenterSpec(HashMap<(SSpecies, SBodyType), SidedSCenterVoxSpec>);
 struct SidedSCenterVoxSpec {
     head: SnakeCenterSubSpec,
     jaw: SnakeCenterSubSpec,
+    tongue: SnakeCenterSubSpec,
     body0: SnakeCenterSubSpec,
     body1: SnakeCenterSubSpec,
     body2: SnakeCenterSubSpec,
@@ -3335,6 +3336,7 @@ struct SidedSCenterVoxSpec {
     body6: SnakeCenterSubSpec,
     body7: SnakeCenterSubSpec,
     body8: SnakeCenterSubSpec,
+    body9: SnakeCenterSubSpec,
 }
 #[derive(Serialize, Deserialize)]
 struct SnakeCenterSubSpec {
@@ -3399,6 +3401,27 @@ impl SnakeCenterSpec {
         let center = graceful_load_segment(&spec.jaw.center.0);
 
         generate_mesh(&center, Vec3::from(spec.jaw.offset))
+    }
+
+    pub fn mesh_tongue(
+        &self,
+        species: SSpecies,
+        body_type: SBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No tongue specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.tongue.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.tongue.offset))
     }
 
     pub fn mesh_body0(
@@ -3588,6 +3611,27 @@ impl SnakeCenterSpec {
         let center = graceful_load_segment(&spec.body8.center.0);
 
         generate_mesh(&center, Vec3::from(spec.body8.offset))
+    }
+
+    pub fn mesh_body9(
+        &self,
+        species: SSpecies,
+        body_type: SBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body9 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body9.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.body9.offset))
     }
 }
 

@@ -1782,7 +1782,7 @@ impl FigureMgr {
                         (true, false, false) => {
                             anim::snake::IdleAnimation::update_skeleton(
                                 &SnakeSkeleton::new(),
-                                time,
+                                (vel.0.magnitude(), ori, state.last_ori, time),
                                 state.state_time,
                                 &mut state_animation_rate,
                                 skeleton_attr,

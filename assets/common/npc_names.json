@@ -616,9 +616,9 @@
             ]
         },
         "species": {
-            "cobra": {
-                "keyword": "cobra",
-                "generic": "Cobra"
+            "python": {
+                "keyword": "python",
+                "generic": "Python"
             }
         }
     }

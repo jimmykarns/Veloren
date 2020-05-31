@@ -28,7 +28,7 @@ impl Animation for RunAnimation {
             .reduce_and()
             && ori.angle_between(last_ori).is_finite()
         {
-            ori.angle_between(last_ori).min(0.05)
+            ori.angle_between(last_ori).min(0.001)
                 * last_ori.determine_side(Vec2::zero(), ori).signum()
         } else {
             0.0
@@ -70,12 +70,20 @@ impl Animation for RunAnimation {
         next.jaw.ori = Quaternion::rotation_x(0.0);
         next.jaw.scale = Vec3::one();
 
+        next.tongue.offset = Vec3::new(
+            0.0,
+            skeleton_attr.tongue.0,
+            skeleton_attr.tongue.1,
+        );
+        next.tongue.ori = Quaternion::rotation_x(0.0);
+        next.tongue.scale = Vec3::one();
+
         next.body0.offset = Vec3::new(
             0.0,
             skeleton_attr.body0.0,
             skeleton_attr.body0.1,
         );
-        next.body0.ori = Quaternion::rotation_z(tilt*14.0);
+        next.body0.ori = Quaternion::rotation_z(tilt*100.0);
         next.body0.scale = Vec3::one();
 
         next.body1.offset = Vec3::new(
@@ -83,7 +91,7 @@ impl Animation for RunAnimation {
             skeleton_attr.body1.0,
             skeleton_attr.body1.1,
         );
-        next.body1.ori = Quaternion::rotation_z(tilt*12.0);
+        next.body1.ori = Quaternion::rotation_z(tilt*100.0);
         next.body1.scale = Vec3::one();
 
         next.body2.offset = Vec3::new(
@@ -91,7 +99,7 @@ impl Animation for RunAnimation {
             skeleton_attr.body2.0,
             skeleton_attr.body2.1,
         );
-        next.body2.ori = Quaternion::rotation_z(tilt*10.0);
+        next.body2.ori = Quaternion::rotation_z(tilt*100.0);
         next.body2.scale = Vec3::one();
 
         next.body3.offset = Vec3::new(
@@ -99,7 +107,7 @@ impl Animation for RunAnimation {
             skeleton_attr.body3.0,
             skeleton_attr.body3.1,
         );
-        next.body3.ori = Quaternion::rotation_z(tilt*8.0);
+        next.body3.ori = Quaternion::rotation_z(tilt*100.0);
         next.body3.scale = Vec3::one();
 
         next.body4.offset = Vec3::new(
@@ -107,7 +115,7 @@ impl Animation for RunAnimation {
             skeleton_attr.body4.0,
             skeleton_attr.body4.1,
         );
-        next.body4.ori = Quaternion::rotation_z(tilt*6.0);
+        next.body4.ori = Quaternion::rotation_z(tilt*100.0);
         next.body4.scale = Vec3::one();
 
         next.body5.offset = Vec3::new(
@@ -115,7 +123,7 @@ impl Animation for RunAnimation {
             skeleton_attr.body5.0,
             skeleton_attr.body5.1,
         );
-        next.body5.ori = Quaternion::rotation_z(tilt*4.0);
+        next.body5.ori = Quaternion::rotation_z(tilt*100.0);
         next.body5.scale = Vec3::one();
 
         next.body6.offset = Vec3::new(
@@ -123,7 +131,7 @@ impl Animation for RunAnimation {
             skeleton_attr.body6.0,
             skeleton_attr.body6.1,
         );
-        next.body6.ori = Quaternion::rotation_z(tilt*2.0);
+        next.body6.ori = Quaternion::rotation_z(tilt*100.0);
         next.body6.scale = Vec3::one();
 
         next.body7.offset = Vec3::new(
@@ -131,18 +139,26 @@ impl Animation for RunAnimation {
             skeleton_attr.body7.0,
             skeleton_attr.body7.1,
         );
-        next.body7.ori = Quaternion::rotation_z(tilt*1.0);
+        next.body7.ori = Quaternion::rotation_z(tilt*100.0);
         next.body7.scale = Vec3::one();
 
         next.body8.offset = Vec3::new(
             0.0,
-            skeleton_attr.body8.0,
-            skeleton_attr.body8.1,
+            skeleton_attr.body7.0,
+            skeleton_attr.body7.1,
         );
-        next.body8.ori = Quaternion::rotation_z(0.0);
+        next.body8.ori = Quaternion::rotation_z(tilt*100.0);
         next.body8.scale = Vec3::one();
 
-        next
+        next.body9.offset = Vec3::new(
+            0.0,
+            skeleton_attr.body9.0,
+            skeleton_attr.body9.1,
+        );
+        next.body9.ori = Quaternion::rotation_z(tilt*100.0);
+        next.body9.scale = Vec3::one();
 
+
+        next
     }
 }
