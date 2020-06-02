@@ -33,7 +33,7 @@ use crate::{
 #[rustfmt::skip]
 use ::image::GenericImageView;
 use cache::Cache;
-use common::{assets, util::srgba_to_linear};
+use common::util::srgba_to_linear;
 use conrod_core::{
     event::Input,
     graph::Graph,
@@ -45,14 +45,7 @@ use conrod_core::{
     Rect, UiBuilder, UiCell,
 };
 use graphic::TexId;
-use std::{
-    f32, f64,
-    fs::File,
-    io::{BufReader, Read},
-    ops::Range,
-    sync::Arc,
-    time::Duration,
-};
+use std::{f32, f64, ops::Range, sync::Arc, time::Duration};
 use tracing::{error, warn};
 use vek::*;
 
@@ -84,18 +77,6 @@ impl DrawCommand {
             kind: DrawKind::Plain,
             verts,
         }
-    }
-}
-
-pub struct Font(text::Font);
-impl assets::Asset for Font {
-    const ENDINGS: &'static [&'static str] = &["ttf"];
-
-    #[allow(clippy::redundant_clone)] // TODO: Pending review in #587
-    fn parse(mut buf_reader: BufReader<File>) -> Result<Self, assets::Error> {
-        let mut buf = Vec::new();
-        buf_reader.read_to_end(&mut buf)?;
-        Ok(Font(text::Font::from_bytes(buf.clone()).unwrap()))
     }
 }
 
@@ -202,8 +183,9 @@ impl Ui {
         self.image_map.replace(id, (graphic_id, Rotation::None));
     }
 
-    pub fn new_font(&mut self, font: Arc<Font>) -> font::Id {
-        self.ui.fonts.insert(font.as_ref().0.clone())
+    pub fn new_font(&mut self, font: Arc<crate::ui::ice::RawFont>) -> font::Id {
+        let font = text::Font::from_bytes(font.0.clone()).unwrap();
+        self.ui.fonts.insert(font)
     }
 
     pub fn id_generator(&mut self) -> Generator { self.ui.widget_id_generator() }
