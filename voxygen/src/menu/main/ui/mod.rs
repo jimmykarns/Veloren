@@ -89,7 +89,7 @@ pub enum Event {
     StartSingleplayer,
     Quit,
     Settings,
-    //DisclaimerClosed,
+    //DisclaimerClosed, TODO: remove all traces?
     AuthServerTrust(String, bool),
 }
 
@@ -111,7 +111,7 @@ pub struct LoginInfo {
 }
 
 enum Info {
-    Disclaimer,
+    //Disclaimer,
     Intro,
 }
 
@@ -147,7 +147,6 @@ enum Screen {
     },
 }
 
-// TODO: use i18n font scale thing
 struct IcedState {
     fonts: IcedFonts,
     imgs: IcedImgs,
@@ -180,7 +179,7 @@ enum Message {
     TrustPromptAdd,
     TrustPromptCancel,
     CloseError,
-    CloseDisclaimer,
+    //CloseDisclaimer,
 }
 
 impl IcedState {
@@ -197,11 +196,11 @@ impl IcedState {
             common::util::GIT_VERSION.to_string()
         );
 
-        let info = if settings.show_disclaimer {
-            Info::Disclaimer
-        } else {
-            Info::Intro
-        };
+        let info = Info::Intro; // if settings.show_disclaimer {
+        //Info::Disclaimer
+        //} else {
+        //Info::Intro
+        //};
 
         Self {
             fonts,
@@ -211,9 +210,9 @@ impl IcedState {
             version,
 
             login_info: LoginInfo {
-                username: String::new(),
+                username: settings.networking.username.clone(),
                 password: String::new(),
-                server: String::new(),
+                server: settings.networking.default_server.clone(),
             },
 
             show_servers: false,
@@ -244,13 +243,11 @@ impl IcedState {
             ),
             Screen::Connecting {
                 screen,
-                start,
                 connection_state,
             } => screen.view(
                 &self.fonts,
                 &self.imgs,
                 self.bg_img,
-                &start,
                 &connection_state,
                 &self.version,
                 self.time,
@@ -267,7 +264,6 @@ impl IcedState {
             Message::Singleplayer => {
                 self.screen = Screen::Connecting {
                     screen: connecting::Screen::new(),
-                    start: std::time::Instant::now(),
                     connection_state: ConnectionState::InProgress {
                         status: [self.i18n.get("main.creating_world"), "..."].concat(),
                     },
@@ -278,7 +274,6 @@ impl IcedState {
             Message::Multiplayer => {
                 self.screen = Screen::Connecting {
                     screen: connecting::Screen::new(),
-                    start: std::time::Instant::now(),
                     connection_state: ConnectionState::InProgress {
                         status: [self.i18n.get("main.connecting"), "..."].concat(),
                     },
@@ -328,9 +323,9 @@ impl IcedState {
                     *error = None;
                 }
             },
-            Message::CloseDisclaimer => {
-                events.push(Event::DisclaimerClosed);
-            },
+            //Message::CloseDisclaimer => {
+            //   events.push(Event::DisclaimerClosed);
+            //},
         }
     }
 
@@ -529,11 +524,7 @@ impl MainMenuUi {
             imgs,
             username: networking.username.clone(),
             password: "".to_owned(),
-            server_address: networking
-                .servers
-                .get(networking.default_server)
-                .cloned()
-                .unwrap_or_default(),
+            server_address: networking.default_server.clone(),
             popup: None,
             connecting: None,
             show_servers: false,
@@ -920,7 +911,7 @@ impl MainMenuUi {
                         .was_clicked()
                     {
                         self.server_address = net_settings.servers[item.i].clone();
-                        net_settings.default_server = item.i;
+                        net_settings.default_server = self.server_address.clone();
                     }
                 }
 
