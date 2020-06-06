@@ -181,6 +181,15 @@ impl PlayState for MainMenuState {
                         password,
                         server_address,
                     } => {
+                        let mut net_settings = &mut global_state.settings.networking;
+                        net_settings.username = username.clone();
+                        if !net_settings.servers.contains(&server_address) {
+                            net_settings.servers.push(server_address.clone());
+                        }
+                        if let Err(err) = global_state.settings.save_to_file() {
+                            warn!("Failed to save settings: {:?}", err);
+                        }
+
                         attempt_login(
                             global_state,
                             username,
@@ -201,7 +210,6 @@ impl PlayState for MainMenuState {
                     #[cfg(feature = "singleplayer")]
                     MainMenuEvent::StartSingleplayer => {
                         let (singleplayer, server_settings) = Singleplayer::new(None); // TODO: Make client and server use the same thread pool
-
                         global_state.singleplayer = Some(singleplayer);
 
                         attempt_login(
@@ -266,15 +274,6 @@ fn attempt_login(
     server_port: u16,
     client_init: &mut Option<ClientInit>,
 ) {
-    let mut net_settings = &mut global_state.settings.networking;
-    net_settings.username = username.clone();
-    if !net_settings.servers.contains(&server_address) {
-        net_settings.servers.push(server_address.clone());
-    }
-    if let Err(e) = global_state.settings.save_to_file() {
-        warn!(?e, "Failed to save settings");
-    }
-
     if comp::Player::alias_is_valid(&username) {
         // Don't try to connect if there is already a connection in progress.
         if client_init.is_none() {
