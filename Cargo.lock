@@ -4989,6 +4989,7 @@ version = "0.6.0"
 dependencies = [
  "authc",
  "bincode",
+ "color_quant",
  "criterion",
  "crossbeam",
  "dot_vox",

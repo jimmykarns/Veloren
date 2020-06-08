@@ -381,6 +381,48 @@ impl PlayState for SessionState {
                             self.client.borrow_mut().swap_loadout();
                         }
                     }
+                    Event::InputUpdate(GameInput::VoxSnap, state)
+                        if state != self.key_state.vox_snap =>
+                    {
+                        self.key_state.vox_snap = state;
+                        if state {
+                            let client = self.client.borrow_mut();
+
+                            let mut path = global_state.settings.screenshots_path.clone();
+                            path.push(format!(
+                                "voxsnap_{}",
+                                std::time::SystemTime::now()
+                                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                                    .map(|d| d.as_millis())
+                                    .unwrap_or(0)
+                            ));
+
+                            let player_pos = client
+                                .state()
+                                .read_storage::<comp::Pos>()
+                                .get(client.entity())
+                                .copied()
+                                .unwrap()
+                                .0;
+
+                            let result = common::util::vox_capture(
+                                &*client.state().terrain(),
+                                player_pos.map(|e| e as i32),
+                                &path,
+                            );
+
+                            self.hud.new_message(match result {
+                                Ok(message) => Chat {
+                                    chat_type: ChatType::Meta,
+                                    message,
+                                },
+                                Err(message) => Chat {
+                                    chat_type: ChatType::Meta,
+                                    message,
+                                },
+                            });
+                        }
+                    }
                     Event::InputUpdate(GameInput::ToggleLantern, true) => {
                         self.client.borrow_mut().toggle_lantern();
                     },

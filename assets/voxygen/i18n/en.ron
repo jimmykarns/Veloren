@@ -353,6 +353,7 @@ magically infused items?"#,
         "gameinput.freelook": "Free Look",
         "gameinput.autowalk": "Auto Walk",
         "gameinput.dance": "Dance",
+        "gameinput.voxsnap": "Capture Surroundings to .vox",
         
         /// End GameInput section
 

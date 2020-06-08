@@ -12,6 +12,7 @@ pub struct KeyState {
     pub toggle_dance: bool,
     pub auto_walk: bool,
     pub swap_loadout: bool,
+    pub vox_snap: bool,
     pub respawn: bool,
     pub analog_matrix: Vec2<f32>,
 }
@@ -30,6 +31,7 @@ impl KeyState {
             toggle_dance: false,
             auto_walk: false,
             swap_loadout: false,
+            vox_snap: false,
             respawn: false,
             analog_matrix: Vec2::zero(),
         }
