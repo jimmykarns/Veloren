@@ -19,28 +19,9 @@ use common::{
     comp::{humanoid, item::ItemKind, Body, Loadout},
     figure::Segment,
     terrain::BlockKind,
-    vol::{BaseVol, ReadVol, Vox},
 };
 use tracing::error;
 use vek::*;
-
-#[derive(PartialEq, Eq, Copy, Clone)]
-struct VoidVox;
-impl Vox for VoidVox {
-    fn empty() -> Self { VoidVox }
-
-    fn is_empty(&self) -> bool { true }
-
-    fn or(self, _other: Self) -> Self { VoidVox }
-}
-struct VoidVol;
-impl BaseVol for VoidVol {
-    type Error = ();
-    type Vox = VoidVox;
-}
-impl ReadVol for VoidVol {
-    fn get<'a>(&'a self, _pos: Vec3<i32>) -> Result<&'a Self::Vox, Self::Error> { Ok(&VoidVox) }
-}
 
 fn generate_mesh(segment: &Segment, offset: Vec3<f32>) -> Mesh<FigurePipeline> {
     Meshable::<FigurePipeline, FigurePipeline>::generate_mesh(segment, (offset, Vec3::one())).0
@@ -166,7 +147,7 @@ impl Scene {
         self.camera
             .update(scene_data.time, 1.0 / 60.0, scene_data.mouse_smoothing);
 
-        self.camera.compute_dependents(&VoidVol);
+        self.camera.compute_dependents_no_terrain();
         let camera::Dependents {
             view_mat,
             proj_mat,

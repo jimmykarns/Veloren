@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a separate camera mode for when the player is indoors
+
 ### Changed
+
 - Fixed a bug where leaving the Settings menu by pressing "N" in single player kept the game paused
 
 ### Removed
@@ -52,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Training dummy items
 - Added spin attack for axe
 - Creature specific stats
+  <<<<<<< HEAD
 - Minimap compass
 - Initial crafting system implementation
 - Protection stat to armor that reduces incoming damage
@@ -61,11 +65,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add detection of entities under the cursor
 - Functional group-system with exp-sharing and disabled damage to group members
 - Some Campfire, fireball & bomb; particle, light & sound effects.
-- Added firework recipe
-- Added setting to change resolution
-- Rare (unfinished) castles
-- Caves with monsters and treasure
-- Furniture and decals in towns
 
 ### Changed
 
