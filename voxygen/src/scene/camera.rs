@@ -1,4 +1,7 @@
-use common::vol::{ReadVol, Vox};
+use common::{
+    terrain::TerrainGrid,
+    vol::{ReadVol, Vox},
+};
 use std::f32::consts::PI;
 use treeculler::Frustum;
 use vek::*;
@@ -42,6 +45,9 @@ pub struct Camera {
 
     last_time: Option<f64>,
 
+    enclosed: bool,
+    enclosed_last_checked: Option<Vec3<f32>>,
+
     dependents: Dependents,
 }
 
@@ -61,6 +67,11 @@ impl Camera {
 
             last_time: None,
 
+            // Whether the camera was detected to be inside of a structure. Switches us to indoor
+            // camera.
+            enclosed: false,
+            enclosed_last_checked: None,
+
             dependents: Dependents {
                 view_mat: Mat4::identity(),
                 proj_mat: Mat4::identity(),
@@ -69,9 +80,124 @@ impl Camera {
         }
     }
 
+    ///
+    /// Estimate whether the player is indoors with rays from their position
+    /// The player is marked "enclosed" if >= 75% of the rays hit a solid block
+    pub fn check_enclosure(&mut self, terrain: &TerrainGrid) {
+        // We can expose these values in the settings at some point if they become a
+        // performance concern
+        let vertical_resolution = 3;
+        let horizontal_resolution = 12;
+        let ray_distance = 30.0;
+        let raycast_resolution = 50;
+
+        let mut total = 0;
+        let mut hit = 0;
+
+        for horizontal in 0..horizontal_resolution {
+            // Do a ray horizontally out from the player to check for things
+            let horizontal_angle = (horizontal as f32 * PI) / (horizontal_resolution as f32 / 2.0);
+            let (start, end) = (
+                self.focus,
+                self.focus
+                    + (Vec3::new(
+                        -f32::sin(horizontal as f32),
+                        -f32::cos(horizontal as f32),
+                        0.0,
+                    ) * ray_distance),
+            );
+
+            match terrain
+                .ray(start, end)
+                .ignore_error()
+                .max_iter(raycast_resolution)
+                .until(|b| b.is_solid())
+                .cast()
+            {
+                (_, Ok(Some(_))) => {
+                    total += 1;
+                    hit += 1;
+                },
+                (_, Ok(None)) => total += 1,
+                (_, Err(_)) => total += 1,
+            }
+
+            if horizontal % vertical_resolution == 0 {
+                for vertical in 0..3 {
+                    let vertical_angle = (vertical as f32 * PI) / 6.0;
+                    let (vertical_start, vertical_end) = (
+                        self.focus,
+                        self.focus
+                            + (Vec3::new(
+                                -f32::sin(horizontal_angle) * f32::cos(vertical_angle),
+                                -f32::cos(horizontal_angle) * f32::cos(vertical_angle),
+                                f32::sin(vertical_angle),
+                            ) * ray_distance),
+                    );
+
+                    match terrain
+                        .ray(vertical_start, vertical_end)
+                        .ignore_error()
+                        .max_iter(raycast_resolution)
+                        .until(|b| b.is_solid())
+                        .cast()
+                    {
+                        (_, Ok(Some(_))) => {
+                            total += 1;
+                            hit += 1;
+                        },
+                        (_, Ok(None)) => total += 1,
+                        (_, Err(_)) => total += 1,
+                    }
+                }
+            }
+        }
+
+        let percentage = hit as f32 / total as f32;
+        self.enclosed = percentage >= 0.75;
+    }
+
+    /// Compute_dependents adjusted for when there is no terrain data (character
+    /// selection)
+    pub fn compute_dependents_no_terrain(&mut self) {
+        self.dependents.view_mat = Mat4::<f32>::identity()
+            * Mat4::translation_3d(-Vec3::unit_z() * self.dist)
+            * Mat4::rotation_z(self.ori.z)
+            * Mat4::rotation_x(self.ori.y)
+            * Mat4::rotation_y(self.ori.x)
+            * Mat4::rotation_3d(PI / 2.0, -Vec4::unit_x())
+            * Mat4::translation_3d(-self.focus);
+
+        self.dependents.proj_mat =
+            Mat4::perspective_rh_no(self.fov, self.aspect, NEAR_PLANE, FAR_PLANE);
+
+        // TODO: Make this more efficient.
+        self.dependents.cam_pos = Vec3::from(self.dependents.view_mat.inverted() * Vec4::unit_w());
+    }
+
     /// Compute the transformation matrices (view matrix and projection matrix)
     /// and position of the camera.
-    pub fn compute_dependents(&mut self, terrain: &impl ReadVol) {
+    pub fn compute_dependents(&mut self, terrain: &TerrainGrid) {
+        // Check enclosure if necessary
+        let mut should_check_enclosure = false;
+        match self.enclosed_last_checked {
+            Some(vec) => {
+                // We don't need to check enclosure every frame. Only check if we have moved.
+                if vec.distance_squared(self.focus) >= 1.2 {
+                    should_check_enclosure = true;
+                    self.enclosed_last_checked = Some(self.focus);
+                }
+            },
+            None => {
+                should_check_enclosure = true;
+                self.enclosed_last_checked = Some(self.focus);
+            },
+        }
+
+        if should_check_enclosure {
+            self.check_enclosure(&*terrain);
+        }
+
         let dist = {
             let (start, end) = (
                 self.focus
@@ -83,18 +209,37 @@ impl Camera {
                 self.focus,
             );
 
-            match terrain
-                .ray(start, end)
-                .ignore_error()
-                .max_iter(500)
-                .until(|b| b.is_empty())
-                .cast()
-            {
-                (d, Ok(Some(_))) => f32::min(self.dist - d - 0.03, self.dist),
-                (_, Ok(None)) => self.dist,
-                (_, Err(_)) => self.dist,
+            if self.enclosed {
+                match terrain
+                    .ray(start, end)
+                    .ignore_error()
+                    .max_iter(500)
+                    .until(|vox| !vox.is_solid())
+                    .last_edge_cast()
+                {
+                    Ok(d) => {
+                        if d >= self.dist {
+                            self.dist
+                        } else {
+                            f32::min(self.dist - d - 0.1, self.dist)
+                        }
+                    },
+                    Err(_) => self.dist,
+                }
+            } else {
+                match terrain
+                    .ray(start, end)
+                    .ignore_error()
+                    .max_iter(500)
+                    .until(|b| b.is_empty())
+                    .cast()
+                {
+                    (d, Ok(Some(_))) => f32::min(self.dist - d - 0.03, self.dist),
+                    (_, Ok(None)) => self.dist,
+                    (_, Err(_)) => self.dist,
+                }
+                .max(0.0)
             }
-            .max(0.0)
         };
 
         self.dependents.view_mat = Mat4::<f32>::identity()

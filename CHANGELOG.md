@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show where screenshots are saved in the chat
 - Added basic auto walk
 - Added weapon/attack sound effects
+<<<<<<< HEAD
 - M2 attack for bow
 - Hotbar persistence
 - Alpha version Disclaimer
@@ -42,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Training dummy items
 - Added spin attack for axe
 - Creature specific stats
+- Added a separate camera mode for when the player is indoors
 
 ### Changed
 
