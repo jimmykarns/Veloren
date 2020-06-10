@@ -107,19 +107,15 @@ impl Camera {
                     ) * ray_distance),
             );
 
-            match terrain
+            total += 1;
+            if let (_, Ok(Some(_))) = terrain
                 .ray(start, end)
                 .ignore_error()
                 .max_iter(raycast_resolution)
                 .until(|b| b.is_solid())
                 .cast()
             {
-                (_, Ok(Some(_))) => {
-                    total += 1;
-                    hit += 1;
-                },
-                (_, Ok(None)) => total += 1,
-                (_, Err(_)) => total += 1,
+                hit += 1;
             }
 
             if horizontal % vertical_resolution == 0 {
@@ -157,11 +153,9 @@ impl Camera {
         self.enclosed = percentage >= 0.75;
     }
 
-    /// Compute_dependents adjusted for when there is no terrain data (character
-    /// selection)
-    pub fn compute_dependents_no_terrain(&mut self) {
+    fn compute_dependents_given_distance(&mut self, distance: f32) {
         self.dependents.view_mat = Mat4::<f32>::identity()
-            * Mat4::translation_3d(-Vec3::unit_z() * self.dist)
+            * Mat4::translation_3d(-Vec3::unit_z() * distance)
             * Mat4::rotation_z(self.ori.z)
             * Mat4::rotation_x(self.ori.y)
             * Mat4::rotation_y(self.ori.x)
@@ -175,29 +169,15 @@ impl Camera {
         self.dependents.cam_pos = Vec3::from(self.dependents.view_mat.inverted() * Vec4::unit_w());
     }
 
+    /// Compute_dependents adjusted for when there is no terrain data (character
+    /// selection)
+    pub fn compute_dependents_no_terrain(&mut self) {
+        self.compute_dependents_given_distance(self.dist);
+    }
+
     /// Compute the transformation matrices (view matrix and projection matrix)
     /// and position of the camera.
     pub fn compute_dependents(&mut self, terrain: &TerrainGrid) {
-        // Check enclosure if necessary
-        let mut should_check_enclosure = false;
-        match self.enclosed_last_checked {
-            Some(vec) => {
-                // We don't need to check enclosure every frame. Only check if we have moved.
-                if vec.distance_squared(self.focus) >= 1.2 {
-                    should_check_enclosure = true;
-                    self.enclosed_last_checked = Some(self.focus);
-                }
-            },
-            None => {
-                should_check_enclosure = true;
-                self.enclosed_last_checked = Some(self.focus);
-            },
-        }
-
-        if should_check_enclosure {
-            self.check_enclosure(&*terrain);
-        }
-
         let dist = {
             let (start, end) = (
                 self.focus
@@ -242,19 +222,7 @@ impl Camera {
             }
         };
 
-        self.dependents.view_mat = Mat4::<f32>::identity()
-            * Mat4::translation_3d(-Vec3::unit_z() * dist)
-            * Mat4::rotation_z(self.ori.z)
-            * Mat4::rotation_x(self.ori.y)
-            * Mat4::rotation_y(self.ori.x)
-            * Mat4::rotation_3d(PI / 2.0, -Vec4::unit_x())
-            * Mat4::translation_3d(-self.focus);
-
-        self.dependents.proj_mat =
-            Mat4::perspective_rh_no(self.fov, self.aspect, NEAR_PLANE, FAR_PLANE);
-
-        // TODO: Make this more efficient.
-        self.dependents.cam_pos = Vec3::from(self.dependents.view_mat.inverted() * Vec4::unit_w());
+        self.compute_dependents_given_distance(dist);
     }
 
     pub fn frustum(&self) -> Frustum<f32> {
@@ -336,7 +304,26 @@ impl Camera {
     /// Set the distance of the camera from the focus (i.e., zoom).
     pub fn set_distance(&mut self, dist: f32) { self.tgt_dist = dist; }
 
-    pub fn update(&mut self, time: f64, dt: f32, smoothing_enabled: bool) {
+    pub fn update(
+        &mut self,
+        time: f64,
+        dt: f32,
+        smoothing_enabled: bool,
+        terrain: Option<&TerrainGrid>,
+    ) {
+        if let Some(terrain) = terrain {
+            // Check enclosure if necessary
+            let enclosure_check_distance: f32 = 1.25;
+            let should_check_enclosure = self.enclosed_last_checked.map_or(true, |pos| {
+                pos.distance_squared(self.focus) >= enclosure_check_distance.powi(2)
+            });
+
+            if should_check_enclosure {
+                self.enclosed_last_checked = Some(self.focus);
+                self.check_enclosure(&*terrain);
+            }
+        }
+
         // This is horribly frame time dependent, but so is most of the game
         let delta = self.last_time.replace(time).map_or(0.0, |t| time - t);
         if (self.dist - self.tgt_dist).abs() > 0.01 {

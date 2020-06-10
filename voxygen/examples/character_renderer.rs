@@ -61,8 +61,8 @@ fn main() {
     scene.camera_mut().set_distance(1.5);
     scene
         .camera_mut()
-        .update(0.0, 1.0 / 60.0, scene_data.mouse_smoothing);
-    scene.maintain(&mut renderer, scene_data, Some(&loadout));
+        .update(0.0, 1.0 / 60.0, scene_data.mouse_smoothing, None);
+    scene.maintain(&mut renderer, scene_data);
 
     // Render
     renderer.clear();
