@@ -316,6 +316,7 @@ impl Scene {
             scene_data.state.get_time(),
             scene_data.state.get_delta_time(),
             scene_data.mouse_smoothing,
+            Some(&*scene_data.state.terrain()),
         );
 
         // Compute camera matrices.

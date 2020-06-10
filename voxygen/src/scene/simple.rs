@@ -138,14 +138,13 @@ impl Scene {
         }
     }
 
-    pub fn maintain(
-        &mut self,
-        renderer: &mut Renderer,
-        scene_data: SceneData,
-        loadout: Option<&Loadout>,
-    ) {
-        self.camera
-            .update(scene_data.time, 1.0 / 60.0, scene_data.mouse_smoothing);
+    pub fn maintain(&mut self, renderer: &mut Renderer, scene_data: SceneData) {
+        self.camera.update(
+            scene_data.time,
+            1.0 / 60.0,
+            scene_data.mouse_smoothing,
+            None,
+        );
 
         self.camera.compute_dependents_no_terrain();
         let camera::Dependents {
