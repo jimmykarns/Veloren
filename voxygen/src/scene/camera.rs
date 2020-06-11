@@ -49,7 +49,12 @@ pub struct Camera {
     last_time: Option<f64>,
 
     enclosed: bool,
-    enclosed_last_checked: Option<Vec3<f32>>,
+    enclosure_max_distance: f32,
+    enclosure_check_step: u8,
+    enclosure_check_total: u8,
+    enclosure_check_hit: u8,
+    enclosure_current_camera_distance: f32,
+    target_distance_before_enclosure: f32,
 
     dependents: Dependents,
 }
@@ -73,7 +78,13 @@ impl Camera {
             // Whether the camera was detected to be inside of a structure. Switches us to indoor
             // camera.
             enclosed: false,
-            enclosed_last_checked: None,
+
+            enclosure_max_distance: 0.0,
+            enclosure_check_step: 0,
+            enclosure_check_total: 0,
+            enclosure_check_hit: 0,
+            enclosure_current_camera_distance: 0.0,
+            target_distance_before_enclosure: 0.0,
 
             dependents: Dependents {
                 view_mat: Mat4::identity(),
@@ -84,77 +95,85 @@ impl Camera {
         }
     }
 
-    ///
-    /// Estimate whether the player is indoors with rays from their position
-    /// The player is marked "enclosed" if >= 75% of the rays hit a solid block
-    pub fn check_enclosure(&mut self, terrain: &TerrainGrid) {
-        // We can expose these values in the settings at some point if they become a
-        // performance concern
-        let vertical_resolution = 3;
-        let horizontal_resolution = 12;
+    pub fn build_up_enclosure_check(&mut self, terrain: &TerrainGrid) {
         let ray_distance = 30.0;
-        let raycast_resolution = 50;
+        let raycast_resolution = 75;
+        let horizontal_resolution = 12;
 
-        let mut total = 0;
-        let mut hit = 0;
+        let horizontal_angle =
+            (self.enclosure_check_step as f32 * PI) / (horizontal_resolution as f32 / 2.0);
+        let (start, end) = (
+            self.focus,
+            self.focus
+                + (Vec3::new(
+                    -f32::sin(horizontal_angle as f32),
+                    -f32::cos(horizontal_angle as f32),
+                    0.0,
+                ) * ray_distance),
+        );
+        self.enclosure_check_total += 1;
+        if let (d, Ok(Some(_))) = terrain
+            .ray(start, end)
+            .ignore_error()
+            .max_iter(raycast_resolution)
+            .until(|b| b.is_solid())
+            .cast()
+        {
+            self.enclosure_check_hit += 1;
+            if d > self.enclosure_max_distance {
+                self.enclosure_max_distance = d;
+            }
+        }
 
-        for horizontal in 0..horizontal_resolution {
-            // Do a ray horizontally out from the player to check for things
-            let horizontal_angle = (horizontal as f32 * PI) / (horizontal_resolution as f32 / 2.0);
-            let (start, end) = (
+        for vertical in 0..3 {
+            let vertical_angle = (vertical as f32 * PI) / 6.0;
+            let (vertical_start, vertical_end) = (
                 self.focus,
                 self.focus
                     + (Vec3::new(
-                        -f32::sin(horizontal as f32),
-                        -f32::cos(horizontal as f32),
-                        0.0,
+                        -f32::sin(horizontal_angle) * f32::cos(vertical_angle),
+                        -f32::cos(horizontal_angle) * f32::cos(vertical_angle),
+                        f32::sin(vertical_angle),
                     ) * ray_distance),
             );
 
-            total += 1;
-            if let (_, Ok(Some(_))) = terrain
-                .ray(start, end)
+            self.enclosure_check_total += 1;
+            if let (d, Ok(Some(_))) = terrain
+                .ray(vertical_start, vertical_end)
                 .ignore_error()
                 .max_iter(raycast_resolution)
                 .until(|b| b.is_solid())
                 .cast()
             {
-                hit += 1;
-            }
-
-            if horizontal % vertical_resolution == 0 {
-                for vertical in 0..3 {
-                    let vertical_angle = (vertical as f32 * PI) / 6.0;
-                    let (vertical_start, vertical_end) = (
-                        self.focus,
-                        self.focus
-                            + (Vec3::new(
-                                -f32::sin(horizontal_angle) * f32::cos(vertical_angle),
-                                -f32::cos(horizontal_angle) * f32::cos(vertical_angle),
-                                f32::sin(vertical_angle),
-                            ) * ray_distance),
-                    );
-
-                    match terrain
-                        .ray(vertical_start, vertical_end)
-                        .ignore_error()
-                        .max_iter(raycast_resolution)
-                        .until(|b| b.is_solid())
-                        .cast()
-                    {
-                        (_, Ok(Some(_))) => {
-                            total += 1;
-                            hit += 1;
-                        },
-                        (_, Ok(None)) => total += 1,
-                        (_, Err(_)) => total += 1,
-                    }
+                self.enclosure_check_hit += 1;
+                if d > self.enclosure_max_distance {
+                    self.enclosure_max_distance = d;
                 }
             }
         }
 
-        let percentage = hit as f32 / total as f32;
-        self.enclosed = percentage >= 0.75;
+        self.enclosure_check_step += 1;
+        if self.enclosure_check_step >= horizontal_resolution {
+            let enclosure_percentage =
+                self.enclosure_check_hit as f32 / self.enclosure_check_total as f32;
+            if enclosure_percentage >= 0.9 {
+                if !self.enclosed {
+                    self.target_distance_before_enclosure = self.tgt_dist;
+                }
+                self.enclosed = true;
+            } else {
+                if self.enclosed {
+                    self.dist = self.enclosure_current_camera_distance;
+                    self.tgt_dist = self.target_distance_before_enclosure;
+                }
+                self.enclosed = false;
+                self.enclosure_max_distance = 0.0;
+                self.target_distance_before_enclosure = 0.0;
+            }
+            self.enclosure_check_step = 0;
+            self.enclosure_check_total = 0;
+            self.enclosure_check_hit = 0;
+        }
     }
 
     fn compute_dependents_given_distance(&mut self, distance: f32) {
@@ -217,22 +236,13 @@ impl Camera {
                 .max(0.0)
             }
         };
-
-        self.dependents.view_mat = Mat4::<f32>::identity()
-            * Mat4::translation_3d(-Vec3::unit_z() * dist)
-            - *Mat4::rotation_z(self.ori.z)
-                * Mat4::rotation_x(self.ori.y)
-                * Mat4::rotation_y(self.ori.x)
-                * Mat4::rotation_3d(PI / 2.0, -Vec4::unit_x())
-                * Mat4::translation_3d(-self.focus);
-
-        self.dependents.proj_mat =
-            Mat4::perspective_rh_no(self.fov, self.aspect, NEAR_PLANE, FAR_PLANE);
-
-        // TODO: Make this more efficient.
-        self.dependents.cam_pos = Vec3::from(self.dependents.view_mat.inverted() * Vec4::unit_w());
-
-        self.dependents.cam_dir = Vec3::from(self.dependents.view_mat.inverted() * -Vec4::unit_z());
+        if self.enclosed {
+            self.enclosure_current_camera_distance = dist;
+            if self.tgt_dist > self.enclosure_max_distance && self.tgt_dist > self.dist {
+                self.tgt_dist = dist;
+            }
+        }
+        self.compute_dependents_given_distance(dist);
     }
 
     pub fn frustum(&self) -> Frustum<f32> {
@@ -295,6 +305,9 @@ impl Camera {
                         self.set_mode(CameraMode::FirstPerson);
                     } else {
                         self.tgt_dist = t;
+                        if self.enclosed && self.tgt_dist > self.enclosure_max_distance {
+                            self.tgt_dist = self.enclosure_max_distance;
+                        }
                     }
                 },
                 CameraMode::FirstPerson => {
@@ -320,16 +333,7 @@ impl Camera {
         terrain: Option<&TerrainGrid>,
     ) {
         if let Some(terrain) = terrain {
-            // Check enclosure if necessary
-            let enclosure_check_distance: f32 = 1.25;
-            let should_check_enclosure = self.enclosed_last_checked.map_or(true, |pos| {
-                pos.distance_squared(self.focus) >= enclosure_check_distance.powi(2)
-            });
-
-            if should_check_enclosure {
-                self.enclosed_last_checked = Some(self.focus);
-                self.check_enclosure(&*terrain);
-            }
+            self.build_up_enclosure_check(&*terrain);
         }
 
         // This is horribly frame time dependent, but so is most of the game
