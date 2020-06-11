@@ -52,6 +52,7 @@ pub struct Camera {
     enclosure_check_hit: u8,
     enclosure_current_camera_distance: f32,
     target_distance_before_enclosure: f32,
+    enclosure_should_move_zoom: bool,
 
     dependents: Dependents,
 }
@@ -82,6 +83,7 @@ impl Camera {
             enclosure_check_hit: 0,
             enclosure_current_camera_distance: 0.0,
             target_distance_before_enclosure: 0.0,
+            enclosure_should_move_zoom: false,
 
             dependents: Dependents {
                 view_mat: Mat4::identity(),
@@ -155,6 +157,7 @@ impl Camera {
             if enclosure_percentage >= 0.9 {
                 if !self.enclosed {
                     self.target_distance_before_enclosure = self.tgt_dist;
+                    self.enclosure_should_move_zoom = true;
                 }
                 self.enclosed = true;
             } else {
@@ -242,8 +245,12 @@ impl Camera {
         };
         if self.enclosed {
             self.enclosure_current_camera_distance = dist;
-            if self.tgt_dist > self.enclosure_max_distance && self.tgt_dist > self.dist {
+            if self.enclosure_should_move_zoom {
                 self.tgt_dist = dist;
+                self.enclosure_should_move_zoom = false;
+            }
+            if self.tgt_dist > self.enclosure_max_distance {
+                self.tgt_dist = self.enclosure_max_distance;
             }
         }
         self.compute_dependents_given_distance(dist);
@@ -275,7 +282,7 @@ impl Camera {
         // Wrap camera yaw
         self.tgt_ori.x = ori.x.rem_euclid(2.0 * PI);
         // Clamp camera pitch to the vertical limits
-        self.tgt_ori.y = ori.y.min(PI / 2.0 - 0.0001).max(-PI / 2.0 + 0.0001);
+        self.tgt_ori.y = ori.y.min(PI / 2.0 - 0.0001).max(-0.20 * PI / 2.0 + 0.0001);
         // Wrap camera roll
         self.tgt_ori.z = ori.z.rem_euclid(2.0 * PI);
     }
@@ -285,7 +292,7 @@ impl Camera {
         // Wrap camera yaw
         self.ori.x = ori.x.rem_euclid(2.0 * PI);
         // Clamp camera pitch to the vertical limits
-        self.ori.y = ori.y.min(PI / 2.0 - 0.0001).max(-PI / 2.0 + 0.0001);
+        self.ori.y = ori.y.min(PI / 2.0 - 0.0001).max(-0.20 * PI / 2.0 + 0.0001);
         // Wrap camera roll
         self.ori.z = ori.z.rem_euclid(2.0 * PI);
     }
