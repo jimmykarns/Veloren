@@ -179,7 +179,7 @@ impl FigureMgr {
         let time = state.get_time();
         let tick = scene_data.tick;
         let ecs = state.ecs();
-        let mut rhai_engine = crate::anim::quadruped_small::idle::AnimationRhaiEngine::new();
+        let mut mun_runtime = crate::anim::quadruped_small::idle::MunRuntime::new();
         let view_distance = scene_data.view_distance;
         let dt = state.get_delta_time();
         let frustum = camera.frustum();
@@ -793,12 +793,13 @@ impl FigureMgr {
                         physics.in_fluid,                                 // In water
                     ) {
                         // Standing
-                        (true, false, false) => {
+                        //(true, false, false) => {
+                        _ => {
                             //anim::quadruped_small::IdleAnimation::update_skeleton(
-                            <&anim::quadruped_small::idle::RhaiIdleAnimation>::update_skeleton(
+                            <&anim::quadruped_small::idle::MunIdleAnimation>::update_skeleton(
                                 &QuadrupedSmallSkeleton::new(),
                                 //time,
-                                (time, &mut rhai_engine),
+                                (time, &mut mun_runtime),
                                 state.state_time,
                                 &mut state_animation_rate,
                                 skeleton_attr,

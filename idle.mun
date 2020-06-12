@@ -1,0 +1,189 @@
+pub struct SkeletonAttr {
+    head_0: f32,
+    head_1: f32,
+    chest_0: f32,
+    chest_1: f32,
+    feet_f_0: f32,
+    feet_f_1: f32,
+    feet_f_2: f32,
+    feet_b_0: f32,
+    feet_b_1: f32,
+    feet_b_2: f32,
+    tail_0: f32,
+    tail_1: f32,
+}
+
+pub struct Vec3 {
+    x: f32,
+    y: f32,
+    z: f32,
+}
+
+pub struct Quaternion(u128)
+
+pub struct Bone {
+    pub offset: Vec3,
+    pub ori: Quaternion,
+    pub scale: Vec3,
+}
+
+pub struct Skeleton {
+    head: Bone,
+    chest: Bone,
+    leg_lf: Bone,
+    leg_rf: Bone,
+    leg_lb: Bone,
+    leg_rb: Bone,
+    tail: Bone,
+}
+
+pub fn attr(
+    head_0: f32,
+    head_1: f32,
+    chest_0: f32,
+    chest_1: f32,
+    feet_f_0: f32,
+    feet_f_1: f32,
+    feet_f_2: f32,
+    feet_b_0: f32,
+    feet_b_1: f32,
+    feet_b_2: f32,
+    tail_0: f32,
+    tail_1: f32,
+) -> SkeletonAttr {
+    SkeletonAttr {
+        head_0,
+        head_1,
+        chest_0,
+        chest_1,
+        feet_f_0,
+        feet_f_1,
+        feet_f_2,
+        feet_b_0,
+        feet_b_1,
+        feet_b_2,
+        tail_0,
+        tail_1,
+    }
+}
+
+pub fn vec3(x: f32, y: f32, z: f32) -> Vec3 {
+    Vec3 { x, y, z }
+}
+
+pub fn quaternion(v: u128) -> Quaternion {
+    Quaternion(v)   
+}
+
+pub fn bone(offset: Vec3, ori: Quaternion, scale: Vec3) -> Bone {
+    Bone { offset, ori, scale }
+}
+
+pub fn skeleton(
+    head: Bone,
+    chest: Bone,
+    leg_lf: Bone,
+    leg_rf: Bone,
+    leg_lb: Bone,
+    leg_rb: Bone,
+    tail: Bone,
+) -> Skeleton {
+    Skeleton {
+        head,
+        chest,
+        leg_lf,
+        leg_rf,
+        leg_lb,
+        leg_rb,
+        tail,
+    }
+}
+
+// Broadcast
+fn vec3_b(t: f32) -> Vec3 {
+    vec3(t, t, t)
+}
+
+fn v3_div(v: Vec3, div: f32) -> Vec3 {
+    Vec3 {
+        x: v.x / div,
+        y: v.y / div,
+        z: v.z / div,
+    }   
+}
+
+extern fn sin(x: f32) -> f32;
+extern fn floor(x: f32) -> f32;
+extern fn rot_x(x: f32) -> u128;
+extern fn rot_y(x: f32) -> u128;
+extern fn rot_z(x: f32) -> u128;
+extern fn quat_mul(a: u128, b: u128) -> u128;
+
+fn update_skeleton(
+    skeleton: Skeleton,
+    global_time: f32,
+    anim_time: f32,
+    attr: SkeletonAttr,
+) -> Skeleton {
+    let next = skeleton;
+    
+    let PI = 3.14159265358979323846264338327950288_f32;
+
+    let slow = sin(anim_time * 3.5);
+    let slowa = sin(anim_time * 3.5 * PI / 2.0);
+
+    let slow_alt = sin(anim_time * 3.5 + PI);
+
+    let head_look_x = sin(floor((global_time + anim_time) / 8.0) * 7331.0) * 0.5;
+    let head_look_y = sin(floor((global_time + anim_time) / 8.0) * 1337.0) * 0.25;
+
+    next.head.offset = v3_div(vec3(0.0, attr.head_0, attr.head_1 + slow * 0.2), 11.0);
+    next.head.ori = Quaternion(quat_mul(rot_z(head_look_x), rot_x(head_look_y + slow_alt * 0.03)));
+    next.head.scale = vec3_b(1.0 / 10.5);
+
+    next.chest.offset = v3_div(vec3(
+        slow * 0.05,
+        attr.chest_0,
+        attr.chest_1 * slowa * 0.2,
+    ), 11.0);
+    next.chest.ori = Quaternion(rot_y(slow * 0.05));
+    next.chest.scale = vec3_b(1.0 / 11.0);
+
+    next.leg_lf.offset = v3_div(vec3(
+        -attr.feet_f_0,
+        attr.feet_f_1,
+        attr.feet_f_2,
+    ), 11.0);
+    next.leg_lf.ori = Quaternion(rot_x(slow_alt * 0.08));
+    next.leg_lf.scale = vec3_b(1.0 / 11.0);
+    
+    next.leg_rf.offset = v3_div(vec3(
+        attr.feet_f_0,
+        attr.feet_f_1,
+        attr.feet_f_2,
+    ), 11.0);
+    next.leg_rf.ori = Quaternion(rot_x(slow_alt * 0.08));
+    next.leg_rf.scale = vec3_b(1.0 / 11.0);
+
+    next.leg_lb.offset = v3_div(vec3(
+        -attr.feet_b_0,
+        attr.feet_b_1,
+        attr.feet_b_2,
+    ), 11.0);
+    next.leg_lb.ori = Quaternion(rot_x(slow_alt * 0.08));
+    next.leg_lb.scale = vec3_b(1.0 / 11.0);
+    
+    next.leg_rb.offset = v3_div(vec3(
+        attr.feet_b_0,
+        attr.feet_b_1,
+        attr.feet_b_2,
+    ), 11.0);
+    next.leg_rb.ori = Quaternion(rot_x(slow_alt * 0.08));
+    next.leg_rb.scale = vec3_b(1.0 / 11.0);
+    
+    next.tail.offset = vec3(0.0, attr.tail_0, attr.tail_1);
+    next.tail.ori = Quaternion(rot_z(slow * 0.4));
+    next.leg_rb.scale = vec3_b(1.0 / 11.0);
+
+    next
+}

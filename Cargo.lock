@@ -1268,12 +1268,31 @@ checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
 
 [[package]]
 name = "fsevent"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ab7d1bd1bd33cc98b0889831b72da23c0aa4df9cec7e0702f46ecea04b35db6"
+dependencies = [
+ "bitflags",
+ "fsevent-sys 2.0.1",
+]
+
+[[package]]
+name = "fsevent"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97f347202c95c98805c216f9e1df210e8ebaec9fdb2365700a43c10797a35e63"
 dependencies = [
  "bitflags",
- "fsevent-sys",
+ "fsevent-sys 3.0.2",
+]
+
+[[package]]
+name = "fsevent-sys"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f41b048a94555da0f42f1d632e2e19510084fb8e303b0daa2816e733fb3644a0"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
@@ -2076,6 +2095,17 @@ dependencies = [
 
 [[package]]
 name = "inotify"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4816c66d2c8ae673df83366c18341538f234a26d65a9ecea5c348b453ac1d02f"
+dependencies = [
+ "bitflags",
+ "inotify-sys",
+ "libc",
+]
+
+[[package]]
+name = "inotify"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46dd0a94b393c730779ccfd2a872b67b1eb67be3fc33082e733bdb38b5fde4d4"
@@ -2399,6 +2429,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60302e4db3a61da70c0cb7991976248362f30319e88850c487b9b95bbf059e00"
 
 [[package]]
+name = "md5"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
+
+[[package]]
 name = "memchr"
 version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2537,6 +2573,46 @@ dependencies = [
 ]
 
 [[package]]
+name = "mun_abi"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91b2de6746c9bb78f2088a937f1eb8b905c65168077f627e985e11c864130017"
+dependencies = [
+ "md5",
+ "once_cell",
+ "parking_lot 0.10.2",
+]
+
+[[package]]
+name = "mun_memory"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ce8194a28c45440e991b9300426d73572dbeaf53952fddeabb4c891fe9a2715"
+dependencies = [
+ "lazy_static",
+ "mun_abi",
+ "once_cell",
+ "parking_lot 0.10.2",
+]
+
+[[package]]
+name = "mun_runtime"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6999e7bd106173bc24d9394d81cbe1c31646ddb3e363ca7c4dc0c4f50072237"
+dependencies = [
+ "failure",
+ "libloading 0.5.2",
+ "md5",
+ "mun_abi",
+ "mun_memory",
+ "notify 4.0.15",
+ "parking_lot 0.10.2",
+ "rustc-hash",
+ "tempfile",
+]
+
+[[package]]
 name = "net2"
 version = "0.2.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2610,6 +2686,24 @@ dependencies = [
 
 [[package]]
 name = "notify"
+version = "4.0.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "80ae4a7688d1fab81c5bf19c64fc8db920be8d519ce6336ed4e7efe024724dbd"
+dependencies = [
+ "bitflags",
+ "filetime",
+ "fsevent 0.4.0",
+ "fsevent-sys 2.0.1",
+ "inotify 0.7.1",
+ "libc",
+ "mio",
+ "mio-extras",
+ "walkdir",
+ "winapi 0.3.8",
+]
+
+[[package]]
+name = "notify"
 version = "5.0.0-pre.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b00c0b65188bffb5598c302e19b062feb94adef02c31f15622a163c95d673c3"
@@ -2619,9 +2713,9 @@ dependencies = [
  "chashmap",
  "crossbeam-channel 0.4.2",
  "filetime",
- "fsevent",
- "fsevent-sys",
- "inotify",
+ "fsevent 2.0.2",
+ "fsevent-sys 3.0.2",
+ "inotify 0.8.3",
  "libc",
  "mio",
  "mio-extras",
@@ -3479,6 +3573,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26412eb97c6b088a6997e05f69403a802a92d520de2f8e63c2b65f9e0f47c4e8"
 
 [[package]]
+name = "remove_dir_all"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a83fa3702a688b9359eccba92d153ac33fd2e8462f9e0e3fdf155239ea7792e"
+dependencies = [
+ "winapi 0.3.8",
+]
+
+[[package]]
 name = "rhai"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4076,6 +4179,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tempfile"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a6e24d9338a0a5be79593e2fa15a648add6138caa803e2d5bc782c371732ca9"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "rand 0.7.3",
+ "redox_syscall",
+ "remove_dir_all",
+ "winapi 0.3.8",
+]
+
+[[package]]
 name = "termcolor"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4584,7 +4701,7 @@ dependencies = [
  "log",
  "lz4-compress",
  "mio",
- "notify",
+ "notify 5.0.0-pre.2",
  "parking_lot 0.9.0",
  "rand 0.7.3",
  "rayon",
@@ -4674,6 +4791,7 @@ dependencies = [
  "leon",
  "log",
  "msgbox",
+ "mun_runtime",
  "num 0.2.1",
  "rand 0.7.3",
  "rhai",

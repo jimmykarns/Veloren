@@ -31,7 +31,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 black_box(&attr),
             )
         })
-    });*/
+    });
 
     let leon_ast = quadruped_small::idle::LeonAst::new();
     c.bench_function("leon idle animation", |b| {
@@ -39,6 +39,19 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             <&quadruped_small::idle::LeonIdleAnimation>::update_skeleton(
                 black_box(&skeleton),
                 black_box((global_time, &leon_ast)),
+                black_box(anim_time),
+                black_box(&mut rate),
+                black_box(&attr),
+            )
+        })
+    });*/
+
+    let mut mun_runtime = quadruped_small::idle::MunRuntime::new();
+    c.bench_function("mun idle animation", |b| {
+        b.iter(|| {
+            <&quadruped_small::idle::MunIdleAnimation>::update_skeleton(
+                black_box(&skeleton),
+                black_box((global_time, &mut mun_runtime)),
                 black_box(anim_time),
                 black_box(&mut rate),
                 black_box(&attr),
