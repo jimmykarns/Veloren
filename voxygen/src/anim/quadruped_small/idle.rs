@@ -890,7 +890,7 @@ impl Marshall for Vec3<f32> {
 }
 impl Marshall for Quaternion<f32> {
     fn to_mun(&self, runtime: &Rc<RefCell<Runtime>>) -> StructRef {
-        invoke_fn!(runtime, "quat", self.to_bits()).unwrap()
+        invoke_fn!(runtime, "quaternion", self.to_bits()).unwrap()
     }
 
     fn from_mun(sref: StructRef) -> Self { Quaternion::from_bits(sref.get("0").unwrap()) }
