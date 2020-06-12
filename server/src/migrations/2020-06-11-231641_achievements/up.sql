@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS "achievement" (
+    id INTEGER PRIMARY KEY NOT NULL,
+    checksum VARCHAR(64) NOT NULL UNIQUE,
+    details TEXT NOT NULL
+);

@@ -1,4 +1,12 @@
 table! {
+    achievement (id) {
+        id -> Integer,
+        checksum -> Text,
+        details -> Text,
+    }
+}
+
+table! {
     body (character_id) {
         character_id -> Integer,
         species -> SmallInt,
@@ -19,6 +27,15 @@ table! {
         player_uuid -> Text,
         alias -> Text,
         tool -> Nullable<Text>,
+    }
+}
+
+table! {
+    data_migration (id) {
+        id -> Integer,
+        title -> Text,
+        checksum -> Text,
+        last_run -> Timestamp,
     }
 }
 
@@ -54,4 +71,4 @@ joinable!(inventory -> character (character_id));
 joinable!(loadout -> character (character_id));
 joinable!(stats -> character (character_id));
 
-allow_tables_to_appear_in_same_query!(body, character, inventory, loadout, stats);
+allow_tables_to_appear_in_same_query!(achievement, body, character, inventory, loadout, stats);

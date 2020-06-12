@@ -36,6 +36,6 @@ tiny_http = "0.7.0"
 portpicker = { git = "https://github.com/xMAC94x/portpicker-rs" }
 authc = { git = "https://gitlab.com/veloren/auth.git", rev = "223a4097f7ebc8d451936dccb5e6517194bbf086" }
 libsqlite3-sys = { version = "0.18", features = ["bundled"] }
-diesel = { version = "1.4.3", features = ["sqlite"] }
+diesel = { version = "1.4.3", features = ["sqlite", "chrono"] }
 diesel_migrations = "1.4.0"
 dotenv = "0.15.0"

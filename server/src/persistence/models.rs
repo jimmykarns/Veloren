@@ -1,8 +1,12 @@
 extern crate serde_json;
 
-use super::schema::{body, character, inventory, loadout, stats};
+use super::{
+    achievement::hash,
+    schema::{achievement, body, character, data_migration, inventory, loadout, stats},
+};
 use crate::comp;
-use common::character::Character as CharacterData;
+use chrono::NaiveDateTime;
+use common::{achievement::AchievementItem, character::Character as CharacterData};
 use diesel::sql_types::Text;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -344,6 +348,91 @@ impl From<(i32, &comp::Loadout)> for LoadoutUpdate {
         LoadoutUpdate {
             character_id,
             items: LoadoutData(loadout.clone()),
+        }
+    }
+}
+
+/// Generic datamigration entry
+#[derive(Queryable, Debug, Identifiable)]
+#[table_name = "data_migration"]
+pub struct DataMigration {
+    pub id: i32,
+    pub title: String,
+    pub checksum: String,
+    pub last_run: NaiveDateTime,
+}
+
+#[derive(Insertable, PartialEq, Debug)]
+#[table_name = "data_migration"]
+pub struct NewDataMigration<'a> {
+    pub title: &'a str,
+    pub checksum: &'a str,
+    pub last_run: NaiveDateTime,
+}
+
+/// Achievements hold the data related to achievements available in-game. They
+/// are the data referenced for characters
+/// A wrapper type for Loadout components used to serialise to and from JSON
+/// If the column contains malformed JSON, a default loadout is returned, with
+/// the starter sword set as the main weapon
+#[derive(SqlType, AsExpression, Debug, Deserialize, Serialize, FromSqlRow, PartialEq)]
+#[sql_type = "Text"]
+pub struct AchievementData(AchievementItem);
+
+impl<DB> diesel::deserialize::FromSql<Text, DB> for AchievementData
+where
+    DB: diesel::backend::Backend,
+    String: diesel::deserialize::FromSql<Text, DB>,
+{
+    fn from_sql(
+        bytes: Option<&<DB as diesel::backend::Backend>::RawValue>,
+    ) -> diesel::deserialize::Result<Self> {
+        let t = String::from_sql(bytes)?;
+
+        match serde_json::from_str(&t) {
+            Ok(data) => Ok(Self(data)),
+            Err(e) => {
+                warn!(?e, "Failed to deserialise achevement data");
+
+                Ok(Self(AchievementItem::default()))
+            },
+        }
+    }
+}
+
+impl<DB> diesel::serialize::ToSql<Text, DB> for AchievementData
+where
+    DB: diesel::backend::Backend,
+{
+    fn to_sql<W: std::io::Write>(
+        &self,
+        out: &mut diesel::serialize::Output<W, DB>,
+    ) -> diesel::serialize::Result {
+        let s = serde_json::to_string(&self.0)?;
+        <String as diesel::serialize::ToSql<Text, DB>>::to_sql(&s, out)
+    }
+}
+
+#[derive(Queryable, Debug, Identifiable)]
+#[table_name = "achievement"]
+pub struct Achievement {
+    pub id: i32,
+    pub checksum: String,
+    pub details: AchievementData,
+}
+
+#[derive(Insertable, PartialEq, Debug)]
+#[table_name = "achievement"]
+pub struct NewAchievement {
+    pub checksum: String,
+    pub details: AchievementData,
+}
+
+impl From<&AchievementItem> for NewAchievement {
+    fn from(item: &AchievementItem) -> Self {
+        Self {
+            checksum: hash(item).to_string(),
+            details: AchievementData(item.clone()),
         }
     }
 }

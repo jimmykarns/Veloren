@@ -5,7 +5,7 @@
 //!   for managing table migrations
 //! - [`diesel-cli`](https://github.com/diesel-rs/diesel/tree/master/diesel_cli/)
 //!   for generating and testing migrations
-
+pub mod achievement;
 pub mod character;
 
 mod error;

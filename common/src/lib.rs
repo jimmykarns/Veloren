@@ -11,6 +11,7 @@
     option_zip
 )]
 
+pub mod achievement;
 pub mod assets;
 pub mod astar;
 pub mod character;

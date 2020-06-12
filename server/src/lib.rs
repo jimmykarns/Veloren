@@ -263,6 +263,15 @@ impl Server {
             info!(?e, "Migration error");
         }
 
+        // Sync Achievement Data
+        debug!("Syncing Achievement data...");
+
+        if let Some(e) =
+            persistence::achievement::sync(&this.server_settings.persistence_db_dir).err()
+        {
+            info!(?e, "Achievement data migration error");
+        }
+
         debug!(?settings, "created veloren server with");
 
         let git_hash = *common::util::GIT_HASH;
