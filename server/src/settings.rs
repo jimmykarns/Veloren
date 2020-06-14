@@ -59,7 +59,7 @@ impl Default for ServerSettings {
             .map(|n| n.to_string())
             .collect(),
             persistence_db_dir: "saves".to_owned(),
-            banned_words_file: "alias_banned_words".to_owned(),
+            banned_words_file: "banned_alias_words.ron".to_owned(),
         }
     }
 }
