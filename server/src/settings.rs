@@ -22,7 +22,7 @@ pub struct ServerSettings {
     /// uses the value of the file options to decide how to proceed.
     pub map_file: Option<FileOpts>,
     pub persistence_db_dir: String,
-    pub banned_words_file: String
+    pub banned_words_file: String,
 }
 
 impl Default for ServerSettings {
