@@ -1,6 +1,9 @@
 use super::SysTimer;
 use crate::{
-    auth_provider::AuthProvider, client::Client, persistence, settings::PersistenceDBDir, settings::ServerSettings,
+    auth_provider::AuthProvider,
+    client::Client,
+    persistence,
+    settings::{PersistenceDBDir, ServerSettings},
     CLIENT_TIMEOUT,
 };
 use common::{
@@ -352,8 +355,7 @@ impl<'a> System<'a> for Sys {
                     ClientMsg::CreateCharacter { alias, tool, body } => {
                         if let Err(error) = filter_banned_words(&alias) {
                             client.notify(ServerMsg::CharacterActionError(error));
-                        }
-                        else if let Some(player) = players.get(entity) {
+                        } else if let Some(player) = players.get(entity) {
                             match persistence::character::create_character(
                                 &player.uuid().to_string(),
                                 alias,
@@ -470,7 +472,10 @@ fn filter_banned_words(alias: &str) -> Result<(), String> {
         for banned_word in banned_words {
             let lowercase_banned_word = helper_to_lowercase(&banned_word);
             if lowercase_alias.contains(&lowercase_banned_word) {
-                return Err(format!("Character name \"{}\" contains a banned word: \"{}\"", alias, banned_word));
+                return Err(format!(
+                    "Character name \"{}\" contains a banned word: \"{}\"",
+                    alias, banned_word
+                ));
             }
         }
     }
@@ -478,7 +483,8 @@ fn filter_banned_words(alias: &str) -> Result<(), String> {
 }
 
 fn helper_to_lowercase(string: &str) -> String {
-    string.chars()
+    string
+        .chars()
         .map(|c| c.to_uppercase().collect::<String>())
         .collect()
 }
