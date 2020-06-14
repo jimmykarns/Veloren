@@ -154,6 +154,7 @@ pub fn create_character(
     db_dir: &str,
 ) -> CharacterListResult {
     check_character_limit(uuid, db_dir)?;
+    filter_banned_words(&character_alias)?;
 
     let connection = establish_connection(db_dir);
 
@@ -239,6 +240,19 @@ pub fn create_character(
     })?;
 
     load_character_list(uuid, db_dir)
+}
+
+fn filter_banned_words(alias: &str) -> Result<(), Error> {
+    let server_settings = super::super::settings::ServerSettings::load();
+    let contains_banned_word = server_settings.banned_words_file
+        .lines()
+        .all(|banned_word| !alias.contains(banned_word));
+    
+    if contains_banned_word {
+        Err(Error::CharacterDataError)
+    } else {
+        Ok(())
+    }
 }
 
 /// Delete a character. Returns the updated character list.

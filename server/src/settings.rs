@@ -22,6 +22,7 @@ pub struct ServerSettings {
     /// uses the value of the file options to decide how to proceed.
     pub map_file: Option<FileOpts>,
     pub persistence_db_dir: String,
+    pub banned_words_file: String
 }
 
 impl Default for ServerSettings {
@@ -58,6 +59,7 @@ impl Default for ServerSettings {
             .map(|n| n.to_string())
             .collect(),
             persistence_db_dir: "saves".to_owned(),
+            banned_words_file: "alias_banned_words".to_owned(),
         }
     }
 }
