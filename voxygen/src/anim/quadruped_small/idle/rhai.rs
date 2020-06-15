@@ -1,0 +1,359 @@
+use super::super::{super::Animation, QuadrupedSmallSkeleton, SkeletonAttr};
+use std::{f32::consts::PI, ops::Mul};
+use vek::*;
+
+pub struct RhaiIdleAnimation;
+
+#[derive(Clone)]
+pub struct RhaiQuadrupedSmallSkeleton(QuadrupedSmallSkeleton);
+impl RhaiQuadrupedSmallSkeleton {
+    fn get_head_offset(&mut self) -> Vec3<f32> { self.0.head.offset }
+
+    fn get_head_ori(&mut self) -> Quaternion<f32> { self.0.head.ori }
+
+    fn get_head_scale(&mut self) -> Vec3<f32> { self.0.head.scale }
+
+    fn set_head_offset(&mut self, offset: Vec3<f32>) { self.0.head.offset = offset; }
+
+    fn set_head_ori(&mut self, ori: Quaternion<f32>) { self.0.head.ori = ori; }
+
+    fn set_head_scale(&mut self, scale: Vec3<f32>) { self.0.head.scale = scale; }
+
+    fn get_chest_offset(&mut self) -> Vec3<f32> { self.0.chest.offset }
+
+    fn get_chest_ori(&mut self) -> Quaternion<f32> { self.0.chest.ori }
+
+    fn get_chest_scale(&mut self) -> Vec3<f32> { self.0.chest.scale }
+
+    fn set_chest_offset(&mut self, offset: Vec3<f32>) { self.0.chest.offset = offset; }
+
+    fn set_chest_ori(&mut self, ori: Quaternion<f32>) { self.0.chest.ori = ori; }
+
+    fn set_chest_scale(&mut self, scale: Vec3<f32>) { self.0.chest.scale = scale; }
+
+    fn get_leg_lf_offset(&mut self) -> Vec3<f32> { self.0.leg_lf.offset }
+
+    fn get_leg_lf_ori(&mut self) -> Quaternion<f32> { self.0.leg_lf.ori }
+
+    fn get_leg_lf_scale(&mut self) -> Vec3<f32> { self.0.leg_lf.scale }
+
+    fn set_leg_lf_offset(&mut self, offset: Vec3<f32>) { self.0.leg_lf.offset = offset; }
+
+    fn set_leg_lf_ori(&mut self, ori: Quaternion<f32>) { self.0.leg_lf.ori = ori; }
+
+    fn set_leg_lf_scale(&mut self, scale: Vec3<f32>) { self.0.leg_lf.scale = scale; }
+
+    fn get_leg_rf_offset(&mut self) -> Vec3<f32> { self.0.leg_rf.offset }
+
+    fn get_leg_rf_ori(&mut self) -> Quaternion<f32> { self.0.leg_rf.ori }
+
+    fn get_leg_rf_scale(&mut self) -> Vec3<f32> { self.0.leg_rf.scale }
+
+    fn set_leg_rf_offset(&mut self, offset: Vec3<f32>) { self.0.leg_rf.offset = offset; }
+
+    fn set_leg_rf_ori(&mut self, ori: Quaternion<f32>) { self.0.leg_rf.ori = ori; }
+
+    fn set_leg_rf_scale(&mut self, scale: Vec3<f32>) { self.0.leg_rf.scale = scale; }
+
+    fn get_leg_lb_offset(&mut self) -> Vec3<f32> { self.0.leg_lb.offset }
+
+    fn get_leg_lb_ori(&mut self) -> Quaternion<f32> { self.0.leg_lb.ori }
+
+    fn get_leg_lb_scale(&mut self) -> Vec3<f32> { self.0.leg_lb.scale }
+
+    fn set_leg_lb_offset(&mut self, offset: Vec3<f32>) { self.0.leg_lb.offset = offset; }
+
+    fn set_leg_lb_ori(&mut self, ori: Quaternion<f32>) { self.0.leg_lb.ori = ori; }
+
+    fn set_leg_lb_scale(&mut self, scale: Vec3<f32>) { self.0.leg_lb.scale = scale; }
+
+    fn get_leg_rb_offset(&mut self) -> Vec3<f32> { self.0.leg_rb.offset }
+
+    fn get_leg_rb_ori(&mut self) -> Quaternion<f32> { self.0.leg_rb.ori }
+
+    fn get_leg_rb_scale(&mut self) -> Vec3<f32> { self.0.leg_rb.scale }
+
+    fn set_leg_rb_offset(&mut self, offset: Vec3<f32>) { self.0.leg_rb.offset = offset; }
+
+    fn set_leg_rb_ori(&mut self, ori: Quaternion<f32>) { self.0.leg_rb.ori = ori; }
+
+    fn set_leg_rb_scale(&mut self, scale: Vec3<f32>) { self.0.leg_rb.scale = scale; }
+}
+#[derive(Clone)]
+struct RhaiSkeletonAttr(SkeletonAttr);
+impl RhaiSkeletonAttr {
+    fn head_0(&mut self) -> f32 { self.0.head.0 }
+
+    fn head_1(&mut self) -> f32 { self.0.head.1 }
+
+    fn chest_0(&mut self) -> f32 { self.0.chest.0 }
+
+    fn chest_1(&mut self) -> f32 { self.0.chest.1 }
+
+    fn feet_f_0(&mut self) -> f32 { self.0.feet_f.0 }
+
+    fn feet_f_1(&mut self) -> f32 { self.0.feet_f.1 }
+
+    fn feet_f_2(&mut self) -> f32 { self.0.feet_f.2 }
+
+    fn feet_b_0(&mut self) -> f32 { self.0.feet_b.0 }
+
+    fn feet_b_1(&mut self) -> f32 { self.0.feet_b.1 }
+
+    fn feet_b_2(&mut self) -> f32 { self.0.feet_b.2 }
+}
+
+pub struct AnimationRhaiEngine {
+    engine: rhai::Engine,
+    ast: rhai::AST,
+}
+
+trait Vec2RhaiExt {
+    fn x(&mut self) -> f32;
+    fn y(&mut self) -> f32;
+}
+impl Vec2RhaiExt for Vec2<f32> {
+    fn x(&mut self) -> f32 { self.x }
+
+    fn y(&mut self) -> f32 { self.y }
+}
+
+const IDLE_SCRIPT: &str = "
+    let wave = sin(anim_time * 14.0);
+    let wave_slow = sin(anim_time * 3.5 + PI);
+    let wave_slow_cos = cos(anim_time * 3.5 + PI);
+
+    let pig_head_look = vec2(
+        sin(floor((global_time + anim_time) / 8.0) * 7331.0) * 0.5,
+        sin(floor((global_time + anim_time) / 8.0) * 1337.0) * 0.25
+    );
+
+    next.head_offset = vec3(0.0, skeleton_attr.head_0, skeleton_attr.head_1 + wave * 0.2) / \
+                           f32(11.0);
+    next.head_ori = rot_z(pig_head_look.x) * rot_x(pig_head_look.y + wave_slow_cos * 0.03);
+    next.head_scale = vec3(1.0 / 10.5);
+
+    next.chest_offset = vec3(
+        wave_slow * f32(0.05),
+        skeleton_attr.chest_0,
+        skeleton_attr.chest_1 + wave_slow_cos * 0.2
+    ) / 11.0;
+    next.chest_ori = rot_y(wave_slow * f32(0.05));
+    next.chest_scale = vec3(1.0 / 11.0);
+
+    next.leg_lf_offset = vec3(
+        -(skeleton_attr.feet_f_0),
+        skeleton_attr.feet_f_1,
+        skeleton_attr.feet_f_2
+    ) / 11.0;
+    next.leg_lf_ori = rot_x(wave_slow_cos * 0.08);
+    next.leg_lf_scale = vec3(1.0 / 11.0);
+
+    next.leg_rf_offset = vec3(
+        skeleton_attr.feet_f_0,
+        skeleton_attr.feet_f_1,
+        skeleton_attr.feet_f_2
+    ) / 11.0;
+    next.leg_rf_ori = rot_x(wave_slow_cos * 0.08);
+    next.leg_rf_scale = vec3(1.0 / 11.0);
+
+    next.leg_lb_offset = vec3(
+        -(skeleton_attr.feet_b_0),
+        skeleton_attr.feet_b_1,
+        skeleton_attr.feet_b_2
+    ) / 11.0;
+    next.leg_lb_ori = rot_x(wave_slow_cos * 0.08);
+    next.leg_lb_scale = vec3(1.0 / 11.0);
+
+    next.leg_rb_offset = vec3(
+        skeleton_attr.feet_b_0,
+        skeleton_attr.feet_b_1,
+        skeleton_attr.feet_b_2
+    ) / 11.0;
+    next.leg_rb_ori = rot_x(wave_slow_cos * 0.08);
+    next.leg_rb_scale = vec3(1.0 / 11.0);
+
+    next
+";
+
+impl AnimationRhaiEngine {
+    pub fn new() -> Self {
+        let mut engine = rhai::Engine::new();
+        // Add functions
+        use rhai::RegisterFn;
+        use std::ops::Div;
+        engine.register_fn("floor", f32::floor);
+        engine.register_fn("sin", f32::sin);
+        engine.register_fn("cos", f32::cos);
+        engine.register_type::<Vec2<f32>>();
+        engine.register_type::<Vec3<f32>>();
+        engine.register_type::<Quaternion<f32>>();
+        engine.register_fn("vec2", Vec2::<f32>::new);
+        engine.register_fn("vec3", Vec3::<f32>::new);
+        engine.register_fn("/", <Vec3<f32> as Div<f32>>::div);
+        engine.register_fn("vec3", Vec3::<f32>::broadcast);
+        engine.register_fn("rot_x", Quaternion::<f32>::rotation_x);
+        engine.register_fn("rot_y", Quaternion::<f32>::rotation_y);
+        engine.register_fn("rot_z", Quaternion::<f32>::rotation_z);
+        engine.register_fn("*", <Quaternion<f32> as Mul<Quaternion<f32>>>::mul);
+        fn mul_f64(x: f32, y: f64) -> f32 { x * y as f32 }
+        engine.register_fn("*", mul_f64);
+        fn div_f64(x: f32, y: f64) -> f32 { x / y as f32 }
+        engine.register_fn("/", div_f64);
+        fn v3_div_f64(x: Vec3<f32>, y: f64) -> Vec3<f32> { x / y as f32 }
+        engine.register_fn("/", v3_div_f64);
+        fn vec3_broadcast_f64(x: f64) -> Vec3<f32> { Vec3::broadcast(x as f32) }
+        engine.register_fn("vec3", vec3_broadcast_f64);
+        fn vec3_first_f64(x: f64, y: f32, z: f32) -> Vec3<f32> { Vec3::new(x as f32, y, z) }
+        engine.register_fn("vec3", vec3_first_f64);
+
+        engine.register_get("x", Vec2::<f32>::x);
+        engine.register_get("y", Vec2::<f32>::y);
+
+        engine.register_type::<RhaiQuadrupedSmallSkeleton>();
+        engine.register_get_set(
+            "head_offset",
+            RhaiQuadrupedSmallSkeleton::get_head_offset,
+            RhaiQuadrupedSmallSkeleton::set_head_offset,
+        );
+        engine.register_get_set(
+            "head_ori",
+            RhaiQuadrupedSmallSkeleton::get_head_ori,
+            RhaiQuadrupedSmallSkeleton::set_head_ori,
+        );
+        engine.register_get_set(
+            "head_scale",
+            RhaiQuadrupedSmallSkeleton::get_head_scale,
+            RhaiQuadrupedSmallSkeleton::set_head_scale,
+        );
+        engine.register_get_set(
+            "chest_offset",
+            RhaiQuadrupedSmallSkeleton::get_chest_offset,
+            RhaiQuadrupedSmallSkeleton::set_chest_offset,
+        );
+        engine.register_get_set(
+            "chest_ori",
+            RhaiQuadrupedSmallSkeleton::get_chest_ori,
+            RhaiQuadrupedSmallSkeleton::set_chest_ori,
+        );
+        engine.register_get_set(
+            "chest_scale",
+            RhaiQuadrupedSmallSkeleton::get_chest_scale,
+            RhaiQuadrupedSmallSkeleton::set_chest_scale,
+        );
+        engine.register_get_set(
+            "leg_lf_offset",
+            RhaiQuadrupedSmallSkeleton::get_leg_lf_offset,
+            RhaiQuadrupedSmallSkeleton::set_leg_lf_offset,
+        );
+        engine.register_get_set(
+            "leg_lf_ori",
+            RhaiQuadrupedSmallSkeleton::get_leg_lf_ori,
+            RhaiQuadrupedSmallSkeleton::set_leg_lf_ori,
+        );
+        engine.register_get_set(
+            "leg_lf_scale",
+            RhaiQuadrupedSmallSkeleton::get_leg_lf_scale,
+            RhaiQuadrupedSmallSkeleton::set_leg_lf_scale,
+        );
+        engine.register_get_set(
+            "leg_rf_offset",
+            RhaiQuadrupedSmallSkeleton::get_leg_rf_offset,
+            RhaiQuadrupedSmallSkeleton::set_leg_rf_offset,
+        );
+        engine.register_get_set(
+            "leg_rf_ori",
+            RhaiQuadrupedSmallSkeleton::get_leg_rf_ori,
+            RhaiQuadrupedSmallSkeleton::set_leg_rf_ori,
+        );
+        engine.register_get_set(
+            "leg_rf_scale",
+            RhaiQuadrupedSmallSkeleton::get_leg_rf_scale,
+            RhaiQuadrupedSmallSkeleton::set_leg_rf_scale,
+        );
+        engine.register_get_set(
+            "leg_lb_offset",
+            RhaiQuadrupedSmallSkeleton::get_leg_lb_offset,
+            RhaiQuadrupedSmallSkeleton::set_leg_lb_offset,
+        );
+        engine.register_get_set(
+            "leg_lb_ori",
+            RhaiQuadrupedSmallSkeleton::get_leg_lb_ori,
+            RhaiQuadrupedSmallSkeleton::set_leg_lb_ori,
+        );
+        engine.register_get_set(
+            "leg_lb_scale",
+            RhaiQuadrupedSmallSkeleton::get_leg_lb_scale,
+            RhaiQuadrupedSmallSkeleton::set_leg_lb_scale,
+        );
+        engine.register_get_set(
+            "leg_rb_offset",
+            RhaiQuadrupedSmallSkeleton::get_leg_rb_offset,
+            RhaiQuadrupedSmallSkeleton::set_leg_rb_offset,
+        );
+        engine.register_get_set(
+            "leg_rb_ori",
+            RhaiQuadrupedSmallSkeleton::get_leg_rb_ori,
+            RhaiQuadrupedSmallSkeleton::set_leg_rb_ori,
+        );
+        engine.register_get_set(
+            "leg_rb_scale",
+            RhaiQuadrupedSmallSkeleton::get_leg_rb_scale,
+            RhaiQuadrupedSmallSkeleton::set_leg_rb_scale,
+        );
+
+        engine.register_type::<RhaiSkeletonAttr>();
+        engine.register_get("head_0", RhaiSkeletonAttr::head_0);
+        engine.register_get("head_1", RhaiSkeletonAttr::head_1);
+        engine.register_get("chest_0", RhaiSkeletonAttr::chest_0);
+        engine.register_get("chest_1", RhaiSkeletonAttr::chest_1);
+        engine.register_get("feet_f_0", RhaiSkeletonAttr::feet_f_0);
+        engine.register_get("feet_f_1", RhaiSkeletonAttr::feet_f_1);
+        engine.register_get("feet_f_2", RhaiSkeletonAttr::feet_f_2);
+        engine.register_get("feet_b_0", RhaiSkeletonAttr::feet_b_0);
+        engine.register_get("feet_b_1", RhaiSkeletonAttr::feet_b_1);
+        engine.register_get("feet_b_2", RhaiSkeletonAttr::feet_b_2);
+
+        fn f32(x: f64) -> f32 { x as f32 }
+        engine.register_fn("f32", f32);
+
+        let ast = engine.compile(IDLE_SCRIPT).unwrap();
+
+        Self { engine, ast }
+    }
+}
+
+impl<'a> Animation for &'a RhaiIdleAnimation {
+    type Dependency = (f64, &'a mut AnimationRhaiEngine);
+    type Skeleton = QuadrupedSmallSkeleton;
+
+    fn update_skeleton(
+        skeleton: &Self::Skeleton,
+        (global_time, rhai_engine): Self::Dependency,
+        anim_time: f64,
+        _rate: &mut f32,
+        skeleton_attr: &SkeletonAttr,
+    ) -> Self::Skeleton {
+        use rhai::Dynamic;
+        // TODO: could reuse scope using set_value
+        let mut scope = rhai::Scope::new();
+        scope.push_dynamic(
+            "next",
+            Dynamic::from(RhaiQuadrupedSmallSkeleton(skeleton.clone())),
+        );
+        scope.push_dynamic("anim_time", Dynamic::from(anim_time as f32));
+        scope.push_dynamic("global_time", Dynamic::from(global_time as f32));
+        scope.push_dynamic(
+            "skeleton_attr",
+            Dynamic::from(RhaiSkeletonAttr(skeleton_attr.clone())),
+        );
+        scope.push_dynamic("PI", Dynamic::from(PI));
+
+        rhai_engine
+            .engine
+            .eval_ast_with_scope::<RhaiQuadrupedSmallSkeleton>(&mut scope, &rhai_engine.ast)
+            //.eval_with_scope::<RhaiQuadrupedSmallSkeleton>(&mut scope, IDLE_SCRIPT)
+            .unwrap()
+            .0
+    }
+}
