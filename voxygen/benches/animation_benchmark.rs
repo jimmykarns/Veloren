@@ -20,7 +20,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         })
     });
 
-    /* let mut rhai_engine = quadruped_small::idle::AnimationRhaiEngine::new();
+    let mut rhai_engine = quadruped_small::idle::AnimationRhaiEngine::new();
     c.bench_function("rhai idle animation", |b| {
         b.iter(|| {
             <&quadruped_small::idle::RhaiIdleAnimation>::update_skeleton(
@@ -57,7 +57,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 black_box(&attr),
             )
         })
-    }); */
+    });
 
     let idle_lib = quadruped_small::idle::IdleLib::new();
     c.bench_function("libloading idle animation", |b| {
@@ -65,6 +65,19 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             <&quadruped_small::idle::LibIdleAnimation>::update_skeleton(
                 black_box(&skeleton),
                 black_box((global_time, &idle_lib)),
+                black_box(anim_time),
+                black_box(&mut rate),
+                black_box(&attr),
+            )
+        })
+    });
+
+    let wasm_runtime = quadruped_small::idle::WasmRuntime::new();
+    c.bench_function("wasm idle animation", |b| {
+        b.iter(|| {
+            <&quadruped_small::idle::WasmIdleAnimation>::update_skeleton(
+                black_box(&skeleton),
+                black_box((global_time, &wasm_runtime)),
                 black_box(anim_time),
                 black_box(&mut rate),
                 black_box(&attr),

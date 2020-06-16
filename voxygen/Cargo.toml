@@ -73,6 +73,7 @@ rhai = "0.15.0"
 leon = { git = "https://github.com/zesterer/leon.git" }
 mun_runtime = "0.2.0"
 libloading = "0.6.2"
+wasmer-runtime = "0.17.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 dispatch = "0.1.4"

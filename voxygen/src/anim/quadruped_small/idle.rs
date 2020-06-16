@@ -2,12 +2,14 @@ mod leon;
 mod lib_load;
 mod mun;
 mod rhai;
+mod wasm;
 
 pub use self::{
     leon::{LeonAst, LeonIdleAnimation},
     lib_load::{IdleLib, LibIdleAnimation},
     mun::{MunIdleAnimation, MunRuntime},
     rhai::{AnimationRhaiEngine, RhaiIdleAnimation},
+    wasm::{WasmIdleAnimation, WasmRuntime},
 };
 
 use super::{super::Animation, QuadrupedSmallSkeleton, SkeletonAttr};

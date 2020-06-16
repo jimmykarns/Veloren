@@ -123,3 +123,85 @@ pub fn update_skeleton(
 
     next
 }
+
+// For Wasm
+impl From<&[f32]> for Bone {
+    fn from(slice: &[f32]) -> Self {
+        Self {
+            offset: Vec3::from_slice(&slice[0..3]),
+            ori: Vec4::from_slice(&slice[3..7]).into(),
+            scale: Vec3::from_slice(&slice[7..10]),
+        }
+    }
+}
+
+impl From<&[f32]> for Skeleton {
+    fn from(slice: &[f32]) -> Self {
+        Self {
+            head: slice[0..10].into(),
+            chest: slice[10..20].into(),
+            leg_lf: slice[20..30].into(),
+            leg_rf: slice[30..40].into(),
+            leg_lb: slice[40..50].into(),
+            leg_rb: slice[50..60].into(),
+            tail: slice[60..70].into(),
+        }
+    }
+}
+
+impl From<&[f32]> for SkeletonAttr {
+    fn from(slice: &[f32]) -> Self {
+        Self {
+            head: (slice[0], slice[1]),
+            chest: (slice[2], slice[3]),
+            feet_f: (slice[4], slice[5], slice[6]),
+            feet_b: (slice[7], slice[8], slice[9]),
+            tail: (slice[10], slice[11]),
+        }
+    }
+}
+
+trait WriteToSlice {
+    fn write(self, slice: &mut [f32]);
+}
+
+impl WriteToSlice for Bone {
+    fn write(self, slice: &mut [f32]) {
+        slice[0..3].copy_from_slice(self.offset.as_slice());
+        slice[3..7].copy_from_slice(self.ori.into_vec4().as_slice());
+        slice[7..10].copy_from_slice(self.scale.as_slice());
+    }
+}
+
+impl WriteToSlice for Skeleton {
+    fn write(self, slice: &mut [f32]) {
+        self.head.write(&mut slice[0..10]);
+        self.chest.write(&mut slice[10..20]);
+        self.leg_lf.write(&mut slice[20..30]);
+        self.leg_rf.write(&mut slice[30..40]);
+        self.leg_lb.write(&mut slice[40..50]);
+        self.leg_rb.write(&mut slice[50..60]);
+        self.tail.write(&mut slice[60..70]);
+    }
+}
+
+// Hold input skeleton (70 f32) and skeleton attr (12 f32)
+// Also holds output skeleton the update fn returns
+static mut BUFFER: [f32; 82] = [0.0; 82];
+
+#[no_mangle]
+pub extern "C" fn buffer_pointer() -> *const f32 { unsafe { BUFFER.as_ptr() } }
+
+// TODO: return error code if something bad happens
+#[no_mangle]
+pub extern "C" fn update_skeleton_c(global_time: f64, anim_time: f64, rate: f32) {
+    let buffer = unsafe { &mut BUFFER };
+
+    let skeleton = buffer[0..70].into();
+    let attr = buffer[70..82].into();
+    let mut rate = rate;
+
+    let skeleton = update_skeleton(&skeleton, global_time, anim_time, &mut rate, &attr);
+
+    skeleton.write(&mut buffer[0..70]);
+}
