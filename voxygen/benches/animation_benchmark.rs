@@ -47,7 +47,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     });
 
     let mut mun_runtime = quadruped_small::idle::MunRuntime::new();
-    c.bench_function("mun idle animation", |b| {
+    c.bench_function("mun idle animation (marshalling perf branch)", |b| {
         b.iter(|| {
             <&quadruped_small::idle::MunIdleAnimation>::update_skeleton(
                 black_box(&skeleton),
