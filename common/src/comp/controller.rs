@@ -31,6 +31,7 @@ pub enum ControlAction {
     SwapLoadout,
     Wield,
     GlideWield,
+    GlideWall,
     Unwield,
     Sit,
     Dance,

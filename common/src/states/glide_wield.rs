@@ -14,7 +14,7 @@ impl CharacterBehavior for Data {
         handle_jump(&data, &mut update);
 
         // If not on the ground while wielding glider enter gliding state
-        if !data.physics.on_ground && !data.physics.in_fluid {
+        if !data.physics.on_ground && !data.physics.in_fluid && !data.physics.on_wall.is_some() {
             update.character = CharacterState::Glide;
         }
 

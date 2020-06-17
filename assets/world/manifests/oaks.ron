@@ -34,7 +34,7 @@
         ),
         (
             specifier: "world.tree.oak_green.9",
-            center:(21, 21, 14)
+            center:(64, 64, 64)
         ),
     ]
 )
