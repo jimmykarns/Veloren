@@ -9,6 +9,7 @@ pub mod dash;
 pub mod equip;
 pub mod glidewall;
 pub mod glidewield;
+pub mod glidewall;
 pub mod gliding;
 pub mod idle;
 pub mod jump;

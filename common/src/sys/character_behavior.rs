@@ -228,7 +228,9 @@ impl<'a> System<'a> for Sys {
                     CharacterState::GlideWield => {
                         states::glide_wield::Data.handle_event(&j, action)
                     },
-                    CharacterState::GlideWall => states::glide_wall::Data.handle_event(&j, action),
+                    CharacterState::GlideWall => {
+                        states::glide_wall::Data.handle_event(&j, action)
+                    },
                     CharacterState::Sit => {
                         states::sit::Data::handle_event(&states::sit::Data, &j, action)
                     },
@@ -261,7 +263,7 @@ impl<'a> System<'a> for Sys {
                 CharacterState::Climb => states::climb::Data.behavior(&j),
                 CharacterState::Glide => states::glide::Data.behavior(&j),
                 CharacterState::GlideWield => states::glide_wield::Data.behavior(&j),
-                CharacterState::GlideWall => states::glide_wall::Data.behavior(&j),
+                CharacterState::GlideWall => states::glide_wall::Data.behavior(&j),                
                 CharacterState::Sit => states::sit::Data::behavior(&states::sit::Data, &j),
                 CharacterState::Dance => states::dance::Data::behavior(&states::dance::Data, &j),
                 CharacterState::BasicBlock => states::basic_block::Data.behavior(&j),
