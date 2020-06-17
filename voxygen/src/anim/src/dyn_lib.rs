@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use libloading::Library;
+<<<<<<< HEAD
 use notify::{immediate_watcher, EventKind, RecursiveMode, Watcher};
 use std::{
     process::{Command, Stdio},
@@ -23,10 +24,22 @@ const COMPILED_FILE: &str = "libvoxygen_anim.so";
 const ACTIVE_FILE: &str = "libvoxygen_anim_active.so";
 
 // This option is required as `hotreload()` moves the `LoadedLib`.
+=======
+use notify::{
+    event::{AccessKind, AccessMode},
+    immediate_watcher, EventKind, RecursiveMode, Watcher,
+};
+use std::{
+    process::{Command, Stdio},
+    sync::Mutex,
+};
+
+>>>>>>> Hotreload animations using libloading
 lazy_static! {
     pub static ref LIB: Mutex<Option<LoadedLib>> = Mutex::new(Some(LoadedLib::compile_load()));
 }
 
+<<<<<<< HEAD
 /// LoadedLib holds a loaded dynamic library and the location of library file
 /// with the appropriate OS specific name and extension i.e.
 /// `libvoxygen_anim_active.dylib`, `voxygen_anim_active.dll`.
@@ -58,10 +71,29 @@ impl LoadedLib {
         }
 
         copy(&LoadedLib::determine_path());
+=======
+pub struct LoadedLib {
+    pub lib: Library,
+}
+
+impl LoadedLib {
+    fn compile_load() -> Self {
+        // Compile
+        let _output = Command::new("cargo")
+            .stderr(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .arg("build")
+            .arg("--release")
+            .arg("--package")
+            .arg("veloren-voxygen-anim")
+            .output()
+            .unwrap();
+>>>>>>> Hotreload animations using libloading
 
         Self::load()
     }
 
+<<<<<<< HEAD
     /// Load a library from disk.
     ///
     /// Currently this is pretty fragile, it gets the path of where it thinks
@@ -165,10 +197,29 @@ pub fn init() {
         }
     });
 
+=======
+    fn load() -> Self {
+        #[cfg(target_os = "windows")]
+        let lib = Library::new("../target/release/libvoxygen_anim.dll").unwrap();
+        #[cfg(not(target_os = "windows"))]
+        let lib = Library::new("../target/release/libvoxygen_anim.so").unwrap();
+
+        Self { lib }
+    }
+}
+
+// Starts up watcher test test2 test3 test4 test5
+pub fn init() {
+    // Start watcher
+    let mut watcher = immediate_watcher(event_fn).unwrap();
+    watcher.watch("src/anim", RecursiveMode::Recursive).unwrap();
+
+>>>>>>> Hotreload animations using libloading
     // Let the watcher live forever
     std::mem::forget(watcher);
 }
 
+<<<<<<< HEAD
 /// Event function to hotreload the dynamic library
 ///
 /// This is called by the watcher to filter for modify events on `.rs` files
@@ -216,15 +267,48 @@ fn hotreload() {
 ///
 /// Returns `false` if the compile failed.
 fn compile() -> bool {
+=======
+// Recompiles and hotreloads the lib if the source is changed
+// Note: designed with voxygen dir as working dir, could be made more flexible
+fn event_fn(res: notify::Result<notify::Event>) {
+    match res {
+        Ok(event) => match event.kind {
+            EventKind::Access(AccessKind::Close(AccessMode::Write)) => {
+                if event
+                    .paths
+                    .iter()
+                    .any(|p| p.extension().map(|e| e == "rs").unwrap_or(false))
+                {
+                    println!(
+                        "Hot reloading animations because these files were modified:\n{:?}",
+                        event.paths
+                    );
+                    reload();
+                }
+            },
+            _ => {},
+        },
+        Err(e) => println!("watch error: {:?}", e),
+    }
+}
+
+fn reload() {
+    // Compile
+>>>>>>> Hotreload animations using libloading
     let output = Command::new("cargo")
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .arg("build")
+<<<<<<< HEAD
+=======
+        .arg("--release")
+>>>>>>> Hotreload animations using libloading
         .arg("--package")
         .arg("veloren-voxygen-anim")
         .output()
         .unwrap();
 
+<<<<<<< HEAD
     output.status.success()
 }
 
@@ -243,4 +327,23 @@ fn copy(lib_path: &PathBuf) {
     // Copy the library file from where it is output, to where we are going to
     // load it from i.e. lib_path.
     std::fs::copy(lib_compiled_path, lib_output_path).expect("Failed to rename dynamic library.");
+=======
+    // Stop if recompile failed
+    if !output.status.success() {
+        println!("Failed to compile anim crate");
+        return;
+    }
+
+    println!("Compile Success!!");
+
+    let mut lock = LIB.lock().unwrap();
+
+    // Close lib
+    lock.take().unwrap().lib.close().unwrap();
+
+    // Open new lib
+    *lock = Some(LoadedLib::load());
+
+    println!("Updated");
+>>>>>>> Hotreload animations using libloading
 }
