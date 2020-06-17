@@ -153,7 +153,7 @@ impl Animation for GlideWallAnimation {
             next.l_foot.offset = Vec3::new(
                 5.0-skeleton_attr.foot.0,
                 -1.5 + skeleton_attr.foot.1 + foothoril * -8.5 * walkintensity - lower * 1.0,
-                -3.0 + skeleton_attr.foot.2 + ((footvertl * -2.5).max(-1.0)) * walkintensity,
+                -2.5 + skeleton_attr.foot.2 + ((footvertl * -2.5).max(-1.0)) * walkintensity,
             );
             next.l_foot.ori = Quaternion::rotation_x(-0.35 + footrotl * -0.3 * walkintensity)
                 * Quaternion::rotation_y(-0.5);

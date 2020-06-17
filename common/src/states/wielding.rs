@@ -44,4 +44,10 @@ impl CharacterBehavior for Data {
         attempt_swap_loadout(data, &mut update);
         update
     }
+
+    fn glide_wield(&self, data: &JoinData) -> StateUpdate {
+        let mut update = StateUpdate::from(data);
+        attempt_glide_wield(data, &mut update);
+        update
+    }
 }

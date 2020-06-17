@@ -12,6 +12,7 @@ impl CharacterBehavior for Data {
 
         handle_move(&data, &mut update, 1.0);
         handle_jump(&data, &mut update);
+        handle_wield(data, &mut update);
 
         // If not on the ground while wielding glider enter gliding state
         if !data.physics.on_ground && !data.physics.in_fluid && !data.physics.on_wall.is_some() {
@@ -36,6 +37,12 @@ impl CharacterBehavior for Data {
     fn unwield(&self, data: &JoinData) -> StateUpdate {
         let mut update = StateUpdate::from(data);
         update.character = CharacterState::Idle;
+        update
+    }
+
+    fn wield(&self, data: &JoinData) -> StateUpdate {
+        let mut update = StateUpdate::from(data);
+        attempt_wield(data, &mut update);
         update
     }
 }
