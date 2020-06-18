@@ -7,8 +7,8 @@ pub mod climb;
 pub mod dance;
 pub mod dash;
 pub mod equip;
-pub mod glidewield;
 pub mod glidewall;
+pub mod glidewield;
 pub mod gliding;
 pub mod idle;
 pub mod jump;
@@ -28,10 +28,15 @@ pub use self::{
     alpha::AlphaAnimation, beta::BetaAnimation, block::BlockAnimation,
     blockidle::BlockIdleAnimation, charge::ChargeAnimation, climb::ClimbAnimation,
     dance::DanceAnimation, dash::DashAnimation, equip::EquipAnimation,
+
     glidewield::GlideWieldAnimation, glidewall::GlideWallAnimation, gliding::GlidingAnimation, idle::IdleAnimation,
     jump::JumpAnimation, leapmelee::LeapAnimation, roll::RollAnimation, run::RunAnimation, shoot::ShootAnimation,
     sit::SitAnimation, spin::SpinAnimation, spinmelee::SpinMeleeAnimation, stand::StandAnimation, swim::SwimAnimation,
     wield::WieldAnimation,
+    glidewall::GlideWallAnimation, glidewield::GlideWieldAnimation, gliding::GlidingAnimation,
+    idle::IdleAnimation, jump::JumpAnimation, leapmelee::LeapAnimation, roll::RollAnimation, run::RunAnimation,
+    shoot::ShootAnimation, sit::SitAnimation, spin::SpinAnimation, spinmelee::SpinMeleeAnimation, stand::StandAnimation,
+    swim::SwimAnimation, wield::WieldAnimation,
 };
 
 use super::{Bone, FigureBoneData, Skeleton};

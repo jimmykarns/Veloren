@@ -603,13 +603,7 @@ impl FigureMgr {
                         // In air
                         (false, _, false) => anim::character::JumpAnimation::update_skeleton(
                             &CharacterSkeleton::new(),
-                            (
-                                active_tool_kind,
-                                second_tool_kind,
-                                ori,
-                                state.last_ori,
-                                time,
-                            ),
+                            (active_tool_kind, second_tool_kind, vel.0, ori, state.last_ori, time),
                             state.state_time,
                             &mut state_animation_rate,
                             skeleton_attr,

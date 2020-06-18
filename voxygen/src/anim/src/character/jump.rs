@@ -4,10 +4,10 @@ use std::f32::consts::PI;
 use vek::*;
 
 pub struct JumpAnimation;
-impl Animation for JumpAnimation {
-    type Dependency = (
+impl Animation for JumpAnimation {    type Dependency = (
         Option<ToolKind>,
         Option<ToolKind>,
+        Vec3<f32>,
         Vec3<f32>,
         Vec3<f32>,
         f64,
@@ -21,9 +21,9 @@ impl Animation for JumpAnimation {
     #[allow(clippy::useless_conversion)] // TODO: Pending review in #587
     fn update_skeleton_inner(
         skeleton: &Self::Skeleton,
-        (active_tool_kind, second_tool_kind, orientation, last_ori, global_time): Self::Dependency,
+        (_active_tool_kind, second_tool_kind, velocity, orientation, last_ori, global_time): Self::Dependency,
         anim_time: f64,
-        _rate: &mut f32,
+        rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
     ) -> Self::Skeleton {
         let mut next = (*skeleton).clone();
@@ -52,6 +52,10 @@ impl Animation for JumpAnimation {
         } else {
             0.0
         } * 1.3;
+
+        let speed = Vec3::<f32>::from(velocity).magnitude();
+        *rate = 1.0;
+        let _freefall = if speed > 6.0 { 1.0 } else { 0.0 };
 
         next.head.offset = Vec3::new(
             0.0,
