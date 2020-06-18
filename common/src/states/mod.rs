@@ -9,7 +9,6 @@ pub mod equipping;
 pub mod glide;
 pub mod glide_wall;
 pub mod glide_wield;
-pub mod glide_wall;
 pub mod idle;
 pub mod leap_melee;
 pub mod roll;
