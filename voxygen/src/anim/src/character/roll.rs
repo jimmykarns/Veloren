@@ -19,7 +19,7 @@ impl Animation for RollAnimation {
     const UPDATE_FN: &'static [u8] = b"character_roll\0";
 
     #[cfg_attr(feature = "be-dyn-lib", export_name = "character_roll")]
-    #[allow(clippy::useless_conversion)] // TODO: Pending review in #587
+    #[allow(clippy::identity_conversion)] // TODO: Pending review in #587
     fn update_skeleton_inner(
         skeleton: &Self::Skeleton,
         (active_tool_kind, second_tool_kind, orientation, last_ori, _global_time): Self::Dependency,

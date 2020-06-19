@@ -24,6 +24,7 @@ impl Animation for RunAnimation {
 
     #[cfg_attr(feature = "be-dyn-lib", export_name = "character_run")]
     #[allow(clippy::useless_conversion)] // TODO: Pending review in #587
+
     fn update_skeleton_inner(
         skeleton: &Self::Skeleton,
         (active_tool_kind, second_tool_kind, velocity, orientation, last_ori, global_time, avg_vel): Self::Dependency,

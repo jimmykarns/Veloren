@@ -18,7 +18,11 @@ impl Animation for JumpAnimation {    type Dependency = (
     const UPDATE_FN: &'static [u8] = b"character_jump\0";
 
     #[cfg_attr(feature = "be-dyn-lib", export_name = "character_jump")]
+<<<<<<< HEAD
     #[allow(clippy::useless_conversion)] // TODO: Pending review in #587
+=======
+    #[allow(clippy::identity_conversion)] // TODO: Pending review in #587
+>>>>>>> add hotloads to all anims
     fn update_skeleton_inner(
         skeleton: &Self::Skeleton,
         (_active_tool_kind, second_tool_kind, velocity, orientation, last_ori, global_time): Self::Dependency,

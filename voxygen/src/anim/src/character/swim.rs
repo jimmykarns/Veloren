@@ -23,6 +23,7 @@ impl Animation for SwimAnimation {
 
     #[cfg_attr(feature = "be-dyn-lib", export_name = "character_swim")]
     #[allow(clippy::useless_conversion)] // TODO: Pending review in #587
+
     fn update_skeleton_inner(
         skeleton: &Self::Skeleton,
         (active_tool_kind, second_tool_kind, velocity, orientation, last_ori, global_time): Self::Dependency,

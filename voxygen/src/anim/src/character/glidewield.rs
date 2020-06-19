@@ -14,8 +14,6 @@ type GlideWieldAnimationDependency = (
     f64,
 );
 
-impl Animation for GlideWieldAnimation {
-    type Dependency = GlideWieldAnimationDependency;
     type Skeleton = CharacterSkeleton;
 
     #[cfg(feature = "use-dyn-lib")]
