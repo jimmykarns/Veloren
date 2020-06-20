@@ -108,10 +108,10 @@ impl Animation for GlideWallAnimation {
 
         next.r_hand.offset = Vec3::new(
             1.0 * tiltcancel + skeleton_attr.hand.0,
-            skeleton_attr.hand.1,
-            skeleton_attr.hand.2,
+            -4.0 + skeleton_attr.hand.1,
+            4.0 + skeleton_attr.hand.2,
         );
-        next.r_hand.ori = Quaternion::rotation_y(0.3 - 0.5 * tiltcancel)
+        next.r_hand.ori = Quaternion::rotation_y(-0.6 - 0.5 * tiltcancel)
             * Quaternion::rotation_x(-0.4 + noisea * noiseb * tiltcancel)
             * Quaternion::rotation_z(-1.57 + noisea * 0.2);
         next.r_hand.scale = Vec3::one();

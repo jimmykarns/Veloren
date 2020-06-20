@@ -36,7 +36,7 @@ impl Animation for GlidingAnimation {
     ) -> Self::Skeleton {
         let mut next = (*skeleton).clone();
 
-        let speed = Vec2::<f32>::from(velocity).magnitude();
+        let speed = Vec3::<f32>::from(velocity).magnitude();
 
         let quick = (anim_time as f32 * 7.0).sin();
         let quicka = (anim_time as f32 * 7.0 + PI / 2.0).sin();

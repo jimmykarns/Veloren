@@ -27,10 +27,6 @@ impl Animation for SneakAnimation {
         *rate = 1.0;
         let slow = (anim_time as f32 * 3.0).sin();
         let breathe = ((anim_time as f32 * 0.5).sin()).abs();
-        let walkintensity = if speed > 5.0 { 1.0 } else { 0.45 };
-        let walk = if speed > 5.0 { 1.0 } else { 0.5 };
-        let lower = if speed > 5.0 { 0.0 } else { 1.0 };
-        let _snapfoot = if speed > 5.0 { 1.1 } else { 2.0 };
         let lab = 1.0;
         let foothoril = (anim_time as f32 * 7.0 * lab as f32 + PI * 1.45).sin();
         let foothorir = (anim_time as f32 * 7.0 * lab as f32 + PI * (0.45)).sin();
@@ -52,7 +48,7 @@ impl Animation for SneakAnimation {
         .sqrt())
             * ((anim_time as f32 * 7.0 * lab as f32 + PI * 0.4).sin());
 
-        let short = ((anim_time as f32 * lab as f32 * 7.0).sin());
+        let short = (anim_time as f32 * lab as f32 * 7.0).sin();
         let noisea = (anim_time as f32 * 11.0 + PI / 6.0).sin();
         let noiseb = (anim_time as f32 * 19.0 + PI / 4.0).sin();
 
@@ -62,7 +58,6 @@ impl Animation for SneakAnimation {
             * ((anim_time as f32 * lab as f32 * 7.0).sin());
 
         let shortalt = (anim_time as f32 * lab as f32 * 7.0 + PI / 2.0).sin();
-        let shortalter = (anim_time as f32 * lab as f32 * 7.0 + PI / -2.0).sin();
 
         let head_look = Vec2::new(
             ((global_time + anim_time) as f32 / 18.0)
@@ -119,9 +114,9 @@ impl Animation for SneakAnimation {
             next.chest.offset = Vec3::new(
                 0.0,
                 skeleton_attr.chest.0,
-                -1.0 + skeleton_attr.chest.1 + shortalt * -0.5,
+                -2.0 + skeleton_attr.chest.1 + shortalt * -0.65,
             );
-            next.chest.ori = Quaternion::rotation_z(0.3 + short * 0.08 + tilt * -0.2)
+            next.chest.ori = Quaternion::rotation_z(0.3 + short * 0.1 + tilt * -0.2)
                 * Quaternion::rotation_y(tilt * 0.8)
                 * Quaternion::rotation_x(-0.5);
             next.chest.scale = Vec3::one();
@@ -154,20 +149,20 @@ impl Animation for SneakAnimation {
 
             next.l_foot.offset = Vec3::new(
                 -skeleton_attr.foot.0,
-                skeleton_attr.foot.1 + foothoril * -10.5 * walkintensity - lower * 1.0,
-                2.0 + skeleton_attr.foot.2 + ((footvertl * -1.7).max(-1.0)) * walkintensity,
+                skeleton_attr.foot.1 + foothoril * -6.0,
+                2.0 + skeleton_attr.foot.2 + ((footvertl * -0.8).max(-1.0)),
             );
-            next.l_foot.ori = Quaternion::rotation_x(-0.2 + footrotl * -0.8 * walkintensity)
-                * Quaternion::rotation_y(tilt * 1.8);
+            next.l_foot.ori =
+                Quaternion::rotation_x(-0.2 + footrotl * -0.8) * Quaternion::rotation_y(tilt * 1.8);
             next.l_foot.scale = Vec3::one();
 
             next.r_foot.offset = Vec3::new(
                 skeleton_attr.foot.0,
-                skeleton_attr.foot.1 + foothorir * -10.5 * walkintensity - lower * 1.0,
-                2.0 + skeleton_attr.foot.2 + ((footvertr * -1.7).max(-1.0)) * walkintensity,
+                skeleton_attr.foot.1 + foothorir * -6.0,
+                2.0 + skeleton_attr.foot.2 + ((footvertr * -0.8).max(-1.0)),
             );
-            next.r_foot.ori = Quaternion::rotation_x(-0.2 + footrotr * -0.8 * walkintensity)
-                * Quaternion::rotation_y(tilt * 1.8);
+            next.r_foot.ori =
+                Quaternion::rotation_x(-0.2 + footrotr * -0.8) * Quaternion::rotation_y(tilt * 1.8);
             next.r_foot.scale = Vec3::one();
 
             next.l_shoulder.offset = Vec3::new(
@@ -175,7 +170,7 @@ impl Animation for SneakAnimation {
                 skeleton_attr.shoulder.1,
                 skeleton_attr.shoulder.2,
             );
-            next.l_shoulder.ori = Quaternion::rotation_x(short * 0.15 * walkintensity);
+            next.l_shoulder.ori = Quaternion::rotation_x(short * 0.7);
             next.l_shoulder.scale = Vec3::one() * 1.1;
 
             next.r_shoulder.offset = Vec3::new(
@@ -183,7 +178,7 @@ impl Animation for SneakAnimation {
                 skeleton_attr.shoulder.1,
                 skeleton_attr.shoulder.2,
             );
-            next.r_shoulder.ori = Quaternion::rotation_x(short * -0.15 * walkintensity);
+            next.r_shoulder.ori = Quaternion::rotation_x(short * -0.7);
             next.r_shoulder.scale = Vec3::one() * 1.1;
 
             next.main.offset = Vec3::new(-7.0, -6.5, 15.0);

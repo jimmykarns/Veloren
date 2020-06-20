@@ -404,9 +404,9 @@ impl PlayState for SessionState {
                     Event::InputUpdate(GameInput::ClimbDown, state) => {
                         self.key_state.climb_down = state;
                     },
-                    /*Event::InputUpdate(GameInput::WallLeap, state) => {
+                    Event::InputUpdate(GameInput::WallLeap, state) => {
                         self.inputs.wall_leap.set_state(state)
-                    },*/
+                    },
                     Event::InputUpdate(GameInput::ToggleWield, state)
                         if state != self.key_state.toggle_wield =>
                     {
