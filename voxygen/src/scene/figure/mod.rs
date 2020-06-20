@@ -827,6 +827,15 @@ impl FigureMgr {
                                 skeleton_attr,
                             )
                         },
+                        CharacterState::Sneak { .. } => {
+                            anim::character::SneakAnimation::update_skeleton(
+                                &CharacterSkeleton::new(),
+                                (active_tool_kind, vel.0, ori, state.last_ori, time),
+                                state.state_time,
+                                &mut state_animation_rate,
+                                skeleton_attr,
+                            )
+                        },
                         CharacterState::GlideWall { .. } => {
                             anim::character::GlideWallAnimation::update_skeleton(
                                 &CharacterSkeleton::new(),
