@@ -4502,6 +4502,7 @@ dependencies = [
  "specs",
  "specs-idvs",
  "sum_type",
+ "uuid",
  "vek",
 ]
 

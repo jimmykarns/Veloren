@@ -25,7 +25,7 @@ fn init_ecs(player_count: u32) -> World {
 
     // Insert player_count players into the ECS Player storage
     let players: Vec<Player> = (0..player_count)
-        .map(|i| Player::new(format!("test_player_{}", i), None, None, Uuid::parse_str("936DA01F-9ABD-4D9D-80C7-02AF85C822A8").unwrap()))
+        .map(|i| Player::new(format!("test_player_{}", i), None, None, Uuid::new_v4()))
         .collect();
     for player in players {
         ecs.create_entity().with(player).build();
