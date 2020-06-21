@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 
-use specs::{WorldExt, World};
+use specs::{WorldExt, World, Builder};
 use specs::join::Join;
 use veloren_common::comp::Player;
 use authc::Uuid;
@@ -28,7 +28,7 @@ fn init_ecs(player_count: u32) -> World {
         .map(|i| Player::new(format!("test_player_{}", i), None, None, Uuid::parse_str("936DA01F-9ABD-4D9D-80C7-02AF85C822A8").unwrap()))
         .collect();
     for player in players {
-        ecs.insert(player);
+        ecs.create_entity().with(player);
     }
 
     ecs
@@ -40,7 +40,8 @@ fn find_player_by_name(ecs: &World, name: &str) {
     let player = (&entities, &players)
         .join()
         .find(|(_, player)| player.alias == name)
-        .map(|(entity, _)| entity);
+        .map(|(entity, _)| entity)
+        .unwrap();
 
     black_box(player);
 }
