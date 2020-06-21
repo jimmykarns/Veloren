@@ -44,3 +44,7 @@ harness = false
 [[bench]]
 name = "color_benchmark"
 harness = false
+
+[[bench]]
+name = "entities_benchmark"
+harness = false
