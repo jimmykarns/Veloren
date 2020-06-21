@@ -28,7 +28,7 @@ fn init_ecs(player_count: u32) -> World {
         .map(|i| Player::new(format!("test_player_{}", i), None, None, Uuid::parse_str("936DA01F-9ABD-4D9D-80C7-02AF85C822A8").unwrap()))
         .collect();
     for player in players {
-        ecs.create_entity().with(player);
+        ecs.create_entity().with(player).build();
     }
 
     ecs
