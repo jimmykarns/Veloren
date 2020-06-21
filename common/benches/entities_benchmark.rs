@@ -17,42 +17,6 @@ fn criterion_benchmark(c: &mut Criterion) {
             });
         });
     }
-    /*
-    c.bench_function("100 players", |b| {
-        let ecs = init_ecs(100);
-        b.iter(|| {
-            find_player_by_name(&ecs, "test_player_50");
-        })
-    });
-
-    c.bench_function("1000 players", |b| {
-        let ecs = init_ecs(1000);
-        b.iter(|| {
-            find_player_by_name(&ecs, "test_player_500");
-        })
-    });
-
-    c.bench_function("100000 players", |b| {
-        let ecs = init_ecs(10000);
-        b.iter(|| {
-            find_player_by_name(&ecs, "test_player_5000");
-        })
-    });
-
-    c.bench_function("100000 players", |b| {
-        let ecs = init_ecs(100000);
-        b.iter(|| {
-            find_player_by_name(&ecs, "test_player_50000");
-        })
-    });
-
-    c.bench_function("1000000 players", |b| {
-        let ecs = init_ecs(1000000);
-        b.iter(|| {
-            find_player_by_name(&ecs, "test_player_500000");
-        })
-    });
-    */
 }
 
 fn init_ecs(player_count: u32) -> World {
