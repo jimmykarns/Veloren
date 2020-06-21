@@ -35,7 +35,9 @@ pub enum ControlAction {
     Unwield,
     Sit,
     Dance,
+    Climb,
     Stand,
+    Sneak,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]

@@ -158,11 +158,15 @@ pub fn attempt_dance(data: &JoinData, update: &mut StateUpdate) {
         update.character = CharacterState::Dance;
     }
 }
+pub fn attempt_sneak(data: &JoinData, update: &mut StateUpdate) {
+    if data.physics.on_ground && data.body.is_humanoid() {
+        update.character = CharacterState::Sneak;
+    }
+}
 
 /// Checks that player can `Climb` and updates `CharacterState` if so
 pub fn handle_climb(data: &JoinData, update: &mut StateUpdate) {
-    if data.inputs.climb.is_some()
-        && data.physics.on_wall.is_some()
+    if data.physics.on_wall.is_some()
         && !data.physics.on_ground
         //&& update.vel.0.z < 0.0
         && data.body.is_humanoid()
@@ -194,6 +198,13 @@ pub fn handle_jump(data: &JoinData, update: &mut StateUpdate) {
             .push_front(LocalEvent::Jump(data.entity));
     }
 }
+/*pub fn handle_jumptest(data: &JoinData, update: &mut StateUpdate) {
+    if data.inputs.wall_leap.is_pressed() && !data.physics.in_fluid {
+        update
+            .local_events
+            .push_front(LocalEvent::WallLeap(data.entity));
+    }
+}*/
 
 /// Will attempt to go into `loadout.active_item.ability1`
 pub fn handle_ability1_input(data: &JoinData, update: &mut StateUpdate) {

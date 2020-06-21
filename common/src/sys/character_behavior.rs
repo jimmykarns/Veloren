@@ -28,7 +28,9 @@ pub trait CharacterBehavior {
     fn unwield(&self, data: &JoinData) -> StateUpdate { StateUpdate::from(data) }
     fn sit(&self, data: &JoinData) -> StateUpdate { StateUpdate::from(data) }
     fn dance(&self, data: &JoinData) -> StateUpdate { StateUpdate::from(data) }
+    fn climb(&self, data: &JoinData) -> StateUpdate { StateUpdate::from(data) }
     fn stand(&self, data: &JoinData) -> StateUpdate { StateUpdate::from(data) }
+    fn sneak(&self, data: &JoinData) -> StateUpdate { StateUpdate::from(data) }
     fn handle_event(&self, data: &JoinData, event: ControlAction) -> StateUpdate {
         match event {
             ControlAction::SwapLoadout => self.swap_loadout(data),
@@ -38,7 +40,9 @@ pub trait CharacterBehavior {
             ControlAction::Unwield => self.unwield(data),
             ControlAction::Sit => self.sit(data),
             ControlAction::Dance => self.dance(data),
+            ControlAction::Climb => self.climb(data),
             ControlAction::Stand => self.stand(data),
+            ControlAction::Sneak => self.sneak(data),
         }
     }
     // fn init(data: &JoinData) -> CharacterState;
@@ -223,7 +227,10 @@ impl<'a> System<'a> for Sys {
                 let j = JoinData::new(&tuple, &updater, &dt);
                 let mut state_update = match j.character {
                     CharacterState::Idle => states::idle::Data.handle_event(&j, action),
-                    CharacterState::Climb => states::climb::Data.handle_event(&j, action),
+                    CharacterState::Sneak => states::sneak::Data.handle_event(&j, action),
+                    CharacterState::Climb => {
+                        states::climb::Data::handle_event(&states::climb::Data, &j, action)
+                    },
                     CharacterState::Glide => states::glide::Data.handle_event(&j, action),
                     CharacterState::GlideWield => {
                         states::glide_wield::Data.handle_event(&j, action)
@@ -258,7 +265,8 @@ impl<'a> System<'a> for Sys {
 
             let mut state_update = match j.character {
                 CharacterState::Idle => states::idle::Data.behavior(&j),
-                CharacterState::Climb => states::climb::Data.behavior(&j),
+                CharacterState::Sneak => states::sneak::Data.behavior(&j),
+                CharacterState::Climb => states::climb::Data::behavior(&states::climb::Data, &j),
                 CharacterState::Glide => states::glide::Data.behavior(&j),
                 CharacterState::GlideWield => states::glide_wield::Data.behavior(&j),
                 CharacterState::GlideWall => states::glide_wall::Data.behavior(&j),

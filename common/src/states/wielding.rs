@@ -50,4 +50,10 @@ impl CharacterBehavior for Data {
         attempt_glide_wield(data, &mut update);
         update
     }
+
+    fn sneak(&self, data: &JoinData) -> StateUpdate {
+        let mut update = StateUpdate::from(data);
+        attempt_sneak(data, &mut update);
+        update
+    }
 }

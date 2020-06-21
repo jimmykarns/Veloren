@@ -1,4 +1,4 @@
-use super::utils::handle_climb;
+use super::utils::*;
 use crate::{
     comp::{CharacterState, StateUpdate},
     sys::character_behavior::{CharacterBehavior, JoinData},

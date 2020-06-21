@@ -398,7 +398,16 @@ impl PlayState for SessionState {
                             self.client.borrow_mut().toggle_glide();
                         }
                     }
-                    Event::InputUpdate(GameInput::Climb, state) => {
+                    /*Event::InputUpdate(GameInput::Climb, state)
+                        if state != self.key_state.toggle_climb =>
+                    {
+                        self.key_state.toggle_climb = state;
+                        if state {
+                            stop_auto_walk(&mut auto_walk, &mut self.key_state, &mut self.hud);
+                            self.client.borrow_mut().toggle_climb();
+                        }
+                    }*/
+                    Event::InputUpdate(GameInput::ClimbUp, state) => {
                         self.key_state.climb_up = state;
                     },
                     Event::InputUpdate(GameInput::ClimbDown, state) => {

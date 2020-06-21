@@ -40,6 +40,7 @@ pub enum CharacterState {
     Idle,
     Climb,
     Sit,
+    Sneak,
     Dance,
     Glide,
     GlideWield,

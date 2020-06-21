@@ -5,6 +5,7 @@ pub struct KeyState {
     pub left: bool,
     pub up: bool,
     pub down: bool,
+    pub toggle_climb: bool,
     pub climb_up: bool,
     pub climb_down: bool,
     pub toggle_wield: bool,
@@ -26,6 +27,7 @@ impl KeyState {
             left: false,
             up: false,
             down: false,
+            toggle_climb: false,
             climb_up: false,
             climb_down: false,
             toggle_wield: false,
@@ -63,8 +65,8 @@ impl KeyState {
         match (self.climb_up, self.climb_down) {
             (true, false) => Some(Climb::Up),
             (false, true) => Some(Climb::Down),
-            (true, true) => Some(Climb::Hold),
-            (false, false) => None,
+            (true, true) => Some(Climb::Up),
+            (false, false) => Some(Climb::Hold),
         }
     }
 }

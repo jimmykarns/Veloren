@@ -10,19 +10,23 @@ impl CharacterBehavior for Data {
     fn behavior(&self, data: &JoinData) -> StateUpdate {
         let mut update = StateUpdate::from(data);
 
-        handle_move(&data, &mut update, 1.0);
-        handle_jump(&data, &mut update);
+        handle_move(data, &mut update, 0.4);
+        handle_jump(data, &mut update);
         handle_wield(data, &mut update);
+        handle_climb(data, &mut update);
         handle_dodge_input(data, &mut update);
 
-        // If not on the ground while wielding glider enter gliding state
-        if !data.physics.on_ground && !data.physics.in_fluid && !data.physics.on_wall.is_some() {
-            update.character = CharacterState::Glide;
+        // Try to Fall/Stand up/Move
+        if !data.physics.on_ground {
+            update.character = CharacterState::Idle;
         }
-        if !data.physics.on_ground && data.physics.on_wall.is_some() {
-            update.character = CharacterState::GlideWall;
-            return update;
-        }
+
+        update
+    }
+
+    fn wield(&self, data: &JoinData) -> StateUpdate {
+        let mut update = StateUpdate::from(data);
+        attempt_wield(data, &mut update);
         update
     }
 
@@ -38,15 +42,15 @@ impl CharacterBehavior for Data {
         update
     }
 
-    fn unwield(&self, data: &JoinData) -> StateUpdate {
-        let mut update = StateUpdate::from(data);
-        update.character = CharacterState::Idle;
-        update
-    }
-
     fn glide_wield(&self, data: &JoinData) -> StateUpdate {
         let mut update = StateUpdate::from(data);
         attempt_glide_wield(data, &mut update);
+        update
+    }
+
+    fn swap_loadout(&self, data: &JoinData) -> StateUpdate {
+        let mut update = StateUpdate::from(data);
+        attempt_swap_loadout(data, &mut update);
         update
     }
 }

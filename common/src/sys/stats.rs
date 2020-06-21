@@ -80,6 +80,7 @@ impl<'a> System<'a> for Sys {
                 | CharacterState::Glide { .. }
                 | CharacterState::GlideWield { .. }
                 | CharacterState::GlideWall { .. }
+                | CharacterState::Sneak { .. }
                 | CharacterState::Wielding { .. }
                 | CharacterState::Equipping { .. }
                 | CharacterState::Boost { .. } => {

@@ -22,7 +22,6 @@ pub struct Data;
 impl CharacterBehavior for Data {
     fn behavior(&self, data: &JoinData) -> StateUpdate {
         let mut update = StateUpdate::from(data);
-
         // If no wall is in front of character or we stopped climbing;
         let (wall_dir, climb) = if let (Some(wall_dir), Some(climb), false) = (
             data.physics.on_wall,
@@ -42,17 +41,18 @@ impl CharacterBehavior for Data {
         };
 
         // Move player
-        update.vel.0 += Vec2::broadcast(data.dt.0)
-            * data.inputs.move_dir
-            * if update.vel.0.magnitude_squared() < CLIMB_SPEED.powf(2.0) {
-                HUMANOID_CLIMB_ACCEL
-            } else {
-                0.0
-            };
+        /*        update.vel.0 += Vec2::broadcast(data.dt.0)
+        * data.inputs.move_dir
+        * if update.vel.0.magnitude_squared() < CLIMB_SPEED.powf(2.0) {
+            HUMANOID_CLIMB_ACCEL
+        } else {
+            0.0
+        };*/
 
         // Expend energy if climbing
         let energy_use = match climb {
-            Climb::Up | Climb::Down => 8,
+            Climb::Up => 6,
+            Climb::Down => 2,
             Climb::Hold => 1,
         };
 
@@ -79,14 +79,14 @@ impl CharacterBehavior for Data {
             match climb {
                 Climb::Down => {
                     update.vel.0 -=
-                        data.dt.0 * update.vel.0.map(|e| e.abs().powf(1.5) * e.signum() * 6.0);
+                        data.dt.0 * update.vel.0.map(|e| e.abs().powf(1.5) * e.signum());
                 },
                 Climb::Up => {
                     update.vel.0.z = (update.vel.0.z + data.dt.0 * GRAVITY * 1.25).min(CLIMB_SPEED);
                 },
                 Climb::Hold => {
                     // Antigrav
-                    update.vel.0.z = (update.vel.0.z + data.dt.0 * GRAVITY * 1.5).min(CLIMB_SPEED);
+                    update.vel.0.z = (update.vel.0.z + data.dt.0 * GRAVITY * 1.1).min(CLIMB_SPEED); //NEGat 1.04
                     update.vel.0 = Lerp::lerp(
                         update.vel.0,
                         Vec3::zero(),

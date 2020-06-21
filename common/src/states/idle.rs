@@ -12,6 +12,7 @@ impl CharacterBehavior for Data {
 
         handle_move(data, &mut update, 1.0);
         handle_jump(data, &mut update);
+        //handle_jumptest(data, &mut update);
         handle_wield(data, &mut update);
         handle_climb(data, &mut update);
         handle_dodge_input(data, &mut update);
@@ -46,6 +47,12 @@ impl CharacterBehavior for Data {
     fn swap_loadout(&self, data: &JoinData) -> StateUpdate {
         let mut update = StateUpdate::from(data);
         attempt_swap_loadout(data, &mut update);
+        update
+    }
+
+    fn sneak(&self, data: &JoinData) -> StateUpdate {
+        let mut update = StateUpdate::from(data);
+        attempt_sneak(data, &mut update);
         update
     }
 }

@@ -54,9 +54,9 @@ impl Animation for JumpAnimation {    type Dependency = (
             0.0
         } * 1.3;
 
-        let speed = Vec3::<f32>::from(velocity).magnitude();
+        let speed = velocity.z;
         *rate = 1.0;
-        if speed < 25.0 {
+        if speed > -24.0 {
             next.head.offset = Vec3::new(
                 0.0,
                 -3.0 + skeleton_attr.head.0,
@@ -178,11 +178,11 @@ impl Animation for JumpAnimation {    type Dependency = (
         } else {
             next.head.offset = Vec3::new(
                 0.0,
-                -3.0 + skeleton_attr.head.0,
+                -1.0 + skeleton_attr.head.0,
                 -1.0 + skeleton_attr.head.1,
             );
             next.head.ori =
-                Quaternion::rotation_x(0.25 + slow * 0.04) * Quaternion::rotation_z(tilt * -2.5);
+                Quaternion::rotation_x(-0.25 + slow * 0.04) * Quaternion::rotation_z(tilt * -2.5);
             next.head.scale = Vec3::one() * skeleton_attr.head_scale;
 
             next.chest.offset = Vec3::new(
@@ -229,7 +229,7 @@ impl Animation for JumpAnimation {    type Dependency = (
             next.l_foot.offset = Vec3::new(
                 -skeleton_attr.foot.0,
                 2.0 + skeleton_attr.foot.1,
-                skeleton_attr.foot.2 + slow * 1.5,
+                skeleton_attr.foot.2 + slow * 0.5,
             );
             next.l_foot.ori = Quaternion::rotation_x(slow * -0.2);
             next.l_foot.scale = Vec3::one();
@@ -313,7 +313,7 @@ impl Animation for JumpAnimation {    type Dependency = (
             next.r_foot.offset = Vec3::new(
                 skeleton_attr.foot.0,
                 2.0 + skeleton_attr.foot.1,
-                skeleton_attr.foot.2 + slow * 1.5,
+                skeleton_attr.foot.2 + slow * 0.5,
             );
             next.r_foot.ori = Quaternion::rotation_x(slow * 0.2);
             next.r_foot.scale = Vec3::one();
@@ -355,7 +355,7 @@ impl Animation for JumpAnimation {    type Dependency = (
             next.lantern.scale = Vec3::one() * 0.65;
 
             next.torso.offset = Vec3::new(0.0, 0.0, 8.0) / 11.0 * skeleton_attr.scaler;
-            next.torso.ori = Quaternion::rotation_x(-2.0 - speed / 6.0 * switch);
+            next.torso.ori = Quaternion::rotation_x(-(speed + 24.0) / 10.0 * switch);
             next.torso.scale = Vec3::one() / 11.0 * skeleton_attr.scaler;
         };
         next.control.offset = Vec3::new(0.0, 0.0, 0.0);

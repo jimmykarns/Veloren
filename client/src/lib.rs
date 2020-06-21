@@ -460,6 +460,36 @@ impl Client {
         }
     }
 
+    pub fn toggle_climb(&mut self) {
+        let is_climbing = self
+            .state
+            .ecs()
+            .read_storage::<comp::CharacterState>()
+            .get(self.entity)
+            .map(|cs| matches!(cs, comp::CharacterState::Climb));
+
+        match is_climbing {
+            Some(true) => self.control_action(ControlAction::Stand),
+            Some(false) => self.control_action(ControlAction::Climb),
+            None => warn!("Can't toggle climb, client entity doesn't have a `CharacterState`"),
+        }
+    }
+
+    pub fn toggle_sneak(&mut self) {
+        let is_sneaking = self
+            .state
+            .ecs()
+            .read_storage::<comp::CharacterState>()
+            .get(self.entity)
+            .map(|cs| matches!(cs, comp::CharacterState::Sneak));
+
+        match is_sneaking {
+            Some(true) => self.control_action(ControlAction::Stand),
+            Some(false) => self.control_action(ControlAction::Sneak),
+            None => warn!("Can't toggle sneak, client entity doesn't have a `CharacterState`"),
+        }
+    }
+
     pub fn toggle_glide(&mut self) {
         let is_gliding = self
             .state
