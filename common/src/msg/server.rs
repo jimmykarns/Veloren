@@ -59,6 +59,11 @@ pub enum ServerMsg {
         time_of_day: state::TimeOfDay,
         world_map: (Vec2<u32>, Vec<u32>),
     },
+    /// A list of achievements which the character has fully or partially
+    /// completed
+    AchievementDataUpdate(Vec<comp::Achievement>),
+    /// An error occurred while loading character achievements
+    AchievementDataError(String),
     /// An error occurred while loading character data
     CharacterDataLoadError(String),
     /// A list of characters belonging to the a authenticated player was sent

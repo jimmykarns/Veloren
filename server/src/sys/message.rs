@@ -1,6 +1,8 @@
 use super::SysTimer;
 use crate::{
-    auth_provider::AuthProvider, client::Client, persistence::character::CharacterLoader,
+    auth_provider::AuthProvider,
+    client::Client,
+    persistence::{achievement::AchievementLoader, character::CharacterLoader},
     ServerSettings, CLIENT_TIMEOUT,
 };
 use common::{
@@ -395,6 +397,7 @@ impl<'a> System<'a> for Sys {
         Read<'a, EventBus<ServerEvent>>,
         Read<'a, Time>,
         ReadExpect<'a, CharacterLoader>,
+        ReadExpect<'a, AchievementLoader>,
         ReadExpect<'a, TerrainGrid>,
         Write<'a, SysTimer<Self>>,
         ReadStorage<'a, Uid>,
@@ -425,6 +428,7 @@ impl<'a> System<'a> for Sys {
             server_event_bus,
             time,
             character_loader,
+            achievement_loader,
             terrain,
             mut timer,
             uids,
@@ -520,16 +524,21 @@ impl<'a> System<'a> for Sys {
             }
         }
 
-        // Handle new players.
-        // Tell all clients to add them to the player list.
+        // Handle new players: Tell all clients to add them to the player list, and load
+        // non-critical data for their character
         for entity in new_players {
             if let (Some(uid), Some(player)) = (uids.get(entity), players.get(entity)) {
+                if let Some(character_id) = player.character_id {
+                    achievement_loader.load_character_achievement_list(entity, character_id);
+                }
+
                 let msg = ServerMsg::PlayerListUpdate(PlayerListUpdate::Add(*uid, PlayerInfo {
                     player_alias: player.alias.clone(),
                     is_online: true,
                     is_admin: admins.get(entity).is_some(),
                     character: None, // new players will be on character select.
                 }));
+
                 for client in (&mut clients).join().filter(|c| c.is_registered()) {
                     client.notify(msg.clone())
                 }

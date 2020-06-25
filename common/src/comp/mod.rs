@@ -1,4 +1,5 @@
 mod ability;
+mod achievement;
 mod admin;
 pub mod agent;
 mod body;
@@ -20,6 +21,7 @@ mod visual;
 
 // Reexports
 pub use ability::{CharacterAbility, CharacterAbilityType, ItemConfig, Loadout};
+pub use achievement::{Achievement, AchievementItem, AchievementList, AchievementType};
 pub use admin::{Admin, AdminList};
 pub use agent::{Agent, Alignment};
 pub use body::{

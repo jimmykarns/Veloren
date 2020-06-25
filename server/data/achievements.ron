@@ -1,0 +1,10 @@
+[
+    (
+        title: "Collect 10 Apples",
+        achievement_type: CollectConsumable(Apple, 10)
+    ),
+    (
+        title: "Collect 50 Apples",
+        achievement_type: CollectConsumable(Apple, 50)
+    ),
+]

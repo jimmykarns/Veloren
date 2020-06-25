@@ -83,6 +83,10 @@ pub enum ServerEvent {
     Chat(comp::ChatMsg),
 }
 
+pub enum AchievementEvent {
+    CollectedItem { entity: EcsEntity, item: comp::Item },
+}
+
 pub struct EventBus<E> {
     queue: Mutex<VecDeque<E>>,
 }

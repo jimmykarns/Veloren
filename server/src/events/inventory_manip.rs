@@ -5,6 +5,7 @@ use common::{
         slot::{self, Slot},
         Pos, MAX_PICKUP_RANGE_SQR,
     },
+    event::{AchievementEvent, EventBus},
     sync::{Uid, WorldSyncExt},
     terrain::block::Block,
     vol::{ReadVol, Vox},
@@ -82,9 +83,18 @@ pub fn handle_inventory(server: &mut Server, entity: EcsEntity, manip: comp::Inv
                     // player's inventory but also left on the ground
                     panic!("Failed to delete picked up item entity: {:?}", err);
                 }
-                comp::InventoryUpdate::new(comp::InventoryUpdateEvent::Collected(
-                    picked_up_item.unwrap(),
-                ))
+
+                let item = picked_up_item.unwrap();
+
+                state
+                    .ecs()
+                    .read_resource::<EventBus<AchievementEvent>>()
+                    .emit_now(AchievementEvent::CollectedItem {
+                        entity,
+                        item: item.clone(),
+                    });
+
+                comp::InventoryUpdate::new(comp::InventoryUpdateEvent::Collected(item))
             } else {
                 comp::InventoryUpdate::new(comp::InventoryUpdateEvent::CollectFailed)
             };
@@ -111,8 +121,17 @@ pub fn handle_inventory(server: &mut Server, entity: EcsEntity, manip: comp::Inv
                 } else if block.is_collectible()
                     && state.try_set_block(pos, Block::empty()).is_some()
                 {
-                    comp::Item::try_reclaim_from_block(block)
-                        .map(|item| state.give_item(entity, item));
+                    comp::Item::try_reclaim_from_block(block).map(|item| {
+                        state
+                            .ecs()
+                            .read_resource::<EventBus<AchievementEvent>>()
+                            .emit_now(AchievementEvent::CollectedItem {
+                                entity,
+                                item: item.clone(),
+                            });
+
+                        state.give_item(entity, item);
+                    });
                 }
             }
         },

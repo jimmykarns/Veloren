@@ -175,6 +175,7 @@ impl StateExt for State {
             entity,
             comp::Alignment::Owned(self.read_component_cloned(entity).unwrap()),
         );
+        self.write_component(entity, comp::AchievementList::default());
 
         // Set the character id for the player
         // TODO this results in a warning in the console: "Error modifying synced

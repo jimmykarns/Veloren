@@ -2,7 +2,10 @@ extern crate serde_json;
 
 use super::{
     achievement::hash,
-    schema::{achievement, body, character, data_migration, inventory, loadout, stats},
+    schema::{
+        achievement, body, character, character_achievement, data_migration, inventory, loadout,
+        stats,
+    },
 };
 use crate::comp;
 use chrono::NaiveDateTime;
@@ -377,7 +380,7 @@ pub struct NewDataMigration<'a> {
 /// the starter sword set as the main weapon
 #[derive(SqlType, AsExpression, Debug, Deserialize, Serialize, FromSqlRow, PartialEq)]
 #[sql_type = "Text"]
-pub struct AchievementData(AchievementItem);
+pub struct AchievementData(comp::AchievementItem);
 
 impl<DB> diesel::deserialize::FromSql<Text, DB> for AchievementData
 where
@@ -394,7 +397,7 @@ where
             Err(e) => {
                 warn!(?e, "Failed to deserialise achevement data");
 
-                Ok(Self(AchievementItem::default()))
+                Ok(Self(comp::AchievementItem::default()))
             },
         }
     }
@@ -421,6 +424,10 @@ pub struct Achievement {
     pub details: AchievementData,
 }
 
+impl From<&AchievementData> for comp::AchievementItem {
+    fn from(data: &AchievementData) -> comp::AchievementItem { data.0.clone() }
+}
+
 #[derive(Insertable, PartialEq, Debug)]
 #[table_name = "achievement"]
 pub struct NewAchievement {
@@ -428,11 +435,39 @@ pub struct NewAchievement {
     pub details: AchievementData,
 }
 
-impl From<&AchievementItem> for NewAchievement {
-    fn from(item: &AchievementItem) -> Self {
+impl From<&comp::AchievementItem> for NewAchievement {
+    fn from(item: &comp::AchievementItem) -> Self {
         Self {
             checksum: hash(item).to_string(),
             details: AchievementData(item.clone()),
+        }
+    }
+}
+
+/// Character Achievements belong to characters
+#[derive(Queryable, Debug, Identifiable)]
+#[primary_key(character_id)]
+#[table_name = "character_achievement"]
+pub struct CharacterAchievement {
+    pub character_id: i32,
+    pub achievement_id: i32,
+    pub completed: i32,
+    pub progress: i32,
+}
+
+impl From<&CharacterAchievement> for comp::Achievement {
+    fn from(_achievement: &CharacterAchievement) -> comp::Achievement {
+        comp::Achievement::default()
+    }
+}
+
+impl From<Achievement> for comp::Achievement {
+    fn from(achievement: Achievement) -> comp::Achievement {
+        comp::Achievement {
+            id: achievement.id,
+            item: comp::AchievementItem::from(&achievement.details),
+            completed: false,
+            progress: 0,
         }
     }
 }

@@ -30,7 +30,7 @@ use crate::{
 use common::{
     cmd::ChatCommand,
     comp::{self, ChatType},
-    event::{EventBus, ServerEvent},
+    event::{AchievementEvent, EventBus, ServerEvent},
     msg::{ClientState, ServerInfo, ServerMsg},
     state::{State, TimeOfDay},
     sync::WorldSyncExt,
@@ -42,7 +42,10 @@ use futures_timer::Delay;
 use futures_util::{select, FutureExt};
 use metrics::{ServerMetrics, TickMetrics};
 use network::{Address, Network, Pid};
-use persistence::character::{CharacterLoader, CharacterLoaderResponseType, CharacterUpdater};
+use persistence::{
+    achievement::{AchievementLoader, AchievementLoaderResponse, AvailableAchievements},
+    character::{CharacterLoader, CharacterLoaderResponseType, CharacterUpdater},
+};
 use specs::{join::Join, Builder, Entity as EcsEntity, RunNow, SystemData, WorldExt};
 use std::{
     i32,
@@ -95,7 +98,13 @@ impl Server {
     pub fn new(settings: ServerSettings) -> Result<Self, Error> {
         let mut state = State::default();
         state.ecs_mut().insert(settings.clone());
+
+        // Event Emitters
         state.ecs_mut().insert(EventBus::<ServerEvent>::default());
+        state
+            .ecs_mut()
+            .insert(EventBus::<AchievementEvent>::default());
+
         state.ecs_mut().insert(AuthProvider::new(
             settings.auth_server_address.clone(),
             settings.whitelist.clone(),
@@ -104,18 +113,18 @@ impl Server {
         state.ecs_mut().insert(ChunkGenerator::new());
         state
             .ecs_mut()
+            .insert(comp::AdminList(settings.admins.clone()));
+
+        // Persistence interaction
+        state
+            .ecs_mut()
             .insert(CharacterUpdater::new(settings.persistence_db_dir.clone()));
         state
             .ecs_mut()
             .insert(CharacterLoader::new(settings.persistence_db_dir.clone()));
         state
             .ecs_mut()
-            .insert(persistence::character::CharacterUpdater::new(
-                settings.persistence_db_dir.clone(),
-            ));
-        state
-            .ecs_mut()
-            .insert(comp::AdminList(settings.admins.clone()));
+            .insert(AchievementLoader::new(settings.persistence_db_dir.clone()));
 
         // System timers for performance monitoring
         state.ecs_mut().insert(sys::EntitySyncTimer::default());
@@ -243,6 +252,25 @@ impl Server {
         thread_pool.execute(f);
         block_on(network.listen(Address::Tcp(settings.gameserver_address)))?;
 
+        // Run pending DB migrations (if any)
+        debug!("Running DB migrations...");
+
+        if let Some(e) = persistence::run_migrations(&settings.persistence_db_dir).err() {
+            info!(?e, "Migration error");
+        }
+
+        // Sync and Load Achievement Data
+        debug!("Syncing Achievement data...");
+
+        match persistence::achievement::sync(&settings.persistence_db_dir) {
+            Ok(achievements) => {
+                info!("Achievement data loaded...");
+                info!(?achievements, "data:");
+                state.ecs_mut().insert(AvailableAchievements(achievements));
+            },
+            Err(e) => error!(?e, "Achievement data migration error"),
+        }
+
         let this = Self {
             state,
             world: Arc::new(world),
@@ -255,22 +283,6 @@ impl Server {
             metrics,
             tick_metrics,
         };
-
-        // Run pending DB migrations (if any)
-        debug!("Running DB migrations...");
-
-        if let Some(e) = persistence::run_migrations(&settings.persistence_db_dir).err() {
-            info!(?e, "Migration error");
-        }
-
-        // Sync Achievement Data
-        debug!("Syncing Achievement data...");
-
-        if let Some(e) =
-            persistence::achievement::sync(&this.server_settings.persistence_db_dir).err()
-        {
-            info!(?e, "Achievement data migration error");
-        }
 
         debug!(?settings, "created veloren server with");
 
@@ -419,6 +431,20 @@ impl Server {
             }
         }
 
+        let achievement_events = self
+            .state
+            .ecs()
+            .read_resource::<EventBus<AchievementEvent>>()
+            .recv_all();
+
+        for event in achievement_events {
+            match event {
+                AchievementEvent::CollectedItem { entity, item } => {
+                    info!(?item, "Achievement event: item");
+                },
+            }
+        }
+
         // 7 Persistence updates
         let before_persistence_updates = Instant::now();
 
@@ -464,6 +490,22 @@ impl Server {
                         .ecs()
                         .read_resource::<EventBus<ServerEvent>>()
                         .emit_now(message);
+                },
+            });
+
+        self.state
+            .ecs()
+            .read_resource::<persistence::achievement::AchievementLoader>()
+            .messages()
+            .for_each(|query_result| match query_result {
+                AchievementLoaderResponse::LoadCharacterAchievementListResponse((
+                    entity,
+                    result,
+                )) => match result {
+                    Ok(achievement_data) => self
+                        .notify_client(entity, ServerMsg::AchievementDataUpdate(achievement_data)),
+                    Err(error) => self
+                        .notify_client(entity, ServerMsg::AchievementDataError(error.to_string())),
                 },
             });
 

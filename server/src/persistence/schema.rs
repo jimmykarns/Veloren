@@ -31,6 +31,15 @@ table! {
 }
 
 table! {
+    character_achievement (character_id) {
+        character_id -> Integer,
+        achievement_id -> Integer,
+        completed -> Integer,
+        progress -> Integer,
+    }
+}
+
+table! {
     data_migration (id) {
         id -> Integer,
         title -> Text,
@@ -67,8 +76,18 @@ table! {
 }
 
 joinable!(body -> character (character_id));
+joinable!(character_achievement -> achievement (achievement_id));
+joinable!(character_achievement -> character (character_id));
 joinable!(inventory -> character (character_id));
 joinable!(loadout -> character (character_id));
 joinable!(stats -> character (character_id));
 
-allow_tables_to_appear_in_same_query!(achievement, body, character, inventory, loadout, stats);
+allow_tables_to_appear_in_same_query!(
+    achievement,
+    body,
+    character,
+    character_achievement,
+    inventory,
+    loadout,
+    stats,
+);

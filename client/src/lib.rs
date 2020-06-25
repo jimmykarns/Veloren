@@ -992,6 +992,14 @@ impl Client {
                     self.view_distance = Some(vd);
                     frontend_events.push(Event::SetViewDistance(vd));
                 },
+                ServerMsg::AchievementDataUpdate(achievements) => {
+                    // TODO should this happen? Can't you just save it
+                    // against the entity on the server and it will et
+                    // synced?
+                },
+                ServerMsg::AchievementDataError(error) => {
+                    // TODO handle somehow
+                },
             }
         }
     }

@@ -11,7 +11,7 @@
     option_zip
 )]
 
-pub mod achievement;
+#[macro_use] extern crate serde_derive;
 pub mod assets;
 pub mod astar;
 pub mod character;
