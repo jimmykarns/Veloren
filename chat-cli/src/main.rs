@@ -7,6 +7,7 @@ use std::{io, net::ToSocketAddrs, sync::mpsc, thread, time::Duration};
 use tracing::{error, info};
 
 const TPS: u64 = 10; // Low value is okay, just reading messages.
+const DEFAULT_PORT: u16 = 14004;
 
 fn read_input() -> String {
     let mut buffer = String::new();
@@ -27,13 +28,18 @@ fn main() {
     // Set up an fps clock.
     let mut clock = Clock::start();
 
-    println!("Enter your username");
+    println!("Enter your username:");
     let username = read_input();
 
-    println!("Enter the server address");
-    let server_addr = read_input();
+    println!("Enter the server address:");
+    let mut server_addr = read_input();
 
-    println!("Enter your password");
+    // Use default port if none specified
+    if !server_addr.contains(':') {
+        server_addr.push_str(format!(":{}", DEFAULT_PORT).as_str());
+    }
+
+    println!("Enter your password:");
     let password = read_input();
 
     // Create a client.
