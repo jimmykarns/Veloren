@@ -49,7 +49,7 @@ image_ids_ice! {
         delete_button_press: "voxygen.element.buttons.x_red_press",
 
 
-        name_input: "voxygen.element.misc_bg.textbox_mid",
+        name_input: "voxygen.element.misc_bg.textbox",
 
         // Tool Icons
         daggers: "voxygen.element.icons.daggers",
@@ -165,6 +165,8 @@ struct Controls {
     i18n: std::sync::Arc<Localization>,
     // Voxygen version
     version: String,
+    // Alpha disclaimer
+    alpha: String,
 
     info_content: Option<InfoContent>,
     // enter: bool,
@@ -190,12 +192,14 @@ impl Controls {
             env!("CARGO_PKG_VERSION"),
             common::util::GIT_VERSION.to_string()
         );
+        let alpha = format!("Veloren Pre-Alpha {}", env!("CARGO_PKG_VERSION"),);
 
         Self {
             fonts,
             imgs,
             i18n,
             version,
+            alpha,
 
             info_content: None,
             mode: Mode::Select {
@@ -226,6 +230,18 @@ impl Controls {
             .size(self.fonts.cyri.scale(15))
             .width(Length::Fill)
             .horizontal_alignment(HorizontalAlignment::Right);
+
+        let alpha = iced::Text::new(&self.alpha)
+            .size(self.fonts.cyri.scale(15))
+            .width(Length::Fill)
+            .horizontal_alignment(HorizontalAlignment::Center);
+
+        let top_text = Row::with_children(vec![
+            Space::new(Length::Fill, Length::Shrink).into(),
+            alpha.into(),
+            version.into(),
+        ])
+        .width(Length::Fill);
 
         let content = match &mut self.mode {
             Mode::Select {
@@ -375,7 +391,7 @@ impl Controls {
         };
 
         Container::new(
-            Column::with_children(vec![version.into(), content.into()])
+            Column::with_children(vec![top_text.into(), content.into()])
                 .spacing(3)
                 .width(Length::Fill)
                 .height(Length::Fill),

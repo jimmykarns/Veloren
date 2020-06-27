@@ -15,7 +15,7 @@ use crate::{
     },
     GlobalState,
 };
-use iced::{text_input, Column, Container, HorizontalAlignment, Length};
+use iced::{text_input, Column, Container, HorizontalAlignment, Length, Row, Space};
 //ImageFrame, Tooltip,
 use crate::settings::Settings;
 use common::assets::load_expect;
@@ -133,6 +133,8 @@ struct Controls {
     i18n: std::sync::Arc<Localization>,
     // Voxygen version
     version: String,
+    // Alpha disclaimer
+    alpha: String,
 
     selected_server_index: Option<usize>,
     login_info: LoginInfo,
@@ -176,6 +178,7 @@ impl Controls {
             env!("CARGO_PKG_VERSION"),
             common::util::GIT_VERSION.to_string()
         );
+        let alpha = format!("Veloren Pre-Alpha {}", env!("CARGO_PKG_VERSION"),);
 
         let screen = /* if settings.show_disclaimer {
             Screen::Disclaimer {
@@ -205,6 +208,7 @@ impl Controls {
             bg_img,
             i18n,
             version,
+            alpha,
 
             selected_server_index,
             login_info,
@@ -229,6 +233,18 @@ impl Controls {
             .size(self.fonts.cyri.scale(15))
             .width(Length::Fill)
             .horizontal_alignment(HorizontalAlignment::Right);
+
+        let alpha = iced::Text::new(&self.alpha)
+            .size(self.fonts.cyri.scale(15))
+            .width(Length::Fill)
+            .horizontal_alignment(HorizontalAlignment::Center);
+
+        let top_text = Row::with_children(vec![
+            Space::new(Length::Fill, Length::Shrink).into(),
+            alpha.into(),
+            version.into(),
+        ])
+        .width(Length::Fill);
 
         let bg_img = if matches!(&self.screen, Screen::Connecting {..}) {
             self.bg_img
@@ -268,7 +284,7 @@ impl Controls {
         };
 
         Container::new(
-            Column::with_children(vec![version.into(), content])
+            Column::with_children(vec![top_text.into(), content])
                 .spacing(3)
                 .width(Length::Fill)
                 .height(Length::Fill),
