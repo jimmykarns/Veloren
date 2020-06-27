@@ -25,8 +25,9 @@ pub use self::{
         sprite::{Instance as SpriteInstance, SpritePipeline},
         terrain::{Locals as TerrainLocals, TerrainPipeline},
         ui::{
-            create_quad as create_ui_quad, create_tri as create_ui_tri, Locals as UiLocals,
-            Mode as UiMode, UiPipeline,
+            create_quad as create_ui_quad,
+            create_quad_vert_gradient as create_ui_quad_vert_gradient, create_tri as create_ui_tri,
+            Locals as UiLocals, Mode as UiMode, UiPipeline,
         },
         Globals, Light, Shadow,
     },
