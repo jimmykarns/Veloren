@@ -28,6 +28,7 @@ pub struct IcedUi {
     cache: Option<Cache>,
     events: Vec<Event>,
     clipboard: Clipboard,
+    cursor_position: Vec2<f32>,
     // Scaling of the ui
     scale: Scale,
     window_resized: Option<Vec2<u32>>,
@@ -46,6 +47,7 @@ impl IcedUi {
             events: Vec::new(),
             // TODO: handle None
             clipboard: Clipboard::new(window.window()).unwrap(),
+            cursor_position: Vec2::zero(),
             scale,
             window_resized: None,
         })
@@ -74,6 +76,13 @@ impl IcedUi {
             Event::Mouse(mouse::Event::CursorMoved { x, y }) => {
                 // TODO: return f32 here
                 let scale = self.scale.scale_factor_logical() as f32;
+                // TODO: determine why iced moved cursor position out of the `Cache` and if we
+                // may need to handle this in a different way to address
+                // whatever issue iced was trying to address
+                self.cursor_position = Vec2 {
+                    x: x * scale,
+                    y: y * scale,
+                };
                 self.events.push(Event::Mouse(mouse::Event::CursorMoved {
                     x: x * scale,
                     y: y * scale,
@@ -129,6 +138,11 @@ impl IcedUi {
             }
         }
 
+        let cursor_position = iced::Point {
+            x: self.cursor_position.x,
+            y: self.cursor_position.y,
+        };
+
         // TODO: convert to f32 at source
         let window_size = self.scale.scaled_window_size().map(|e| e as f32);
 
@@ -141,11 +155,13 @@ impl IcedUi {
 
         let messages = user_interface.update(
             self.events.drain(..),
+            cursor_position,
             Some(&self.clipboard),
             &mut self.renderer,
         );
 
-        let (primitive, mouse_interaction) = user_interface.draw(&mut self.renderer);
+        let (primitive, mouse_interaction) =
+            user_interface.draw(&mut self.renderer, cursor_position);
 
         self.cache = Some(user_interface.into_cache());
 
