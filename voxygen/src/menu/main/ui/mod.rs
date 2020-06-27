@@ -9,18 +9,18 @@ use crate::{
     ui::{
         self,
         fonts::IcedFonts as Fonts,
-        ice::{Element, IcedUi as Ui},
+        ice::{style, widget, Element, Font, IcedUi as Ui},
         img_ids::{ImageGraphic, VoxelGraphic},
         Graphic,
     },
     GlobalState,
 };
+use iced::{text_input, Column, Container, HorizontalAlignment, Length};
 //ImageFrame, Tooltip,
 use crate::settings::Settings;
 use common::assets::load_expect;
 use rand::{seq::SliceRandom, thread_rng};
 use std::time::Duration;
-use ui::ice::widget;
 
 // TODO: what is this? (showed up in rebase)
 //const COL1: Color = Color::Rgba(0.07, 0.1, 0.1, 0.9);
@@ -29,8 +29,9 @@ use ui::ice::widget;
 /*const UI_MAIN: Color = Color::Rgba(0.61, 0.70, 0.70, 1.0); // Greenish Blue
 const UI_HIGHLIGHT_0: Color = Color::Rgba(0.79, 1.09, 1.09, 1.0);*/
 
-use iced::{text_input, Column, Container, HorizontalAlignment, Length};
-use ui::ice::style;
+pub const TEXT_COLOR: iced::Color = iced::Color::from_rgb(1.0, 1.0, 1.0);
+pub const DISABLED_TEXT_COLOR: iced::Color = iced::Color::from_rgba(1.0, 1.0, 1.0, 0.2);
+
 image_ids_ice! {
     struct Imgs {
         <VoxelGraphic>
@@ -223,8 +224,8 @@ impl Controls {
         let button_style = style::button::Style::new(self.imgs.button)
             .hover_image(self.imgs.button_hover)
             .press_image(self.imgs.button_press)
-            .text_color(login::TEXT_COLOR)
-            .disabled_text_color(login::DISABLED_TEXT_COLOR);
+            .text_color(TEXT_COLOR)
+            .disabled_text_color(DISABLED_TEXT_COLOR);
 
         let version = iced::Text::new(&self.version)
             .size(self.fonts.cyri.scale(15))
@@ -446,7 +447,7 @@ impl MainMenuUi {
             .unwrap()
             .read_to_end(&mut buf)
             .unwrap();
-            ui::ice::Font::try_from_vec(buf).unwrap()
+            Font::try_from_vec(buf).unwrap()
         };
 
         let mut ui = Ui::new(&mut global_state.window, font).unwrap();

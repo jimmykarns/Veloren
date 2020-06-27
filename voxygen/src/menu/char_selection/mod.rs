@@ -78,18 +78,10 @@ impl PlayState for CharSelectionState {
                     ui::Event::DeleteCharacter(character_id) => {
                         self.client.borrow_mut().delete_character(character_id);
                     },
-                    ui::Event::Play => {
-                        let char_data = self
-                            .char_selection_ui
-                            .get_character_list()
-                            .expect("Character data is required to play");
-
-                        if let Some(selected_character) =
-                            char_data.get(self.char_selection_ui.selected_character)
-                        {
-                            if let Some(character_id) = selected_character.character.id {
-                                self.client.borrow_mut().request_character(character_id);
-                            }
+                    ui::Event::Play(character) => {
+                        // TODO: eliminate option in character id
+                        if let Some(character_id) = character.character.id {
+                            self.client.borrow_mut().request_character(character_id);
                         }
 
                         return PlayStateResult::Switch(Box::new(SessionState::new(
@@ -105,16 +97,10 @@ impl PlayState for CharSelectionState {
 
             let humanoid_body = self
                 .char_selection_ui
-                .get_character_list()
-                .and_then(|data| {
-                    if let Some(character) = data.get(self.char_selection_ui.selected_character) {
-                        match character.body {
-                            comp::Body::Humanoid(body) => Some(body),
-                            _ => None,
-                        }
-                    } else {
-                        None
-                    }
+                .selected_character()
+                .and_then(|character| match character.body {
+                    comp::Body::Humanoid(body) => Some(body),
+                    _ => None,
                 });
 
             // Maintain the scene.
@@ -148,7 +134,7 @@ impl PlayState for CharSelectionState {
 
             // Draw the UI to the screen.
             self.char_selection_ui
-                .render(global_state.window.renderer_mut(), self.scene.globals());
+                .render(global_state.window.renderer_mut());
 
             // Tick the client (currently only to keep the connection alive).
             let localized_strings = assets::load_expect::<Localization>(&i18n_asset_key(
