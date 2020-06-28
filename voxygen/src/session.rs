@@ -103,6 +103,7 @@ impl SessionState {
                         message,
                     });
                 },
+                client::Event::InitialPlayerListReceived => { /* Only used by chat-cli */ },
                 client::Event::Notification(Notification::WaypointSaved) => {
                     self.hud
                         .new_message(client::Event::Notification(Notification::WaypointSaved));

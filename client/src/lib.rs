@@ -61,6 +61,7 @@ pub enum Event {
     },
     Disconnect,
     DisconnectionNotification(u64),
+    InitialPlayerListReceived,
     Notification(Notification),
     SetViewDistance(u32),
 }
@@ -749,7 +750,8 @@ impl Client {
                     ServerMsg::Shutdown => return Err(Error::ServerShutdown),
                     ServerMsg::InitialSync { .. } => return Err(Error::ServerWentMad),
                     ServerMsg::PlayerListUpdate(PlayerListUpdate::Init(list)) => {
-                        self.player_list = list
+                        self.player_list = list;
+                        frontend_events.push(Event::InitialPlayerListReceived);
                     },
                     ServerMsg::PlayerListUpdate(PlayerListUpdate::Add(uid, player_info)) => {
                         if let Some(old_player_info) =
