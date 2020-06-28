@@ -318,7 +318,7 @@ Commandes du tchat:
         "char_selection.eye_color": "Couleur des yeux",
         "char_selection.accessories": "Accessoires",
         "char_selection.level_fmt": "Niveau {level_nb}",
-        "char_selection.create_new_charater": "Créer un nouveau personnage",
+        "char_selection.create_new_character": "Créer un nouveau personnage",
         "char_selection.human_default": "Humain par défault",
         "char_selection.uncanny_valley": "Vallée dérangeante",
         "char_selection.chest_color": "Couleur du torse",

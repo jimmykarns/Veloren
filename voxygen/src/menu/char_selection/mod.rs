@@ -78,11 +78,8 @@ impl PlayState for CharSelectionState {
                     ui::Event::DeleteCharacter(character_id) => {
                         self.client.borrow_mut().delete_character(character_id);
                     },
-                    ui::Event::Play(character) => {
-                        // TODO: eliminate option in character id
-                        if let Some(character_id) = character.character.id {
-                            self.client.borrow_mut().request_character(character_id);
-                        }
+                    ui::Event::Play(character_id) => {
+                        self.client.borrow_mut().request_character(character_id);
 
                         return PlayStateResult::Switch(Box::new(SessionState::new(
                             global_state,
@@ -95,17 +92,17 @@ impl PlayState for CharSelectionState {
             // Maintain global state.
             global_state.maintain(clock.get_last_delta().as_secs_f32());
 
-            let humanoid_body = self
-                .char_selection_ui
-                .selected_character()
-                .and_then(|character| match character.body {
-                    comp::Body::Humanoid(body) => Some(body),
-                    _ => None,
-                });
-
-            // Maintain the scene.
             {
                 let client = self.client.borrow();
+                let humanoid_body = self
+                    .char_selection_ui
+                    .display_character(&client.character_list.characters)
+                    .and_then(|character| match character.body {
+                        comp::Body::Humanoid(body) => Some(body),
+                        _ => None,
+                    });
+
+                // Maintain the scene.
                 let scene_data = scene::SceneData {
                     time: client.state().get_time(),
                     delta_time: client.state().ecs().read_resource::<DeltaTime>().0,
@@ -121,16 +118,16 @@ impl PlayState for CharSelectionState {
                 };
                 self.scene
                     .maintain(global_state.window.renderer_mut(), scene_data);
-            }
 
-            // Render the scene.
-            let loadout = self.char_selection_ui.get_loadout();
-            self.scene.render(
-                global_state.window.renderer_mut(),
-                self.client.borrow().get_tick(),
-                humanoid_body,
-                loadout.as_ref(),
-            );
+                // Render the scene.
+                let loadout = self.char_selection_ui.get_loadout();
+                self.scene.render(
+                    global_state.window.renderer_mut(),
+                    client.get_tick(),
+                    humanoid_body,
+                    loadout.as_ref(),
+                );
+            }
 
             // Draw the UI to the screen.
             self.char_selection_ui

@@ -340,7 +340,7 @@ magically infused items?"#,
         "char_selection.change_server": "Сменить сервер",
         "char_selection.enter_world": "Войти в мир",
         "char_selection.logout": "Выйти в меню",
-        "char_selection.create_new_charater": "Создать нового персонажа",
+        "char_selection.create_new_character": "Создать нового персонажа",
         "char_selection.character_creation": "Создание персонажа",
 
         "char_selection.human_default": "Стандартный человек",
