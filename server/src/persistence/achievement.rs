@@ -132,7 +132,7 @@ pub fn sync(db_dir: &str) -> Result<Vec<AchievementModel>, Error> {
             info!(?checksum, "checksum: ");
 
             migration_entry.checksum != hash(&achievements).to_string()
-        }
+        },
         Err(diesel::result::Error::NotFound) => {
             let migration = NewDataMigration {
                 title: "achievements",
@@ -145,12 +145,12 @@ pub fn sync(db_dir: &str) -> Result<Vec<AchievementModel>, Error> {
                 .execute(&connection)?;
 
             true
-        }
+        },
         Err(_) => {
             error!("Failed to run migrations"); // TODO better error messaging
 
             false
-        }
+        },
     };
 
     if (should_run || persisted_achievements.is_empty()) && !achievements.is_empty() {
@@ -189,7 +189,7 @@ pub fn sync(db_dir: &str) -> Result<Vec<AchievementModel>, Error> {
                                 }
                             }
                         }
-                    }
+                    },
                     _ => return Err(Error::DatabaseError(error)),
                 }
             }
@@ -207,7 +207,10 @@ pub fn sync(db_dir: &str) -> Result<Vec<AchievementModel>, Error> {
         info!("No achievement updates required");
     }
 
-    Ok(schema::achievement::dsl::achievement.load::<AchievementModel>(&connection)?)
+    let data = schema::achievement::dsl::achievement.load::<AchievementModel>(&connection)?;
+
+    Ok(data)
+    // Ok(data.iter().map(comp::Achievement::from).collect::<_>())
 }
 
 fn load_data() -> Vec<AchievementItem> {
@@ -223,7 +226,7 @@ fn load_data() -> Vec<AchievementItem> {
         Err(error) => {
             warn!(?error, "Unable to find achievement data file");
             Vec::new()
-        }
+        },
     }
 }
 

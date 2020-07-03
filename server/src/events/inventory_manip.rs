@@ -3,9 +3,9 @@ use common::{
     comp::{
         self, item,
         slot::{self, Slot},
-        Pos, MAX_PICKUP_RANGE_SQR,
+        AchievementEvent, Pos, MAX_PICKUP_RANGE_SQR,
     },
-    event::{AchievementEvent, EventBus},
+    event::AchievementEvent,
     sync::{Uid, WorldSyncExt},
     terrain::block::Block,
     vol::{ReadVol, Vox},
@@ -86,13 +86,10 @@ pub fn handle_inventory(server: &mut Server, entity: EcsEntity, manip: comp::Inv
 
                 let item = picked_up_item.unwrap();
 
-                state
-                    .ecs()
-                    .read_resource::<EventBus<AchievementEvent>>()
-                    .emit_now(AchievementEvent::CollectedItem {
-                        entity,
-                        item: item.clone(),
-                    });
+                state.write_component(
+                    entity,
+                    comp::AchievementUpdate::new(AchievementEvent::CollectedItem(item.clone())),
+                );
 
                 comp::InventoryUpdate::new(comp::InventoryUpdateEvent::Collected(item))
             } else {
@@ -122,13 +119,12 @@ pub fn handle_inventory(server: &mut Server, entity: EcsEntity, manip: comp::Inv
                     && state.try_set_block(pos, Block::empty()).is_some()
                 {
                     comp::Item::try_reclaim_from_block(block).map(|item| {
-                        state
-                            .ecs()
-                            .read_resource::<EventBus<AchievementEvent>>()
-                            .emit_now(AchievementEvent::CollectedItem {
-                                entity,
-                                item: item.clone(),
-                            });
+                        state.write_component(
+                            entity,
+                            comp::AchievementUpdate::new(AchievementEvent::CollectedItem(
+                                item.clone(),
+                            )),
+                        );
 
                         state.give_item(entity, item);
                     });

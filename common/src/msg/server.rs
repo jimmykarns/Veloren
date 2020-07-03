@@ -64,6 +64,8 @@ pub enum ServerMsg {
     AchievementDataUpdate(Vec<comp::Achievement>),
     /// An error occurred while loading character achievements
     AchievementDataError(String),
+    /// The client has completed an achievement
+    AchievementCompletion,
     /// An error occurred while loading character data
     CharacterDataLoadError(String),
     /// A list of characters belonging to the a authenticated player was sent

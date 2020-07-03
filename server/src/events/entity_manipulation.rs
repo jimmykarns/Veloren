@@ -1,7 +1,10 @@
 use crate::{client::Client, Server, SpawnPoint, StateExt};
 use common::{
     assets,
-    comp::{self, item::lottery::Lottery, object, Body, HealthChange, HealthSource, Player, Stats},
+    comp::{
+        self, item::lottery::Lottery, object, AchievementEvent, Body, HealthChange, HealthSource,
+        Player, Stats,
+    },
     msg::{PlayerListUpdate, ServerMsg},
     state::BlockChange,
     sync::{Uid, WorldSyncExt},
@@ -313,6 +316,12 @@ pub fn handle_level_up(server: &mut Server, entity: EcsEntity, new_level: u32) {
     let uid = uids
         .get(entity)
         .expect("Failed to fetch uid component for entity.");
+
+    // Write an achievement update to trigger level achievements
+    let _ = server.state.ecs().write_storage().insert(
+        entity,
+        comp::AchievementUpdate::new(AchievementEvent::LevelUp(new_level)),
+    );
 
     server
         .state

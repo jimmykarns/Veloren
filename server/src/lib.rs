@@ -30,7 +30,7 @@ use crate::{
 use common::{
     cmd::ChatCommand,
     comp::{self, ChatType},
-    event::{AchievementEvent, EventBus, ServerEvent},
+    event::{EventBus, ServerEvent},
     msg::{ClientState, ServerInfo, ServerMsg},
     state::{State, TimeOfDay},
     sync::WorldSyncExt,
@@ -101,9 +101,6 @@ impl Server {
 
         // Event Emitters
         state.ecs_mut().insert(EventBus::<ServerEvent>::default());
-        state
-            .ecs_mut()
-            .insert(EventBus::<AchievementEvent>::default());
 
         state.ecs_mut().insert(AuthProvider::new(
             settings.auth_server_address.clone(),
@@ -262,10 +259,11 @@ impl Server {
         // Sync and Load Achievement Data
         debug!("Syncing Achievement data...");
 
+        // TODO I switched this to return comp::Achievement but that's not right...we
+        // want the id really,
         match persistence::achievement::sync(&settings.persistence_db_dir) {
             Ok(achievements) => {
                 info!("Achievement data loaded...");
-                info!(?achievements, "data:");
                 state.ecs_mut().insert(AvailableAchievements(achievements));
             },
             Err(e) => error!(?e, "Achievement data migration error"),
@@ -428,20 +426,6 @@ impl Server {
         for entity in to_delete {
             if let Err(e) = self.state.delete_entity_recorded(entity) {
                 error!(?e, "Failed to delete agent outside the terrain");
-            }
-        }
-
-        let achievement_events = self
-            .state
-            .ecs()
-            .read_resource::<EventBus<AchievementEvent>>()
-            .recv_all();
-
-        for event in achievement_events {
-            match event {
-                AchievementEvent::CollectedItem { entity, item } => {
-                    info!(?item, "Achievement event: item");
-                },
             }
         }
 

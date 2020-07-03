@@ -1000,6 +1000,9 @@ impl Client {
                 ServerMsg::AchievementDataError(error) => {
                     // TODO handle somehow
                 },
+                ServerMsg::AchievementCompletion => {
+                    tracing::info!("Completed achievement");
+                },
             }
         }
     }

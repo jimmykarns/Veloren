@@ -397,7 +397,11 @@ where
             Err(e) => {
                 warn!(?e, "Failed to deserialise achevement data");
 
-                Ok(Self(comp::AchievementItem::default()))
+                Ok(Self(comp::AchievementItem {
+                    title: String::new(),
+                    action: comp::AchievementAction::None,
+                    target: 0,
+                }))
             },
         }
     }
@@ -456,13 +460,22 @@ pub struct CharacterAchievement {
 }
 
 impl From<&CharacterAchievement> for comp::Achievement {
-    fn from(_achievement: &CharacterAchievement) -> comp::Achievement {
-        comp::Achievement::default()
+    fn from(achievement: &CharacterAchievement) -> comp::Achievement {
+        comp::Achievement {
+            id: achievement.achievement_id,
+            item: comp::AchievementItem {
+                title: String::from("TODO"),
+                action: comp::AchievementAction::None,
+                target: 0,
+            },
+            completed: achievement.completed != 0,
+            progress: achievement.progress as usize,
+        }
     }
 }
 
-impl From<Achievement> for comp::Achievement {
-    fn from(achievement: Achievement) -> comp::Achievement {
+impl From<&Achievement> for comp::Achievement {
+    fn from(achievement: &Achievement) -> comp::Achievement {
         comp::Achievement {
             id: achievement.id,
             item: comp::AchievementItem::from(&achievement.details),

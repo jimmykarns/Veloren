@@ -150,6 +150,7 @@ impl State {
         ecs.register::<comp::WaypointArea>();
         ecs.register::<comp::ForceUpdate>();
         ecs.register::<comp::InventoryUpdate>();
+        ecs.register::<comp::AchievementUpdate>();
         ecs.register::<comp::Admin>();
         ecs.register::<comp::Waypoint>();
         ecs.register::<comp::Projectile>();

@@ -1,10 +1,9 @@
 [
     (
-        title: "Collect 10 Apples",
-        achievement_type: CollectConsumable(Apple, 10)
-    ),
-    (
-        title: "Collect 50 Apples",
-        achievement_type: CollectConsumable(Apple, 50)
-    ),
+        title: "Collect 5 Apples",
+        action: CollectItemKind(Consumable(
+            kind: Apple
+        )),
+        target: 5
+    )
 ]
