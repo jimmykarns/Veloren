@@ -552,6 +552,19 @@ impl PlayState for SessionState {
                 }
             }
 
+            // Stop auto walking if player is dead
+            if auto_walk {
+                let client = self.client.borrow();
+                if client
+                    .state()
+                    .read_storage::<comp::Stats>()
+                    .get(client.entity())
+                    .map_or(false, |s| s.is_dead)
+                {
+                    stop_auto_walk(&mut auto_walk, &mut self.key_state, &mut self.hud);
+                }
+            }
+
             if !free_look {
                 walk_forward_dir = self.scene.camera().forward_xy();
                 walk_right_dir = self.scene.camera().right_xy();
