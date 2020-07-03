@@ -313,6 +313,8 @@ magically infused items?"#,
 
         "hud.spell": "Spells",
 
+        "hud.crafting": "Crafting",
+
         "hud.free_look_indicator": "Free look active",       
         "hud.auto_walk_indicator": "Auto walk active",
 

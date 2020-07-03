@@ -1,6 +1,7 @@
 mod bag;
 mod buttons;
 mod chat;
+mod crafting;
 mod esc_menu;
 mod hotbar;
 mod img_ids;
@@ -25,6 +26,7 @@ use bag::Bag;
 use buttons::Buttons;
 use chat::Chat;
 use chrono::NaiveTime;
+use crafting::Crafting;
 use esc_menu::EscMenu;
 use img_ids::Imgs;
 use item_imgs::ItemImgs;
@@ -198,6 +200,7 @@ widget_ids! {
         esc_menu,
         small_window,
         social_window,
+        crafting_window,
         settings_window,
 
         // Free look indicator
@@ -335,6 +338,7 @@ pub struct Show {
     ui: bool,
     intro: bool,
     help: bool,
+    crafting: bool,
     debug: bool,
     bag: bool,
     social: bool,
@@ -368,12 +372,21 @@ impl Show {
 
     fn social(&mut self, open: bool) {
         self.social = open;
+        self.crafting = false;
         self.spell = false;
+        self.want_grab = !open;
+    }
+
+    fn crafting(&mut self, open: bool) {
+        self.crafting = open;
+        self.spell = false;
+        self.social = false;
         self.want_grab = !open;
     }
 
     fn spell(&mut self, open: bool) {
         self.social = false;
+        self.crafting = false;
         self.spell = open;
         self.want_grab = !open;
     }
@@ -390,6 +403,7 @@ impl Show {
         };
         self.bag = false;
         self.social = false;
+        self.crafting = false;
         self.spell = false;
         self.want_grab = !open;
     }
@@ -454,6 +468,11 @@ impl Show {
     fn toggle_social(&mut self) {
         self.social = !self.social;
         self.spell = false;
+    }
+
+    fn toggle_crafting(&mut self) {
+        self.crafting = !self.crafting;
+        self.social = false;
     }
 
     fn open_social_tab(&mut self, social_tab: SocialTab) {
@@ -555,6 +574,7 @@ impl Hud {
                 esc_menu: false,
                 open_windows: Windows::None,
                 map: false,
+                crafting: false,
                 ui: true,
                 social: false,
                 spell: false,
@@ -1531,6 +1551,24 @@ impl Hud {
                 }
             }
         }
+        // Crafting
+
+        // Social Window
+        if self.show.crafting {
+            for event in Crafting::new(
+                &self.show,
+                client,
+                &self.imgs,
+                &self.fonts,
+                &self.voxygen_i18n,
+            )
+            .set(self.ids.crafting_window, ui_widgets)
+            {
+                match event {
+                    crafting::Event::Close => self.show.crafting(false),
+                }
+            }
+        }
 
         // Skillbar
         // Get player stats
@@ -2062,6 +2100,10 @@ impl Hud {
                 },
                 GameInput::Social if state => {
                     self.show.toggle_social();
+                    true
+                },
+                GameInput::Crafting if state => {
+                    self.show.toggle_crafting();
                     true
                 },
                 GameInput::Spellbook if state => {
