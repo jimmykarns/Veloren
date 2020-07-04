@@ -379,8 +379,6 @@ impl Show {
 
     fn crafting(&mut self, open: bool) {
         self.crafting = open;
-        self.spell = false;
-        self.social = false;
         self.want_grab = !open;
     }
 
@@ -424,6 +422,7 @@ impl Show {
             || self.esc_menu
             || self.map
             || self.social
+            || self.crafting
             || self.spell
             || self.help
             || self.intro
@@ -439,6 +438,7 @@ impl Show {
             self.map = false;
             self.social = false;
             self.spell = false;
+            self.crafting = false;
             self.open_windows = Windows::None;
             self.want_grab = true;
 
@@ -470,10 +470,7 @@ impl Show {
         self.spell = false;
     }
 
-    fn toggle_crafting(&mut self) {
-        self.crafting = !self.crafting;
-        self.social = false;
-    }
+    fn toggle_crafting(&mut self) { self.crafting(!self.crafting) }
 
     fn open_social_tab(&mut self, social_tab: SocialTab) {
         self.social_tab = social_tab;
@@ -1551,9 +1548,8 @@ impl Hud {
                 }
             }
         }
-        // Crafting
 
-        // Social Window
+        // Crafting
         if self.show.crafting {
             for event in Crafting::new(
                 &self.show,
@@ -1565,7 +1561,10 @@ impl Hud {
             .set(self.ids.crafting_window, ui_widgets)
             {
                 match event {
-                    crafting::Event::Close => self.show.crafting(false),
+                    crafting::Event::Close => {
+                        self.show.crafting(false);
+                        self.force_ungrab = true;
+                    },
                 }
             }
         }
