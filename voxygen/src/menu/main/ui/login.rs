@@ -342,6 +342,7 @@ impl LoginBanner {
                 .padding(10)
                 .height(Length::FillPortion(25))
                 .into(),
+            // TODO: i18n
             Column::with_children(vec![
                 BackgroundContainer::new(
                     Image::new(imgs.input_bg)
@@ -349,7 +350,7 @@ impl LoginBanner {
                         .fix_aspect_ratio(),
                     TextInput::new(
                         &mut self.username,
-                        "Username",
+                        i18n.get("main.username"),
                         &login_info.username,
                         Message::Username,
                     )
@@ -364,7 +365,7 @@ impl LoginBanner {
                         .fix_aspect_ratio(),
                     TextInput::new(
                         &mut self.password,
-                        "Password",
+                        i18n.get("main.password"),
                         &login_info.password,
                         Message::Password,
                     )
@@ -380,7 +381,7 @@ impl LoginBanner {
                         .fix_aspect_ratio(),
                     TextInput::new(
                         &mut self.server,
-                        "Server",
+                        i18n.get("main.server"),
                         &login_info.server,
                         Message::Server,
                     )

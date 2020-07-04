@@ -94,13 +94,19 @@ impl PlayState for CharSelectionState {
 
             {
                 let client = self.client.borrow();
-                let humanoid_body = self
+                let (humanoid_body, loadout) = self
                     .char_selection_ui
-                    .display_character(&client.character_list.characters)
-                    .and_then(|character| match character.body {
-                        comp::Body::Humanoid(body) => Some(body),
-                        _ => None,
-                    });
+                    .display_body_loadout(&client.character_list.characters)
+                    .map(|(body, loadout)| {
+                        (
+                            match body {
+                                comp::Body::Humanoid(body) => Some(body),
+                                _ => None,
+                            },
+                            Some(loadout),
+                        )
+                    })
+                    .unwrap_or_default();
 
                 // Maintain the scene.
                 let scene_data = scene::SceneData {
@@ -120,12 +126,11 @@ impl PlayState for CharSelectionState {
                     .maintain(global_state.window.renderer_mut(), scene_data);
 
                 // Render the scene.
-                let loadout = self.char_selection_ui.get_loadout();
                 self.scene.render(
                     global_state.window.renderer_mut(),
                     client.get_tick(),
                     humanoid_body,
-                    loadout.as_ref(),
+                    loadout,
                 );
             }
 
