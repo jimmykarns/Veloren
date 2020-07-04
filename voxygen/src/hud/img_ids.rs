@@ -62,6 +62,11 @@ image_ids! {
         social_button_press: "voxygen.element.buttons.social_tab_press",
         social_frame: "voxygen.element.frames.social_frame",
 
+        // Crafting Window
+
+        crafting_window: "voxygen.element.misc_bg.crafting",
+        crafting_frame: "voxygen.element.misc_bg.crafting_frame",
+
         // Chat-Arrows
         chat_arrow: "voxygen.element.buttons.arrow_down",
         chat_arrow_mo: "voxygen.element.buttons.arrow_down_hover",

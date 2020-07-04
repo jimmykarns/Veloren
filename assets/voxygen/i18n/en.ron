@@ -311,9 +311,12 @@ magically infused items?"#,
         "hud.social.faction": "Faction",
         "hud.social.play_online_fmt": "{nb_player} player(s) online",
 
-        "hud.spell": "Spells",
-
         "hud.crafting": "Crafting",
+        "hud.crafting.recipes": "Recipes",
+        "hud.crafting.ingredients": "Ingredients",
+        "hud.crafting.craft": "Craft",
+
+        "hud.spell": "Spells",        
 
         "hud.free_look_indicator": "Free look active",       
         "hud.auto_walk_indicator": "Auto walk active",
