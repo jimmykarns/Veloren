@@ -486,10 +486,14 @@ impl Server {
                     entity,
                     result,
                 )) => match result {
-                    Ok(achievement_data) => self
-                        .notify_client(entity, ServerMsg::AchievementDataUpdate(achievement_data)),
-                    Err(error) => self
-                        .notify_client(entity, ServerMsg::AchievementDataError(error.to_string())),
+                    Ok(achievement_data) => self.notify_client(
+                        entity,
+                        ServerMsg::CharacterAchievementDataLoaded(achievement_data),
+                    ),
+                    Err(error) => self.notify_client(
+                        entity,
+                        ServerMsg::CharacterAchievementDataError(error.to_string()),
+                    ),
                 },
             });
 

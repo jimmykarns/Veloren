@@ -29,7 +29,7 @@ enum AchievementLoaderRequestKind {
     },
 }
 
-type LoadCharacterAchievementsResult = (specs::Entity, Result<Vec<comp::Achievement>, Error>);
+type LoadCharacterAchievementsResult = (specs::Entity, Result<comp::AchievementList, Error>);
 
 /// Wrapper for results
 #[derive(Debug)]
@@ -100,15 +100,17 @@ impl Drop for AchievementLoader {
 fn load_character_achievement_list(
     character_id: i32,
     db_dir: &str,
-) -> Result<Vec<comp::Achievement>, Error> {
+) -> Result<comp::AchievementList, Error> {
     let character_achievements = schema::character_achievement::dsl::character_achievement
         .filter(schema::character_achievement::character_id.eq(character_id))
         .load::<CharacterAchievement>(&establish_connection(db_dir))?;
 
-    Ok(character_achievements
-        .iter()
-        .map(comp::Achievement::from)
-        .collect::<Vec<comp::Achievement>>())
+    Ok(comp::AchievementList::from(
+        character_achievements
+            .iter()
+            .map(comp::Achievement::from)
+            .collect::<Vec<comp::Achievement>>(),
+    ))
 }
 
 pub fn sync(db_dir: &str) -> Result<Vec<AchievementModel>, Error> {

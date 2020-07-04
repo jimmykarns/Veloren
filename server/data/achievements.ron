@@ -1,9 +1,12 @@
 [
     (
         title: "Collect 5 Apples",
-        action: CollectItemKind(Consumable(
-            kind: Apple
-        )),
+        action: CollectConsumable(Apple),
         target: 5
+    ),
+    (
+        title: "Collect 7 Apples",
+        action: CollectConsumable(Apple),
+        target: 7
     )
 ]

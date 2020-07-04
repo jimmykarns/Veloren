@@ -992,16 +992,15 @@ impl Client {
                     self.view_distance = Some(vd);
                     frontend_events.push(Event::SetViewDistance(vd));
                 },
-                ServerMsg::AchievementDataUpdate(achievements) => {
-                    // TODO should this happen? Can't you just save it
-                    // against the entity on the server and it will et
-                    // synced?
+                ServerMsg::CharacterAchievementDataLoaded(achievement_list) => {
+                    self.state.write_component(self.entity, achievement_list);
                 },
-                ServerMsg::AchievementDataError(error) => {
+                ServerMsg::CharacterAchievementDataError(error) => {
                     // TODO handle somehow
                 },
-                ServerMsg::AchievementCompletion => {
-                    tracing::info!("Completed achievement");
+                ServerMsg::AchievementCompletion(achievement) => {
+                    // TODO handle in UI
+                    tracing::info!(?achievement, "Completed achievement");
                 },
             }
         }

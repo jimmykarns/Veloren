@@ -16,7 +16,7 @@ pub fn handle_initialize_character(server: &mut Server, entity: EcsEntity, chara
 pub fn handle_loaded_character_data(
     server: &mut Server,
     entity: EcsEntity,
-    loaded_components: (comp::Body, comp::Stats, comp::Inventory, comp::Loadout),
+    loaded_components: (i32, comp::Body, comp::Stats, comp::Inventory, comp::Loadout),
 ) {
     server
         .state

@@ -88,13 +88,21 @@ impl Achievement {
     }
 }
 
-/// The achievement List assigned to all players. This holds a list of
-/// achievements where the player has made some progress towards completion.
+/// Each character is assigned an achievement list, which holds information
+/// about which achievements that the player has made some progress on, or
+/// completed.
+///
+/// This minimises storage of data per-character, and can be merged with a full
+/// achievement list
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct AchievementList(Vec<Achievement>);
 
 impl Default for AchievementList {
     fn default() -> AchievementList { AchievementList(Vec::new()) }
+}
+
+impl AchievementList {
+    pub fn from(data: Vec<Achievement>) -> Self { Self(data) }
 }
 
 impl Component for AchievementList {

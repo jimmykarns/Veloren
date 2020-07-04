@@ -61,11 +61,11 @@ pub enum ServerMsg {
     },
     /// A list of achievements which the character has fully or partially
     /// completed
-    AchievementDataUpdate(Vec<comp::Achievement>),
+    CharacterAchievementDataLoaded(comp::AchievementList),
     /// An error occurred while loading character achievements
-    AchievementDataError(String),
+    CharacterAchievementDataError(String),
     /// The client has completed an achievement
-    AchievementCompletion,
+    AchievementCompletion(comp::AchievementItem),
     /// An error occurred while loading character data
     CharacterDataLoadError(String),
     /// A list of characters belonging to the a authenticated player was sent

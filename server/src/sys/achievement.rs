@@ -37,7 +37,7 @@ impl<'a> System<'a> for Sys {
                         .process_achievement(Achievement::from(achievement), ach_update.event())
                         == true
                     {
-                        client.notify(ServerMsg::AchievementCompletion);
+                        client.notify(ServerMsg::AchievementCompletion(achievement_item));
                     }
                 }
             });
