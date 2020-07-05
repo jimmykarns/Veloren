@@ -21,6 +21,8 @@ use std::{
 };
 use tracing::{error, info, warn};
 
+pub type Achievement = AchievementModel;
+
 /// Available database operations when modifying a player's characetr list
 enum AchievementLoaderRequestKind {
     LoadCharacterAchievementList {
@@ -237,10 +239,3 @@ pub fn hash<T: Hash>(t: &T) -> u64 {
     t.hash(&mut s);
     s.finish()
 }
-
-/// Holds a list of achievements available to players.
-///
-/// This acts as the reference for checks on achievements, and holds id's as
-/// well as details of achievement
-#[derive(Debug)]
-pub struct AvailableAchievements(pub Vec<AchievementModel>);

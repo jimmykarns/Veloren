@@ -2,9 +2,10 @@ use crate::{client::Client, Server, SpawnPoint, StateExt};
 use common::{
     assets,
     comp::{
-        self, item::lottery::Lottery, object, AchievementEvent, Alignment, Body, HealthChange,
-        HealthSource, Player, Stats,
+        self, item::lottery::Lottery, object, AchievementEvent, AchievementTrigger, Alignment,
+        Body, HealthChange, HealthSource, Player, Stats,
     },
+    event::EventBus,
     msg::{PlayerListUpdate, ServerMsg},
     state::BlockChange,
     sync::{Uid, WorldSyncExt},
@@ -90,10 +91,10 @@ pub fn handle_destroy(server: &mut Server, entity: EcsEntity, cause: HealthSourc
                         },
                         _ => None,
                     } {
-                        let _ = state
+                        state
                             .ecs()
-                            .write_storage()
-                            .insert(entity, comp::AchievementUpdate::new(event));
+                            .read_resource::<EventBus<AchievementTrigger>>()
+                            .emit_now(AchievementTrigger { entity, event });
                     }
                 });
             }
@@ -339,11 +340,15 @@ pub fn handle_level_up(server: &mut Server, entity: EcsEntity, new_level: u32) {
         .get(entity)
         .expect("Failed to fetch uid component for entity.");
 
-    // Write an achievement update to trigger level achievements
-    let _ = server.state.ecs().write_storage().insert(
-        entity,
-        comp::AchievementUpdate::new(AchievementEvent::LevelUp(new_level)),
-    );
+    // Emit an achievement check for the level up
+    server
+        .state
+        .ecs()
+        .read_resource::<EventBus<AchievementTrigger>>()
+        .emit_now(AchievementTrigger {
+            entity,
+            event: AchievementEvent::LevelUp(new_level),
+        });
 
     server
         .state

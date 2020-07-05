@@ -1,9 +1,15 @@
-use crate::comp::{
-    self,
-    item::{Consumable, Item, ItemKind},
-};
-use specs::{Component, FlaggedStorage};
+use crate::comp::item::{Consumable, Item, ItemKind};
+use specs::{Component, Entity, FlaggedStorage};
 use specs_idvs::IDVStorage;
+
+/// Used for in-game events that contribute towards player achievements.
+///
+/// For example, when an `InventoryManip` is detected, we record that event in
+/// order to process achievements which depend on collecting items.
+pub struct AchievementTrigger {
+    pub entity: Entity,
+    pub event: AchievementEvent,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum AchievementEvent {
@@ -35,7 +41,7 @@ pub struct AchievementItem {
 }
 
 impl AchievementItem {
-    pub fn matches_event(&self, event: AchievementEvent) -> bool {
+    pub fn matches_event(&self, event: &AchievementEvent) -> bool {
         match event {
             AchievementEvent::KilledNpc => self.action == AchievementAction::KillNpcs,
             AchievementEvent::KilledPlayer => self.action == AchievementAction::KillPlayers,
@@ -51,14 +57,6 @@ impl AchievementItem {
                 _ => false,
             },
             AchievementEvent::None => false,
-            _ => {
-                tracing::warn!(
-                    ?event,
-                    "An AchievementEvent was processed but the event was not handled"
-                );
-
-                false
-            },
         }
     }
 }
@@ -79,10 +77,10 @@ impl Achievement {
     /// incremented by 1. This covers many cases, but using this method allows
     /// handling of unique types of achievements which are not simple
     /// counters for events
-    pub fn increment_progress(&mut self, event: AchievementEvent) -> bool {
+    pub fn increment_progress(&mut self, event: &AchievementEvent) -> bool {
         match event {
             AchievementEvent::LevelUp(level) => {
-                self.progress = level as usize;
+                self.progress = *level as usize;
             },
             _ => self.progress += 1,
         };
@@ -123,7 +121,7 @@ impl AchievementList {
     pub fn process_achievement(
         &mut self,
         achievement: Achievement,
-        event: AchievementEvent,
+        event: &AchievementEvent,
     ) -> bool {
         let id = achievement.id;
 
@@ -131,7 +129,7 @@ impl AchievementList {
             self.0.push(achievement);
         }
 
-        return if let Some(char_achievement) = self.item_by_id(id) {
+        if let Some(char_achievement) = self.item_by_id(id) {
             if char_achievement.completed {
                 return false;
             }
@@ -141,28 +139,8 @@ impl AchievementList {
             tracing::warn!("Failed to find achievement after inserting");
 
             false
-        };
+        }
     }
-}
-
-/// Used as a container for in-game events that contribute towards player
-/// achievements.
-///
-/// For example, when an `InventoryManip` is detected, we record that event in
-/// order to process achievements which depend on collecting items.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AchievementUpdate {
-    event: AchievementEvent,
-}
-
-impl AchievementUpdate {
-    pub fn new(event: AchievementEvent) -> Self { Self { event } }
-
-    pub fn event(&self) -> AchievementEvent { self.event.clone() }
-}
-
-impl Component for AchievementUpdate {
-    type Storage = IDVStorage<Self>;
 }
 
 #[cfg(test)]
@@ -181,7 +159,7 @@ mod tests {
         let event =
             AchievementEvent::CollectedItem(assets::load_expect_cloned("common.items.apple"));
 
-        assert!(item.matches_event(event));
+        assert!(item.matches_event(&event));
     }
 
     #[test]
@@ -195,7 +173,7 @@ mod tests {
         let event =
             AchievementEvent::CollectedItem(assets::load_expect_cloned("common.items.apple"));
 
-        assert_eq!(item.matches_event(event), false);
+        assert_eq!(item.matches_event(&event), false);
     }
 
     #[test]
@@ -208,7 +186,7 @@ mod tests {
 
         let event = AchievementEvent::LevelUp(3);
 
-        assert_eq!(item.matches_event(event), true);
+        assert_eq!(item.matches_event(&event), true);
     }
 
     #[test]
@@ -233,12 +211,12 @@ mod tests {
 
         // The first two increments should not indicate that it is complete
         assert_eq!(
-            achievement_list.process_achievement(achievement.clone(), event.clone()),
+            achievement_list.process_achievement(achievement.clone(), &event),
             false
         );
 
         assert_eq!(
-            achievement_list.process_achievement(achievement.clone(), event.clone()),
+            achievement_list.process_achievement(achievement.clone(), &event),
             false
         );
 
@@ -246,7 +224,7 @@ mod tests {
 
         // It should return true when completed
         assert_eq!(
-            achievement_list.process_achievement(achievement, event),
+            achievement_list.process_achievement(achievement, &event),
             true
         );
 
@@ -274,7 +252,8 @@ mod tests {
         let mut achievement_list = AchievementList::default();
 
         assert_eq!(
-            achievement_list.process_achievement(achievement.clone(), AchievementEvent::LevelUp(6)),
+            achievement_list
+                .process_achievement(achievement.clone(), &AchievementEvent::LevelUp(6)),
             false
         );
 
@@ -283,7 +262,7 @@ mod tests {
         assert_eq!(achievement_list.0.get(0).unwrap().completed, false);
 
         assert_eq!(
-            achievement_list.process_achievement(achievement, AchievementEvent::LevelUp(10)),
+            achievement_list.process_achievement(achievement, &AchievementEvent::LevelUp(10)),
             true
         );
 
@@ -313,7 +292,7 @@ mod tests {
             AchievementEvent::CollectedItem(assets::load_expect_cloned("common.items.mushroom"));
 
         assert_eq!(
-            achievement_list.process_achievement(achievement, event),
+            achievement_list.process_achievement(achievement, &event),
             false
         );
 

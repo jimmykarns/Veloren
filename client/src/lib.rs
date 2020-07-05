@@ -997,6 +997,7 @@ impl Client {
                 },
                 ServerMsg::CharacterAchievementDataError(error) => {
                     // TODO handle somehow
+                    tracing::info!(?error, "Failed to load achievements");
                 },
                 ServerMsg::AchievementCompletion(achievement) => {
                     // TODO handle in UI

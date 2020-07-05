@@ -1,4 +1,3 @@
-pub mod achievement;
 pub mod entity_sync;
 pub mod message;
 pub mod object;
@@ -54,9 +53,6 @@ pub fn run_sync_systems(ecs: &mut specs::World) {
     // Sync
     terrain_sync::Sys.run_now(ecs);
     entity_sync::Sys.run_now(ecs);
-
-    // Test
-    achievement::Sys.run_now(ecs);
 }
 
 /// Used to schedule systems to run at an interval

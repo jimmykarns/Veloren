@@ -3,9 +3,9 @@ use common::{
     comp::{
         self, item,
         slot::{self, Slot},
-        AchievementEvent, Pos, MAX_PICKUP_RANGE_SQR,
+        AchievementEvent, AchievementTrigger, Pos, MAX_PICKUP_RANGE_SQR,
     },
-    event::AchievementEvent,
+    event::{AchievementEvent, EventBus},
     sync::{Uid, WorldSyncExt},
     terrain::block::Block,
     vol::{ReadVol, Vox},
@@ -86,10 +86,13 @@ pub fn handle_inventory(server: &mut Server, entity: EcsEntity, manip: comp::Inv
 
                 let item = picked_up_item.unwrap();
 
-                state.write_component(
-                    entity,
-                    comp::AchievementUpdate::new(AchievementEvent::CollectedItem(item.clone())),
-                );
+                state
+                    .ecs()
+                    .read_resource::<EventBus<AchievementTrigger>>()
+                    .emit_now(AchievementTrigger {
+                        entity,
+                        event: AchievementEvent::CollectedItem(item.clone()),
+                    });
 
                 comp::InventoryUpdate::new(comp::InventoryUpdateEvent::Collected(item))
             } else {
@@ -119,12 +122,13 @@ pub fn handle_inventory(server: &mut Server, entity: EcsEntity, manip: comp::Inv
                     && state.try_set_block(pos, Block::empty()).is_some()
                 {
                     comp::Item::try_reclaim_from_block(block).map(|item| {
-                        state.write_component(
-                            entity,
-                            comp::AchievementUpdate::new(AchievementEvent::CollectedItem(
-                                item.clone(),
-                            )),
-                        );
+                        state
+                            .ecs()
+                            .read_resource::<EventBus<AchievementTrigger>>()
+                            .emit_now(AchievementTrigger {
+                                entity,
+                                event: AchievementEvent::CollectedItem(item.clone()),
+                            });
 
                         state.give_item(entity, item);
                     });

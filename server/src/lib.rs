@@ -43,7 +43,7 @@ use futures_util::{select, FutureExt};
 use metrics::{ServerMetrics, TickMetrics};
 use network::{Address, Network, Pid};
 use persistence::{
-    achievement::{AchievementLoader, AchievementLoaderResponse, AvailableAchievements},
+    achievement::{Achievement, AchievementLoader, AchievementLoaderResponse},
     character::{CharacterLoader, CharacterLoaderResponseType, CharacterUpdater},
 };
 use specs::{join::Join, Builder, Entity as EcsEntity, RunNow, SystemData, WorldExt};
@@ -89,6 +89,8 @@ pub struct Server {
 
     metrics: ServerMetrics,
     tick_metrics: TickMetrics,
+
+    achievement_data: Vec<Achievement>,
 }
 
 impl Server {
@@ -101,6 +103,9 @@ impl Server {
 
         // Event Emitters
         state.ecs_mut().insert(EventBus::<ServerEvent>::default());
+        state
+            .ecs_mut()
+            .insert(EventBus::<comp::AchievementTrigger>::default());
 
         state.ecs_mut().insert(AuthProvider::new(
             settings.auth_server_address.clone(),
@@ -261,13 +266,14 @@ impl Server {
 
         // TODO I switched this to return comp::Achievement but that's not right...we
         // want the id really,
-        match persistence::achievement::sync(&settings.persistence_db_dir) {
-            Ok(achievements) => {
-                info!("Achievement data loaded...");
-                state.ecs_mut().insert(AvailableAchievements(achievements));
+        let achievement_data = match persistence::achievement::sync(&settings.persistence_db_dir) {
+            Ok(achievements) => achievements,
+            Err(e) => {
+                error!(?e, "Achievement data migration error");
+
+                Vec::new()
             },
-            Err(e) => error!(?e, "Achievement data migration error"),
-        }
+        };
 
         let this = Self {
             state,
@@ -280,6 +286,8 @@ impl Server {
 
             metrics,
             tick_metrics,
+
+            achievement_data,
         };
 
         debug!(?settings, "created veloren server with");
@@ -426,6 +434,43 @@ impl Server {
         for entity in to_delete {
             if let Err(e) = self.state.delete_entity_recorded(entity) {
                 error!(?e, "Failed to delete agent outside the terrain");
+            }
+        }
+
+        // Achievement processing
+        let achievement_events = self
+            .state
+            .ecs()
+            .read_resource::<EventBus<comp::AchievementTrigger>>()
+            .recv_all();
+
+        for trigger in achievement_events {
+            // Get the achievement that matches this event
+            for achievement in &self.achievement_data {
+                let achievement_item = comp::AchievementItem::from(&achievement.details);
+
+                if achievement_item.matches_event(&trigger.event) {
+                    // Calls to `process_achievement` return true to indicate that the
+                    // achievement is complete. In this case, we notify the client to notify them of
+                    // completing the achievement
+                    if let Some(achievement_list) = self
+                        .state
+                        .ecs()
+                        .write_storage::<comp::AchievementList>()
+                        .get_mut(trigger.entity)
+                    {
+                        if achievement_list.process_achievement(
+                            comp::Achievement::from(achievement),
+                            &trigger.event,
+                        ) == true
+                        {
+                            self.notify_client(
+                                trigger.entity,
+                                ServerMsg::AchievementCompletion(achievement_item),
+                            )
+                        }
+                    }
+                }
             }
         }
 

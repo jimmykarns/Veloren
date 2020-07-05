@@ -23,7 +23,7 @@ mod visual;
 pub use ability::{CharacterAbility, CharacterAbilityType, ItemConfig, Loadout};
 pub use achievement::{
     Achievement, AchievementAction, AchievementEvent, AchievementItem, AchievementList,
-    AchievementUpdate,
+    AchievementTrigger,
 };
 pub use admin::{Admin, AdminList};
 pub use agent::{Agent, Alignment};
