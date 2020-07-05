@@ -1,12 +1,52 @@
 [
     (
-        title: "Collect 5 Apples",
+        title: "Collect 10 apples",
         action: CollectConsumable(Apple),
-        target: 5
+        target: 10
     ),
     (
-        title: "Collect 7 Apples",
+        title: "Collect 50 apples",
         action: CollectConsumable(Apple),
-        target: 7
+        target: 50
+    ),
+    (
+        title: "Pick a mushroom",
+        action: CollectConsumable(Mushroom),
+        target: 1
+    ),
+    (
+        title: "Kill an NPC",
+        action: KillNpcs,
+        target: 1
+    ),
+    (
+        title: "Kill 10 NPCs",
+        action: KillNpcs,
+        target: 10
+    ),
+    (
+        title: "Kill 100 NPCs",
+        action: KillNpcs,
+        target: 100
+    ),
+    (
+        title: "Kill another player",
+        action: KillPlayers,
+        target: 1
+    ),
+    (
+        title: "Kill 10 players",
+        action: KillPlayers,
+        target: 10
+    ),
+    (
+        title: "Find a Velorite fragment",
+        action: CollectConsumable(VeloriteFrag),
+        target: 1
+    ),
+    (
+        title: "Find Velorite",
+        action: CollectConsumable(Velorite),
+        target: 1
     )
 ]

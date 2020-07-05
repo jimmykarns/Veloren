@@ -1,4 +1,7 @@
-use crate::comp::item::{Consumable, Item, ItemKind};
+use crate::comp::{
+    self,
+    item::{Consumable, Item, ItemKind},
+};
 use specs::{Component, FlaggedStorage};
 use specs_idvs::IDVStorage;
 
@@ -7,25 +10,23 @@ pub enum AchievementEvent {
     None,
     CollectedItem(Item),
     LevelUp(u32),
+    KilledPlayer,
+    KilledNpc,
 }
 
 /// The types of achievements available in game
-///
-/// Some potential additions in the future:
-/// - ReachCoordinate
-/// - CollectCurrency
-/// - KillPlayers
-/// - OpenChests
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AchievementAction {
     None,
     CollectConsumable(Consumable),
     ReachLevel,
+    KillPlayers,
+    KillNpcs,
 }
 
 /// Information about an achievement. This differs from a complete
 /// [`Achievement`](struct.Achievement.html) in that it describes the
-/// achievement without any information about progress
+/// achievement without any information about progress or completion status
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct AchievementItem {
     pub title: String,
@@ -36,6 +37,8 @@ pub struct AchievementItem {
 impl AchievementItem {
     pub fn matches_event(&self, event: AchievementEvent) -> bool {
         match event {
+            AchievementEvent::KilledNpc => self.action == AchievementAction::KillNpcs,
+            AchievementEvent::KilledPlayer => self.action == AchievementAction::KillPlayers,
             AchievementEvent::LevelUp(_) => self.action == AchievementAction::ReachLevel,
             AchievementEvent::CollectedItem(item) => match self.action {
                 AchievementAction::CollectConsumable(consumable) => {
@@ -47,6 +50,7 @@ impl AchievementItem {
                 },
                 _ => false,
             },
+            AchievementEvent::None => false,
             _ => {
                 tracing::warn!(
                     ?event,
@@ -158,7 +162,7 @@ impl AchievementUpdate {
 }
 
 impl Component for AchievementUpdate {
-    type Storage = FlaggedStorage<Self, IDVStorage<Self>>;
+    type Storage = IDVStorage<Self>;
 }
 
 #[cfg(test)]

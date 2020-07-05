@@ -2,8 +2,8 @@ use crate::{client::Client, Server, SpawnPoint, StateExt};
 use common::{
     assets,
     comp::{
-        self, item::lottery::Lottery, object, AchievementEvent, Body, HealthChange, HealthSource,
-        Player, Stats,
+        self, item::lottery::Lottery, object, AchievementEvent, Alignment, Body, HealthChange,
+        HealthSource, Player, Stats,
     },
     msg::{PlayerListUpdate, ServerMsg},
     state::BlockChange,
@@ -58,6 +58,7 @@ pub fn handle_destroy(server: &mut Server, entity: EcsEntity, cause: HealthSourc
     {
         // Give EXP to the killer if entity had stats
         let mut stats = state.ecs().write_storage::<Stats>();
+
         if let Some(entity_stats) = stats.get(entity).cloned() {
             if let HealthSource::Attack { by } | HealthSource::Projectile { owner: Some(by) } =
                 cause
@@ -72,6 +73,27 @@ pub fn handle_destroy(server: &mut Server, entity: EcsEntity, cause: HealthSourc
                                     * entity_stats.body_type.base_exp_increase())
                                 as i64,
                         );
+                    }
+
+                    // Write an associated AchievementEvent for this kill
+                    if let Some(event) = match (
+                        state.ecs().read_storage::<Player>().get(entity),
+                        state.ecs().read_storage::<Alignment>().get(entity),
+                    ) {
+                        (Some(_), _) => Some(AchievementEvent::KilledPlayer),
+                        (None, Some(alignment)) => {
+                            if alignment == &comp::Alignment::Npc {
+                                Some(AchievementEvent::KilledNpc)
+                            } else {
+                                None
+                            }
+                        },
+                        _ => None,
+                    } {
+                        let _ = state
+                            .ecs()
+                            .write_storage()
+                            .insert(entity, comp::AchievementUpdate::new(event));
                     }
                 });
             }
