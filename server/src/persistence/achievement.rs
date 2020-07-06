@@ -135,8 +135,6 @@ pub fn sync(db_dir: &str) -> Result<Vec<comp::Achievement>, Error> {
         .filter(schema::data_migration::title.eq(String::from("achievements")))
         .first::<DataMigration>(&connection);
 
-    info!(?result, "result: ");
-
     let should_run = match result {
         Ok(migration_entry) => {
             // If these don't match, we need to sync data
@@ -185,7 +183,7 @@ pub fn sync(db_dir: &str) -> Result<Vec<comp::Achievement>, Error> {
                             .set(item)
                             .execute(&connection)
                             {
-                                Ok(_) => warn!(?existing_item.checksum, "Updated achievement"),
+                                Ok(_) => warn!(?existing_item.uuid, "Updated achievement"),
                                 Err(err) => return Err(Error::DatabaseError(err)),
                             }
                         }

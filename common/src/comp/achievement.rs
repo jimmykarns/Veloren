@@ -1,7 +1,8 @@
 use crate::comp::item::{Consumable, Item, ItemKind};
 use hashbrown::HashMap;
+use serde::{Deserialize, Serialize};
 use specs::{Component, Entity, FlaggedStorage};
-use specs_idvs::IDVStorage;
+use specs_idvs::IdvStorage;
 
 /// Used for in-game events that contribute towards player achievements.
 ///
@@ -130,10 +131,12 @@ impl AchievementList {
 }
 
 impl Component for AchievementList {
-    type Storage = FlaggedStorage<Self, IDVStorage<Self>>; // TODO check
+    type Storage = FlaggedStorage<Self, IdvStorage<Self>>; // TODO check
 }
 
 impl AchievementList {
+    pub fn is_empty(&self) -> bool { self.0.is_empty() }
+
     /// Process a single CharacterAchievement item based on the occurance of an
     /// `AchievementEvent`.
     ///
@@ -224,12 +227,12 @@ mod tests {
 
         // The first two increments should not indicate that it is complete
         assert_eq!(
-            achievement_list.process_achievement(&achievement.clone(), &event),
+            achievement_list.process_achievement(&achievement, &event),
             None
         );
 
         assert_eq!(
-            achievement_list.process_achievement(&achievement.clone(), &event),
+            achievement_list.process_achievement(&achievement, &event),
             None
         );
 

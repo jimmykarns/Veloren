@@ -1,62 +1,82 @@
 [
     (
-        id: "9d48b606-f70a-4e7f-a3b7-6630e75ba8fe",
+        uuid: "9d48b606-f70a-4e7f-a3b7-6630e75ba8fe",
         title: "Collect 10 apples",
-        action: CollectConsumable(Apple),
+        action: (
+            CollectConsumable(Apple),
+        ),
         target: 10
     ),
     (
-        id: "ffccb88c-2bb0-41bd-942b-3cbdf9882295",
+        uuid: "ffccb88c-2bb0-41bd-942b-3cbdf9882295",
         title: "Collect 50 apples",
-        action: CollectConsumable(Apple),
+        action: (
+            CollectConsumable(Apple),
+        ),
         target: 50
     ),
     (
-        id: "290c0bc1-ab0a-450e-82d7-6917d9ea7497",
+        uuid: "290c0bc1-ab0a-450e-82d7-6917d9ea7497",
         title: "Pick a mushroom",
-        action: CollectConsumable(Mushroom),
+        action: (
+            CollectConsumable(Mushroom),
+        ),
         target: 1
     ),
     (
-        id: "598aff28-01f6-46a9-a4c1-d75aead98794",
+        uuid: "598aff28-01f6-46a9-a4c1-d75aead98794",
         title: "Kill an NPC",
-        action: KillNpcs,
+        action: (
+            KillNpcs,
+        ),
         target: 1
     ),
     (
-        id: "046e08c5-a512-4ee1-b6e4-76e4e11dd502",
+        uuid: "046e08c5-a512-4ee1-b6e4-76e4e11dd502",
         title: "Kill 10 NPCs",
-        action: KillNpcs,
+        action: (
+            KillNpcs,
+        ),
         target: 10
     ),
     (
-        id: "9c2a326b-c4fa-45bf-9dd6-d4bf9dd85bb5",
+        uuid: "9c2a326b-c4fa-45bf-9dd6-d4bf9dd85bb5",
         title: "Kill 100 NPCs",
-        action: KillNpcs,
+        action: (
+            KillNpcs,
+        ),
         target: 100
     ),
     (
-        id: "de782069-4366-41dc-9645-1c02c64b8037",
+        uuid: "de782069-4366-41dc-9645-1c02c64b8037",
         title: "Kill another player",
-        action: KillPlayers,
+        action: (
+            KillPlayers,
+        ),
         target: 1
     ),
     (
-        id: "df6bf984-efdf-40f7-8bac-e09e9927acba",
+        uuid: "df6bf984-efdf-40f7-8bac-e09e9927acba",
         title: "Kill 10 players",
-        action: KillPlayers,
+        action: (
+            KillPlayers,
+        ),
         target: 10
     ),
     (
-        id: "d733c6cc-57c9-4a22-aea6-13f4850d750f",
+        uuid: "d733c6cc-57c9-4a22-aea6-13f4850d750f",
         title: "Find a Velorite fragment",
-        action: CollectConsumable(VeloriteFrag),
+        action: (
+            CollectConsumable(VeloriteFrag),
+        ),
         target: 1
     ),
     (
-        id: "50140fe9-1811-40c4-bb3b-89503ac60ccf",
+        uuid: "50140fe9-1811-40c4-bb3b-89503ac60ccf",
         title: "Find Velorite",
-        action: CollectConsumable(Velorite),
+        action: (
+            CollectConsumable(Velorite),
+        ),
         target: 1
     )
 ]

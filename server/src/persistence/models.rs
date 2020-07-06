@@ -5,7 +5,7 @@ use super::schema::{
 };
 use crate::comp;
 use chrono::NaiveDateTime;
-use common::{achievement::AchievementItem, character::Character as CharacterData};
+use common::character::Character as CharacterData;
 use diesel::sql_types::Text;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -376,10 +376,47 @@ pub struct NewDataMigration<'a> {
 #[primary_key(uuid)]
 pub struct Achievement {
     pub uuid: String,
-    pub checksum: String,
     pub title: String,
-    pub action: i32,
+    pub action: AchievementActionData,
     pub target: i32,
+}
+
+/// A wrapper type for the AchievementAction JSON column on achievements
+#[derive(AsExpression, Debug, Deserialize, Hash, Serialize, PartialEq, FromSqlRow)]
+#[sql_type = "Text"]
+pub struct AchievementActionData(pub comp::AchievementAction);
+
+impl<DB> diesel::deserialize::FromSql<Text, DB> for AchievementActionData
+where
+    DB: diesel::backend::Backend,
+    String: diesel::deserialize::FromSql<Text, DB>,
+{
+    fn from_sql(
+        bytes: Option<&<DB as diesel::backend::Backend>::RawValue>,
+    ) -> diesel::deserialize::Result<Self> {
+        let t = String::from_sql(bytes)?;
+
+        match serde_json::from_str(&t) {
+            Ok(data) => Ok(Self(data)),
+            Err(e) => {
+                warn!(?e, "Failed to deserialize achievement action data");
+                Ok(Self(comp::AchievementAction::None))
+            },
+        }
+    }
+}
+
+impl<DB> diesel::serialize::ToSql<Text, DB> for AchievementActionData
+where
+    DB: diesel::backend::Backend,
+{
+    fn to_sql<W: std::io::Write>(
+        &self,
+        out: &mut diesel::serialize::Output<W, DB>,
+    ) -> diesel::serialize::Result {
+        let s = serde_json::to_string(&self.0)?;
+        <String as diesel::serialize::ToSql<Text, DB>>::to_sql(&s, out)
+    }
 }
 
 impl From<&Achievement> for comp::Achievement {
@@ -387,7 +424,7 @@ impl From<&Achievement> for comp::Achievement {
         comp::Achievement {
             uuid: achievement.uuid.clone(),
             title: achievement.title.clone(),
-            action: comp::AchievementAction::None, // TODO find a way to store this data
+            action: achievement.action.0.clone(),
             target: achievement.target as usize,
         }
     }

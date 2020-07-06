@@ -1,9 +1,6 @@
 use crate::{
-    client::Client,
-    persistence::{achievement::AchievementLoader, character::PersistedComponents},
-    settings::ServerSettings,
-    sys::sentinel::DeletedEntities,
-    SpawnPoint,
+    client::Client, persistence::character::PersistedComponents, settings::ServerSettings,
+    sys::sentinel::DeletedEntities, SpawnPoint,
 };
 use common::{
     comp,
@@ -211,13 +208,7 @@ impl StateExt for State {
     }
 
     fn update_character_data(&mut self, entity: EcsEntity, components: PersistedComponents) {
-        let (character_id, body, stats, inventory, loadout) = components;
-
-        // Now that data essential for loading into the world has returned, kick of a
-        // request for supplemental game data, such as achievements
-        self.ecs()
-            .read_resource::<AchievementLoader>()
-            .load_character_achievement_list(entity, character_id);
+        let (body, stats, inventory, loadout) = components;
 
         // Make sure physics are accepted.
         self.write_component(entity, comp::ForceUpdate);

@@ -5,7 +5,7 @@ use common::{
         slot::{self, Slot},
         AchievementEvent, AchievementTrigger, Pos, MAX_PICKUP_RANGE_SQR,
     },
-    event::{AchievementEvent, EventBus},
+    event::EventBus,
     sync::{Uid, WorldSyncExt},
     terrain::block::Block,
     vol::{ReadVol, Vox},

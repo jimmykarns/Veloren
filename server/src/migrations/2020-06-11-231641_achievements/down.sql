@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS "achievement";
+DROP TABLE IF EXISTS "achievements";

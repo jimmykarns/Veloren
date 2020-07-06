@@ -49,7 +49,7 @@ enum CharacterLoaderRequestKind {
 }
 
 /// A tuple of the components that are persisted to the DB for each character
-pub type PersistedComponents = (i32, comp::Body, comp::Stats, comp::Inventory, comp::Loadout);
+pub type PersistedComponents = (comp::Body, comp::Stats, comp::Inventory, comp::Loadout);
 
 type CharacterListResult = Result<Vec<CharacterItem>, Error>;
 type CharacterDataResult = Result<PersistedComponents, Error>;
@@ -236,7 +236,6 @@ impl Drop for CharacterLoader {
 fn load_character_data(player_uuid: &str, character_id: i32, db_dir: &str) -> CharacterDataResult {
     let connection = establish_connection(db_dir);
 
-<<<<<<< HEAD
     let result = schema::character::dsl::character
         .filter(schema::character::id.eq(character_id))
         .filter(schema::character::player_uuid.eq(player_uuid))

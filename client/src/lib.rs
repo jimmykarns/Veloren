@@ -72,6 +72,7 @@ pub struct Client {
     pub world_map: (Arc<DynamicImage>, Vec2<u32>),
     pub player_list: HashMap<Uid, PlayerInfo>,
     pub character_list: CharacterList,
+    pub achievement_list: AchievementList,
     pub active_character_id: Option<i32>,
 
     _network: Network,
@@ -99,6 +100,15 @@ pub struct Client {
 #[derive(Default)]
 pub struct CharacterList {
     pub characters: Vec<CharacterItem>,
+    pub loading: bool,
+    pub error: Option<String>,
+}
+
+/// Holds data related to the current character's achievements, as well as some
+/// additional state to handle UI.
+#[derive(Default)]
+pub struct AchievementList {
+    pub achievements: comp::AchievementList,
     pub loading: bool,
     pub error: Option<String>,
 }
@@ -197,6 +207,7 @@ impl Client {
             world_map,
             player_list: HashMap::new(),
             character_list: CharacterList::default(),
+            achievement_list: AchievementList::default(),
             active_character_id: None,
 
             _network: network,
@@ -333,6 +344,21 @@ impl Client {
             .send(ClientMsg::SetViewDistance(self.view_distance.unwrap()))
             .unwrap();
         // Can't fail
+    }
+
+    /// Requests a full achievement list from the server, merged with the
+    /// characters achievements. This only needs to be called once for the
+    /// character, subsequent updates to the characetr's achievements are sent
+    /// from the server and merged into this result.
+    pub fn load_achievements(&mut self) {
+        if let (true, Some(character_id)) = (
+            self.achievement_list.achievements.is_empty(),
+            self.active_character_id,
+        ) {
+            self.singleton_stream
+                .send(ClientMsg::RequestCharacterAchievementList(character_id))
+                .unwrap();
+        }
     }
 
     pub fn use_slot(&mut self, slot: comp::slot::Slot) {
@@ -993,15 +1019,16 @@ impl Client {
                     frontend_events.push(Event::SetViewDistance(vd));
                 },
                 ServerMsg::CharacterAchievementDataLoaded(achievement_list) => {
-                    self.state.write_component(self.entity, achievement_list);
+                    self.achievement_list.achievements = achievement_list;
+                    self.achievement_list.loading = false;
                 },
                 ServerMsg::CharacterAchievementDataError(error) => {
-                    // TODO handle somehow
-                    tracing::info!(?error, "Failed to load achievements");
+                    self.achievement_list.loading = false;
+                    self.achievement_list.error = Some(error)
                 },
-                ServerMsg::AchievementCompletion(achievement) => {
-                    // TODO handle in UI
-                    tracing::info!(?achievement, "Completed achievement");
+                ServerMsg::AchievementCompletion(_achievement) => {
+                    // TODO: We receieve a single achievement here, and
+                    // update the client's achievement list
                 },
             }
         }

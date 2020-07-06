@@ -41,6 +41,7 @@ impl Sys {
         client: &mut Client,
         cnt: &mut u64,
         character_loader: &ReadExpect<'_, CharacterLoader>,
+        achievement_loader: &ReadExpect<'_, AchievementLoader>,
         terrain: &ReadExpect<'_, TerrainGrid>,
         uids: &ReadStorage<'_, Uid>,
         can_build: &ReadStorage<'_, CanBuild>,
@@ -383,6 +384,11 @@ impl Sys {
                         .get_mut(entity)
                         .map(|s| s.skill_set.unlock_skill_group(skill_group_type));
                 },
+                ClientMsg::RequestCharacterAchievementList(character_id) => {
+                    if players.get(entity).is_some() {
+                        achievement_loader.load_character_achievement_list(entity, character_id)
+                    }
+                },
             }
         }
     }
@@ -490,6 +496,7 @@ impl<'a> System<'a> for Sys {
                     &mut cnt,
 
                     &character_loader,
+                    &achievement_loader,
                     &terrain,
                     &uids,
                     &can_build,
@@ -524,14 +531,9 @@ impl<'a> System<'a> for Sys {
             }
         }
 
-        // Handle new players: Tell all clients to add them to the player list, and load
-        // non-critical data for their character
+        // Handle new players: Tell all clients to add them to the player list
         for entity in new_players {
             if let (Some(uid), Some(player)) = (uids.get(entity), players.get(entity)) {
-                if let Some(character_id) = player.character_id {
-                    achievement_loader.load_character_achievement_list(entity, character_id);
-                }
-
                 let msg = ServerMsg::PlayerListUpdate(PlayerListUpdate::Add(*uid, PlayerInfo {
                     player_alias: player.alias.clone(),
                     is_online: true,

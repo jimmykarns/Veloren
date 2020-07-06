@@ -14,6 +14,7 @@ pub enum ClientMsg {
         token_or_username: String,
     },
     RequestCharacterList,
+    RequestCharacterAchievementList(i32),
     CreateCharacter {
         alias: String,
         tool: Option<String>,

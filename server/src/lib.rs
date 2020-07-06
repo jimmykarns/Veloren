@@ -55,7 +55,7 @@ use std::{
 };
 #[cfg(not(feature = "worldgen"))]
 use test_world::{World, WORLD_SIZE};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 use uvth::{ThreadPool, ThreadPoolBuilder};
 use vek::*;
 #[cfg(feature = "worldgen")]
@@ -265,12 +265,10 @@ impl Server {
         // Sync and Load Achievement Data
         debug!("Syncing Achievement data...");
 
-        // TODO I switched this to return comp::Achievement but that's not right...we
-        // want the id really,
         let achievement_data = match persistence::achievement::sync(&settings.persistence_db_dir) {
             Ok(achievements) => achievements,
             Err(e) => {
-                error!(?e, "Achievement data migration error");
+                warn!(?e, "Achievement data migration error");
 
                 Vec::new()
             },

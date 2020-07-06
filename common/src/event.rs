@@ -60,7 +60,7 @@ pub enum ServerEvent {
     },
     UpdateCharacterData {
         entity: EcsEntity,
-        components: (i32, comp::Body, comp::Stats, comp::Inventory, comp::Loadout),
+        components: (comp::Body, comp::Stats, comp::Inventory, comp::Loadout),
     },
     ExitIngame {
         entity: EcsEntity,

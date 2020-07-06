@@ -1,9 +1,8 @@
 table! {
     achievements (uuid) {
         uuid -> Text,
-        checksum -> Text,
         title -> Text,
-        action -> Integer,
+        action -> Text,
         target -> Integer,
     }
 }
