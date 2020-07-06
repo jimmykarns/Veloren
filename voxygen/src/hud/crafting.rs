@@ -22,10 +22,12 @@ widget_ids! {
         align_ing,
         scrollbar_ing,
         btn_craft,
+        recipe_names[],
     }
 }
 
 pub enum Event {
+    CraftRecipe(String),
     Close,
 }
 
@@ -60,22 +62,39 @@ impl<'a> Crafting<'a> {
     }
 }
 
+pub struct State {
+    ids: Ids,
+    selected_recipe: Option<String>,
+}
+
 impl<'a> Widget for Crafting<'a> {
     type Event = Vec<Event>;
-    type State = Ids;
+    type State = State;
     type Style = ();
 
-    fn init_state(&self, id_gen: widget::id::Generator) -> Self::State { Ids::new(id_gen) }
+    fn init_state(&self, id_gen: widget::id::Generator) -> Self::State {
+        State {
+            ids: Ids::new(id_gen),
+            selected_recipe: None,
+        }
+    }
 
     #[allow(clippy::unused_unit)] // TODO: Pending review in #587
     fn style(&self) -> Self::Style { () }
 
     fn update(self, args: widget::UpdateArgs<Self>) -> Self::Event {
-        let widget::UpdateArgs {
-            /* id, */ state: ids,
-            ui,
-            ..
-        } = args;
+        let widget::UpdateArgs { state, ui, .. } = args;
+
+        if state.ids.recipe_names.len() < self.client.available_recipes().len() {
+            state.update(|state| {
+                state.ids.recipe_names.resize(
+                    self.client.available_recipes().len(),
+                    &mut ui.widget_id_generator(),
+                )
+            });
+        }
+
+        let ids = &state.ids;
 
         let mut events = Vec::new();
 
@@ -119,10 +138,27 @@ impl<'a> Widget for Crafting<'a> {
             .top_right_with_margins_on(ids.window, 74.0, 5.0)
             .set(ids.align_ing, ui);
 
-        // Add recipes as array of Button::image(nothing) with a widget_id generator
-        // here and align to align_rec
+        for (i, (name, _)) in self.client.available_recipes().iter().enumerate() {
+            let button = Button::image(self.imgs.button);
+            let button = if i == 0 {
+                button.top_left_with_margins_on(state.ids.align_rec, 10.0, 10.0)
+            } else {
+                button.down_from(state.ids.recipe_names[i - 1], 10.0)
+            };
+            if button
+                .label(name)
+                .w_h(250.0, 32.0)
+                .hover_image(self.imgs.button_hover)
+                .press_image(self.imgs.button_press)
+                .color(TEXT_COLOR)
+                .set(state.ids.recipe_names[i], ui)
+                .was_clicked()
+            {
+                state.update(|s| s.selected_recipe = Some(name.clone()));
+            }
+        }
 
-        // Add ingredients here and align to align_ing
+        let ids = &state.ids;
 
         // Scrollbars
         Scrollbar::y_axis(ids.align_rec)
@@ -164,7 +200,10 @@ impl<'a> Widget for Crafting<'a> {
             .set(ids.btn_craft, ui)
             .was_clicked()
         {
-            // CRAFT!
+            state
+                .selected_recipe
+                .as_ref()
+                .map(|r| events.push(Event::CraftRecipe(r.clone())));
         }
 
         events

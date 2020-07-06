@@ -1,0 +1,3 @@
+{
+	"potion": ("common.items.potion_minor", [("common.items.mushroom", 2), ("common.items.cheese", 1)]),
+}

@@ -288,6 +288,7 @@ pub enum Event {
     ChangeFreeLookBehavior(PressBehavior),
     ChangeAutoWalkBehavior(PressBehavior),
     ChangeStopAutoWalkOnInput(bool),
+    CraftRecipe(String),
 }
 
 // TODO: Are these the possible layouts we want?
@@ -1561,6 +1562,9 @@ impl Hud {
             .set(self.ids.crafting_window, ui_widgets)
             {
                 match event {
+                    crafting::Event::CraftRecipe(r) => {
+                        events.push(Event::CraftRecipe(r));
+                    },
                     crafting::Event::Close => {
                         self.show.crafting(false);
                         self.force_ungrab = true;

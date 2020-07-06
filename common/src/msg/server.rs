@@ -1,7 +1,9 @@
 use super::{ClientState, EcsCompPacket};
 use crate::{
     character::CharacterItem,
-    comp, state, sync,
+    comp,
+    recipe::Recipe,
+    state, sync,
     sync::Uid,
     terrain::{Block, TerrainChunk},
 };
@@ -92,6 +94,7 @@ pub enum ServerMsg {
     /// Send a popup notification such as "Waypoint Saved"
     Notification(Notification),
     SetViewDistance(u32),
+    UpdateAvailableRecipes(Vec<(String, Recipe)>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

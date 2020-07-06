@@ -9,6 +9,7 @@ use crate::{
 use common::{
     comp::{ForceUpdate, Inventory, InventoryUpdate, Last, Ori, Pos, Vel},
     msg::ServerMsg,
+    recipe::default_recipe_book,
     region::{Event as RegionEvent, RegionMap},
     state::TimeOfDay,
     sync::{CompSyncPackage, Uid},
@@ -313,6 +314,11 @@ impl<'a> System<'a> for Sys {
             client.notify(ServerMsg::InventoryUpdate(
                 inventory.clone(),
                 update.event(),
+            ));
+
+            // TODO: Be smarter about when we do this
+            client.notify(ServerMsg::UpdateAvailableRecipes(
+                default_recipe_book().get_available(inventory),
             ));
         }
 

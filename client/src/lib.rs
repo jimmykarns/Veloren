@@ -25,6 +25,7 @@ use common::{
         PlayerInfo, PlayerListUpdate, RegisterError, RequestStateError, ServerInfo, ServerMsg,
         MAX_BYTES_CHAT_MSG,
     },
+    recipe::Recipe,
     state::State,
     sync::{Uid, UidAllocator, WorldSyncExt},
     terrain::{block::Block, TerrainChunk, TerrainChunkSize},
@@ -71,6 +72,7 @@ pub struct Client {
     pub player_list: HashMap<Uid, PlayerInfo>,
     pub character_list: CharacterList,
     pub active_character_id: Option<i32>,
+    pub available_recipes: Vec<(String, Recipe)>,
 
     _network: Network,
     _participant: Arc<Participant>,
@@ -195,6 +197,7 @@ impl Client {
             player_list: HashMap::new(),
             character_list: CharacterList::default(),
             active_character_id: None,
+            available_recipes: Vec::new(),
 
             _network: network,
             _participant: participant,
@@ -363,6 +366,16 @@ impl Client {
                 )))
                 .unwrap();
         }
+    }
+
+    pub fn available_recipes(&self) -> &[(String, Recipe)] { &self.available_recipes }
+
+    pub fn craft_recipe(&mut self, recipe: String) {
+        self.singleton_stream
+            .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
+                InventoryManip::CraftRecipe(recipe),
+            )))
+            .unwrap();
     }
 
     pub fn toggle_lantern(&mut self) {
@@ -981,6 +994,7 @@ impl Client {
                     self.view_distance = Some(vd);
                     frontend_events.push(Event::SetViewDistance(vd));
                 },
+                ServerMsg::UpdateAvailableRecipes(recipes) => self.available_recipes = recipes,
             }
         }
     }
