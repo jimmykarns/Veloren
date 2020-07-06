@@ -1,4 +1,5 @@
 use crate::comp::item::{Consumable, Item, ItemKind};
+use hashbrown::HashMap;
 use specs::{Component, Entity, FlaggedStorage};
 use specs_idvs::IDVStorage;
 
@@ -11,6 +12,12 @@ pub struct AchievementTrigger {
     pub event: AchievementEvent,
 }
 
+/// Used to indicate an in-game event that can contribute towards the completion
+/// of an achievement.
+///
+/// These are paired with `AchievementAction` items - for
+/// example an event of type `LevelUp` will trigger a check for `ReachLevel`
+/// achievements.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum AchievementEvent {
     None,
@@ -30,17 +37,15 @@ pub enum AchievementAction {
     KillNpcs,
 }
 
-/// Information about an achievement. This differs from a complete
-/// [`Achievement`](struct.Achievement.html) in that it describes the
-/// achievement without any information about progress or completion status
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct AchievementItem {
+pub struct Achievement {
+    pub uuid: String,
     pub title: String,
     pub action: AchievementAction,
     pub target: usize,
 }
 
-impl AchievementItem {
+impl Achievement {
     pub fn matches_event(&self, event: &AchievementEvent) -> bool {
         match event {
             AchievementEvent::KilledNpc => self.action == AchievementAction::KillNpcs,
@@ -63,21 +68,24 @@ impl AchievementItem {
 
 /// The complete representation of an achievement that has been
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Achievement {
-    pub id: i32,
-    pub item: AchievementItem,
+pub struct CharacterAchievement {
+    pub achievement: Achievement,
     pub completed: bool,
     pub progress: usize,
 }
 
-impl Achievement {
+impl CharacterAchievement {
     /// Increment the progress of this Achievement based on its type
     ///
     /// By default, when an achievement is incremented, its `progress` value is
     /// incremented by 1. This covers many cases, but using this method allows
     /// handling of unique types of achievements which are not simple
     /// counters for events
-    pub fn increment_progress(&mut self, event: &AchievementEvent) -> bool {
+    pub fn increment_progress(&mut self, event: &AchievementEvent) -> Option<&mut Self> {
+        if self.completed {
+            return None;
+        }
+
         match event {
             AchievementEvent::LevelUp(level) => {
                 self.progress = *level as usize;
@@ -85,61 +93,67 @@ impl Achievement {
             _ => self.progress += 1,
         };
 
-        self.completed = self.progress >= self.item.target;
-        self.completed
+        self.completed = self.progress >= self.achievement.target;
+
+        if self.completed == true {
+            Some(self)
+        } else {
+            None
+        }
+    }
+}
+
+/// For initialisation of a new CharacterAchievement item when a new achievement
+/// is progressed
+impl From<Achievement> for CharacterAchievement {
+    fn from(achievement: Achievement) -> Self {
+        Self {
+            achievement,
+            completed: false,
+            progress: 0,
+        }
     }
 }
 
 /// Each character is assigned an achievement list, which holds information
 /// about which achievements that the player has made some progress on, or
 /// completed.
-///
-/// This minimises storage of data per-character, and can be merged with a full
-/// achievement list
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct AchievementList(Vec<Achievement>);
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AchievementList(HashMap<String, CharacterAchievement>);
 
 impl Default for AchievementList {
-    fn default() -> AchievementList { AchievementList(Vec::new()) }
+    fn default() -> AchievementList { AchievementList(HashMap::new()) }
 }
 
 impl AchievementList {
-    pub fn from(data: Vec<Achievement>) -> Self { Self(data) }
+    pub fn from(data: HashMap<String, CharacterAchievement>) -> Self { Self(data) }
 }
 
 impl Component for AchievementList {
-    type Storage = FlaggedStorage<Self, IDVStorage<Self>>;
+    type Storage = FlaggedStorage<Self, IDVStorage<Self>>; // TODO check
 }
 
 impl AchievementList {
-    pub fn item_by_id(&mut self, id: i32) -> Option<&mut Achievement> {
-        self.0.iter_mut().find(|a| a.id == id)
-    }
-
-    /// Process a single achievement item, inrementing the progress of the
-    /// achievement. This is called as part of server/sys/Achievements.
+    /// Process a single CharacterAchievement item based on the occurance of an
+    /// `AchievementEvent`.
+    ///
+    /// When the character has existing progress on the achievement it is
+    /// updated, otherwise an insert-then-update is performed.
+    ///
+    /// Returns the `CharacterAchievement` item that was processed in the event
+    /// that prcessing resulted in its completion.
     pub fn process_achievement(
         &mut self,
-        achievement: Achievement,
+        achievement: &Achievement,
         event: &AchievementEvent,
-    ) -> bool {
-        let id = achievement.id;
+    ) -> Option<CharacterAchievement> {
+        let uuid = achievement.uuid.clone();
 
-        if !self.0.contains(&achievement) {
-            self.0.push(achievement);
-        }
-
-        if let Some(char_achievement) = self.item_by_id(id) {
-            if char_achievement.completed {
-                return false;
-            }
-
-            char_achievement.increment_progress(event)
-        } else {
-            tracing::warn!("Failed to find achievement after inserting");
-
-            false
-        }
+        self.0
+            .entry(uuid)
+            .or_insert(CharacterAchievement::from(achievement.clone()))
+            .increment_progress(event)
+            .cloned()
     }
 }
 
@@ -150,8 +164,9 @@ mod tests {
 
     #[test]
     fn inv_collect_event_matches_consumable_achievement_item() {
-        let item = AchievementItem {
-            title: String::from("Test"),
+        let item = Achievement {
+            uuid: String::new(),
+            title: String::new(),
             action: AchievementAction::CollectConsumable(Consumable::Apple),
             target: 10,
         };
@@ -164,8 +179,9 @@ mod tests {
 
     #[test]
     fn inv_collect_event_not_matches_consumable_achievement_item() {
-        let item = AchievementItem {
-            title: String::from("Test"),
+        let item = Achievement {
+            uuid: String::new(),
+            title: String::new(),
             action: AchievementAction::CollectConsumable(Consumable::Cheese),
             target: 10,
         };
@@ -178,8 +194,9 @@ mod tests {
 
     #[test]
     fn levelup_event_matches_reach_level_achievement_item() {
-        let item = AchievementItem {
-            title: String::from("Test"),
+        let item = Achievement {
+            uuid: String::new(),
+            title: String::new(),
             action: AchievementAction::ReachLevel,
             target: 100,
         };
@@ -190,18 +207,14 @@ mod tests {
     }
 
     #[test]
-    fn process_collect_achievement_increments_progress() {
-        let item = AchievementItem {
+    fn process_achievement_increments_progress() {
+        let uuid = String::from("2ef30659-5884-40aa-ba4d-8f5af32ff9ac");
+
+        let achievement = Achievement {
+            uuid: uuid.clone(),
             title: String::from("Collect 3 Mushrooms"),
             action: AchievementAction::CollectConsumable(Consumable::Mushroom),
             target: 3,
-        };
-
-        let achievement = Achievement {
-            id: 1,
-            item,
-            completed: false,
-            progress: 0,
         };
 
         let event =
@@ -211,92 +224,75 @@ mod tests {
 
         // The first two increments should not indicate that it is complete
         assert_eq!(
-            achievement_list.process_achievement(achievement.clone(), &event),
-            false
+            achievement_list.process_achievement(&achievement.clone(), &event),
+            None
         );
 
         assert_eq!(
-            achievement_list.process_achievement(achievement.clone(), &event),
-            false
+            achievement_list.process_achievement(&achievement.clone(), &event),
+            None
         );
 
-        assert_eq!(achievement_list.0.get(0).unwrap().progress, 2);
-
-        // It should return true when completed
-        assert_eq!(
-            achievement_list.process_achievement(achievement, &event),
-            true
-        );
-
-        assert_eq!(achievement_list.0.get(0).unwrap().progress, 3);
-
-        // The achievement `completed` field should be true
-        assert_eq!(achievement_list.0.get(0).unwrap().completed, true);
+        assert_eq!(achievement_list.0.get(&uuid).unwrap().progress, 2);
     }
 
     #[test]
-    fn process_levelup_achievement_increments_progress() {
-        let item = AchievementItem {
+    fn process_achievement_returns_achievement_when_complete() {
+        let uuid = String::from("Test");
+
+        let achievement = Achievement {
+            uuid: uuid.clone(),
             title: String::from("Reach Level 10"),
             action: AchievementAction::ReachLevel,
             target: 10,
         };
 
-        let achievement = Achievement {
-            id: 1,
-            item,
-            completed: false,
-            progress: 1,
-        };
-
         let mut achievement_list = AchievementList::default();
 
-        assert_eq!(
-            achievement_list
-                .process_achievement(achievement.clone(), &AchievementEvent::LevelUp(6)),
-            false
-        );
+        achievement_list.process_achievement(&achievement, &AchievementEvent::LevelUp(6));
 
-        // The achievement progress should be the new level value, and be incomplete
-        assert_eq!(achievement_list.0.get(0).unwrap().progress, 6);
-        assert_eq!(achievement_list.0.get(0).unwrap().completed, false);
+        // The achievement progress should be the new level value, but be incomplete
+        let incomplete_result = achievement_list.0.get(&uuid).unwrap();
 
-        assert_eq!(
-            achievement_list.process_achievement(achievement, &AchievementEvent::LevelUp(10)),
-            true
-        );
+        assert_eq!(incomplete_result.progress, 6);
+        assert_eq!(incomplete_result.completed, false);
+
+        achievement_list.process_achievement(&achievement, &AchievementEvent::LevelUp(10));
 
         // The achievement progress should be the new level value, and be completed
-        assert_eq!(achievement_list.0.get(0).unwrap().progress, 10);
-        assert_eq!(achievement_list.0.get(0).unwrap().completed, true);
+        let complete_result = achievement_list.0.get(&uuid).unwrap();
+
+        assert_eq!(complete_result.progress, 10);
+        assert_eq!(complete_result.completed, true);
     }
 
     #[test]
     fn process_completed_achievement_doesnt_increment_progress() {
-        let item = AchievementItem {
+        let uuid = String::from("Test");
+
+        let achievement = Achievement {
+            uuid: uuid.clone(),
             title: String::from("Collect 3 Mushrooms"),
-            action: AchievementAction::CollectConsumable(Consumable::Mushroom),
+            action: AchievementAction::KillNpcs,
             target: 3,
         };
 
-        let achievement = Achievement {
-            id: 1,
-            item,
-            completed: true,
-            progress: 3,
-        };
+        // Initialise with the already completed event
+        let mut achievement_list = AchievementList::default();
 
-        let mut achievement_list = AchievementList(vec![achievement.clone()]);
+        achievement_list
+            .0
+            .insert(uuid.clone(), CharacterAchievement {
+                achievement: achievement.clone(),
+                completed: true,
+                progress: 3,
+            });
 
-        let event =
-            AchievementEvent::CollectedItem(assets::load_expect_cloned("common.items.mushroom"));
+        achievement_list.process_achievement(&achievement, &AchievementEvent::KilledNpc);
 
-        assert_eq!(
-            achievement_list.process_achievement(achievement, &event),
-            false
-        );
+        let result = achievement_list.0.get(&uuid).unwrap();
 
         // The achievement progress should not have incremented
-        assert_eq!(achievement_list.0.get(0).unwrap().progress, 3);
+        assert_eq!(result.progress, 3);
     }
 }

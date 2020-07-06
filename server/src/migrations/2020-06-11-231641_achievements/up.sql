@@ -1,5 +1,7 @@
-CREATE TABLE IF NOT EXISTS "achievement" (
-    id INTEGER PRIMARY KEY NOT NULL,
-    checksum VARCHAR(64) NOT NULL UNIQUE,
-    details TEXT NOT NULL
+CREATE TABLE IF NOT EXISTS "achievements" (
+    "uuid" TEXT PRIMARY KEY NOT NULL,
+    "checksum" TEXT NOT NULL UNIQUE,
+    "title" TEXT NOT NULL,
+    "action" INT NOT NULL,
+    "target" INT NOT NULL
 );

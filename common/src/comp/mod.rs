@@ -22,8 +22,8 @@ mod visual;
 // Reexports
 pub use ability::{CharacterAbility, CharacterAbilityType, ItemConfig, Loadout};
 pub use achievement::{
-    Achievement, AchievementAction, AchievementEvent, AchievementItem, AchievementList,
-    AchievementTrigger,
+    Achievement, AchievementAction, AchievementEvent, AchievementList, AchievementTrigger,
+    CharacterAchievement,
 };
 pub use admin::{Admin, AdminList};
 pub use agent::{Agent, Alignment};

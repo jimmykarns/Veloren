@@ -43,7 +43,7 @@ use futures_util::{select, FutureExt};
 use metrics::{ServerMetrics, TickMetrics};
 use network::{Address, Network, Pid};
 use persistence::{
-    achievement::{Achievement, AchievementLoader, AchievementLoaderResponse},
+    achievement::{AchievementLoader, AchievementLoaderResponse},
     character::{CharacterLoader, CharacterLoaderResponseType, CharacterUpdater},
 };
 use specs::{join::Join, Builder, Entity as EcsEntity, RunNow, SystemData, WorldExt};
@@ -90,7 +90,8 @@ pub struct Server {
     metrics: ServerMetrics,
     tick_metrics: TickMetrics,
 
-    achievement_data: Vec<Achievement>,
+    /// Holds a list of all available achievements
+    achievement_data: Vec<comp::Achievement>,
 }
 
 impl Server {
@@ -447,9 +448,7 @@ impl Server {
         for trigger in achievement_events {
             // Get the achievement that matches this event
             for achievement in &self.achievement_data {
-                let achievement_item = comp::AchievementItem::from(&achievement.details);
-
-                if achievement_item.matches_event(&trigger.event) {
+                if achievement.matches_event(&trigger.event) {
                     // Calls to `process_achievement` return true to indicate that the
                     // achievement is complete. In this case, we notify the client to notify them of
                     // completing the achievement
@@ -459,14 +458,12 @@ impl Server {
                         .write_storage::<comp::AchievementList>()
                         .get_mut(trigger.entity)
                     {
-                        if achievement_list.process_achievement(
-                            comp::Achievement::from(achievement),
-                            &trigger.event,
-                        ) == true
+                        if let Some(character_achievement) =
+                            achievement_list.process_achievement(achievement, &trigger.event)
                         {
                             self.notify_client(
                                 trigger.entity,
-                                ServerMsg::AchievementCompletion(achievement_item),
+                                ServerMsg::AchievementCompletion(character_achievement),
                             )
                         }
                     }

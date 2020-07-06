@@ -1,11 +1,7 @@
 extern crate serde_json;
 
-use super::{
-    achievement::hash,
-    schema::{
-        achievement, body, character, character_achievement, data_migration, inventory, loadout,
-        stats,
-    },
+use super::schema::{
+    achievements, body, character, character_achievement, data_migration, inventory, loadout, stats,
 };
 use crate::comp;
 use chrono::NaiveDateTime;
@@ -373,114 +369,58 @@ pub struct NewDataMigration<'a> {
     pub last_run: NaiveDateTime,
 }
 
-/// Achievements hold the data related to achievements available in-game. They
-/// are the data referenced for characters
-/// A wrapper type for Loadout components used to serialise to and from JSON
-/// If the column contains malformed JSON, a default loadout is returned, with
-/// the starter sword set as the main weapon
-#[derive(SqlType, AsExpression, Debug, Deserialize, Serialize, FromSqlRow, PartialEq)]
-#[sql_type = "Text"]
-pub struct AchievementData(comp::AchievementItem);
-
-impl<DB> diesel::deserialize::FromSql<Text, DB> for AchievementData
-where
-    DB: diesel::backend::Backend,
-    String: diesel::deserialize::FromSql<Text, DB>,
-{
-    fn from_sql(
-        bytes: Option<&<DB as diesel::backend::Backend>::RawValue>,
-    ) -> diesel::deserialize::Result<Self> {
-        let t = String::from_sql(bytes)?;
-
-        match serde_json::from_str(&t) {
-            Ok(data) => Ok(Self(data)),
-            Err(e) => {
-                warn!(?e, "Failed to deserialise achevement data");
-
-                Ok(Self(comp::AchievementItem {
-                    title: String::new(),
-                    action: comp::AchievementAction::None,
-                    target: 0,
-                }))
-            },
-        }
-    }
-}
-
-impl<DB> diesel::serialize::ToSql<Text, DB> for AchievementData
-where
-    DB: diesel::backend::Backend,
-{
-    fn to_sql<W: std::io::Write>(
-        &self,
-        out: &mut diesel::serialize::Output<W, DB>,
-    ) -> diesel::serialize::Result {
-        let s = serde_json::to_string(&self.0)?;
-        <String as diesel::serialize::ToSql<Text, DB>>::to_sql(&s, out)
-    }
-}
-
-#[derive(Queryable, Debug, Identifiable)]
-#[table_name = "achievement"]
+/// The achievements table holds data related to all achievements available to
+/// players in-game. They serve as a strong reference for character achievements
+/// (see below) and are populated form configuration files holding the data
+#[derive(Queryable, Debug, Identifiable, AsChangeset, Hash, Insertable, Deserialize)]
+#[primary_key(uuid)]
 pub struct Achievement {
-    pub id: i32,
+    pub uuid: String,
     pub checksum: String,
-    pub details: AchievementData,
-}
-
-impl From<&AchievementData> for comp::AchievementItem {
-    fn from(data: &AchievementData) -> comp::AchievementItem { data.0.clone() }
-}
-
-#[derive(Insertable, PartialEq, Debug)]
-#[table_name = "achievement"]
-pub struct NewAchievement {
-    pub checksum: String,
-    pub details: AchievementData,
-}
-
-impl From<&comp::AchievementItem> for NewAchievement {
-    fn from(item: &comp::AchievementItem) -> Self {
-        Self {
-            checksum: hash(item).to_string(),
-            details: AchievementData(item.clone()),
-        }
-    }
-}
-
-/// Character Achievements belong to characters
-#[derive(Queryable, Debug, Identifiable)]
-#[primary_key(character_id)]
-#[table_name = "character_achievement"]
-pub struct CharacterAchievement {
-    pub character_id: i32,
-    pub achievement_id: i32,
-    pub completed: i32,
-    pub progress: i32,
-}
-
-impl From<&CharacterAchievement> for comp::Achievement {
-    fn from(achievement: &CharacterAchievement) -> comp::Achievement {
-        comp::Achievement {
-            id: achievement.achievement_id,
-            item: comp::AchievementItem {
-                title: String::from("TODO"),
-                action: comp::AchievementAction::None,
-                target: 0,
-            },
-            completed: achievement.completed != 0,
-            progress: achievement.progress as usize,
-        }
-    }
+    pub title: String,
+    pub action: i32,
+    pub target: i32,
 }
 
 impl From<&Achievement> for comp::Achievement {
     fn from(achievement: &Achievement) -> comp::Achievement {
         comp::Achievement {
-            id: achievement.id,
-            item: comp::AchievementItem::from(&achievement.details),
-            completed: false,
-            progress: 0,
+            uuid: achievement.uuid.clone(),
+            title: achievement.title.clone(),
+            action: comp::AchievementAction::None, // TODO find a way to store this data
+            target: achievement.target as usize,
+        }
+    }
+}
+
+/// Character Achievements belong to characters, and contain information about
+/// achievement progress.
+///
+/// In the interest of storing as little achievement data per-character as
+/// pssible, we only store a 'character_achievement' entry when a character has
+/// made some progress towards the completion of an achievement.
+#[derive(Queryable, Debug, Identifiable)]
+#[primary_key(character_id)]
+#[table_name = "character_achievement"]
+pub struct CharacterAchievement {
+    pub character_id: i32,
+    pub achievement_uuid: String,
+    pub completed: i32,
+    pub progress: i32,
+}
+
+/// The required elements to build comp::CharacterAchievement from database data
+pub struct CharacterAchievementJoinData<'a> {
+    pub character_achievement: &'a CharacterAchievement,
+    pub achievement: &'a Achievement,
+}
+
+impl From<CharacterAchievementJoinData<'_>> for comp::CharacterAchievement {
+    fn from(data: CharacterAchievementJoinData) -> comp::CharacterAchievement {
+        comp::CharacterAchievement {
+            achievement: comp::Achievement::from(data.achievement),
+            completed: data.character_achievement.completed == 1,
+            progress: data.character_achievement.progress as usize,
         }
     }
 }

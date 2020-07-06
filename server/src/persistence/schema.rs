@@ -1,8 +1,10 @@
 table! {
-    achievement (id) {
-        id -> Integer,
+    achievements (uuid) {
+        uuid -> Text,
         checksum -> Text,
-        details -> Text,
+        title -> Text,
+        action -> Integer,
+        target -> Integer,
     }
 }
 
@@ -33,7 +35,7 @@ table! {
 table! {
     character_achievement (character_id) {
         character_id -> Integer,
-        achievement_id -> Integer,
+        achievement_uuid -> Text,
         completed -> Integer,
         progress -> Integer,
     }
@@ -76,14 +78,14 @@ table! {
 }
 
 joinable!(body -> character (character_id));
-joinable!(character_achievement -> achievement (achievement_id));
 joinable!(character_achievement -> character (character_id));
+joinable!(character_achievement -> achievements (achievement_uuid));
 joinable!(inventory -> character (character_id));
 joinable!(loadout -> character (character_id));
 joinable!(stats -> character (character_id));
 
 allow_tables_to_appear_in_same_query!(
-    achievement,
+    achievements,
     body,
     character,
     character_achievement,
