@@ -17,13 +17,13 @@ const float PI = 3.141592;
 const vec3 SKY_DAY_TOP = vec3(0.1, 0.5, 0.9);
 const vec3 SKY_DAY_MID = vec3(0.02, 0.28, 0.8);
 const vec3 SKY_DAY_BOT = vec3(0.1, 0.2, 0.3);
-const vec3 DAY_LIGHT   = vec3(1.5, 1.4, 1.0);//vec3(1.5, 1.4, 1.0);
+const vec3 DAY_LIGHT   = vec3(1.7, 1.4, 0.7) * 1.5;//vec3(1.5, 1.4, 1.0);
 const vec3 SUN_HALO_DAY = vec3(0.35, 0.35, 0.0);
 
 const vec3 SKY_DUSK_TOP = vec3(0.06, 0.1, 0.20);
 const vec3 SKY_DUSK_MID = vec3(0.35, 0.1, 0.15);
 const vec3 SKY_DUSK_BOT = vec3(0.0, 0.1, 0.23);
-const vec3 DUSK_LIGHT   = vec3(8.0, 1.5, 0.15);
+const vec3 DUSK_LIGHT   = vec3(6.0, 1.5, 0.15);
 const vec3 SUN_HALO_DUSK = vec3(1.2, 0.15, 0.0);
 
 const vec3 SKY_NIGHT_TOP = vec3(0.001, 0.001, 0.0025);
@@ -70,7 +70,7 @@ float get_sun_brightness(/*vec3 sun_dir*/) {
 }
 
 float get_moon_brightness(/*vec3 moon_dir*/) {
-    return max(-moon_dir.z + 0.6, 0.0) * 0.007;
+    return max(-moon_dir.z + 0.6, 0.0) * 0.4;
 }
 
 vec3 get_sun_color(/*vec3 sun_dir*/) {
@@ -586,4 +586,34 @@ vec3 illuminate(float max_light, vec3 view_dir, /*vec3 max_light, */vec3 emitted
     return c;
     // float sum_col = color.r + color.g + color.b;
     // return /*srgb_to_linear*/(/*0.5*//*0.125 * */vec3(pow(color.x, gamma), pow(color.y, gamma), pow(color.z, gamma)));
+}
+
+// All components are in the range [0…1], including hue.
+vec3 rgb2hsv(vec3 c)
+{
+    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+
+    float d = q.x - min(q.w, q.y);
+    float e = 1.0e-10;
+    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+
+// All components are in the range [0…1], including hue.
+vec3 hsv2rgb(vec3 c)
+{
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+vec3 better_color(vec3 col) {
+	vec3 hsv = rgb2hsv(srgb_to_linear(col));
+
+	hsv.x -= 0.015;
+	hsv.y = hsv.y * 1.0 + 0.025;
+	hsv.z *= 0.6 / (hsv.y * 0.5 + 0.5);
+
+	return linear_to_srgb(hsv2rgb(hsv));
 }

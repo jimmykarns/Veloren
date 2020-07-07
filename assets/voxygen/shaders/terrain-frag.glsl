@@ -76,9 +76,9 @@ void main() {
     vec4 f_col_light = texelFetch(t_col_light, ivec2(f_uv_pos)/* + uv_delta*//* - f_norm * 0.00001*/, 0);
     // float f_light = f_col_light.a;
     // vec4 f_col_light = texelFetch(t_col_light, ivec2(int(f_uv_pos.x), int(f_uv_pos.y)/* + uv_delta*//* - f_norm * 0.00001*/), 0);
-    vec3 f_col = /*linear_to_srgb*//*srgb_to_linear*/(f_col_light.rgb);
+    vec3 f_col = /*linear_to_srgb*//*srgb_to_linear*/better_color(f_col_light.rgb);
 	// vec3 f_col = vec3(1.0);
-    float f_light = texture(t_col_light, (f_uv_pos + 0.5) / textureSize(t_col_light, 0)).a;//1.0;//f_col_light.a * 4.0;// f_light = float(v_col_light & 0x3Fu) / 64.0;
+    float f_light = pow(texture(t_col_light, (f_uv_pos + 0.5) / textureSize(t_col_light, 0)).a, 1.25);//1.0;//f_col_light.a * 4.0;// f_light = float(v_col_light & 0x3Fu) / 64.0;
     // vec2 texSize = textureSize(t_col_light, 0);
     // float f_light = texture(t_col_light, f_uv_pos/* + vec2(atlas_offs.xy)*/).a;//1.0;//f_col_light.a * 4.0;// f_light = float(v_col_light & 0x3Fu) / 64.0;
     // float f_light = textureProj(t_col_light, vec3(f_uv_pos/* + vec2(atlas_offs.xy)*/, texSize.x)).a;//1.0;//f_col_light.a * 4.0;// f_light = float(v_col_light & 0x3Fu) / 64.0;
