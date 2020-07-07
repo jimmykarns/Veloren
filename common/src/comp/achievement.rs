@@ -1,13 +1,13 @@
 use crate::comp::item::{Consumable, Item, ItemKind};
 use hashbrown::HashMap;
 use serde::{Deserialize, Serialize};
-use specs::{Component, Entity, FlaggedStorage};
+use specs::{Component, Entity};
 use specs_idvs::IdvStorage;
 
 /// Used for in-game events that contribute towards player achievements.
 ///
-/// For example, when an `InventoryManip` is detected, we record that event in
-/// order to process achievements which depend on collecting items.
+/// For example, when an item is collected in the world, we a trigger
+/// to process an entities achievements which depend on collecting items.
 pub struct AchievementTrigger {
     pub entity: Entity,
     pub event: AchievementEvent,
@@ -75,8 +75,18 @@ pub struct CharacterAchievement {
     pub progress: usize,
 }
 
+impl From<&Achievement> for CharacterAchievement {
+    fn from(achievement: &Achievement) -> Self {
+        Self {
+            achievement: achievement.clone(),
+            completed: false,
+            progress: 0,
+        }
+    }
+}
+
 impl CharacterAchievement {
-    /// Increment the progress of this Achievement based on its type
+    /// Increment the progress of this item based on its type
     ///
     /// By default, when an achievement is incremented, its `progress` value is
     /// incremented by 1. This covers many cases, but using this method allows
@@ -104,18 +114,6 @@ impl CharacterAchievement {
     }
 }
 
-/// For initialisation of a new CharacterAchievement item when a new achievement
-/// is progressed
-impl From<Achievement> for CharacterAchievement {
-    fn from(achievement: Achievement) -> Self {
-        Self {
-            achievement,
-            completed: false,
-            progress: 0,
-        }
-    }
-}
-
 /// Each character is assigned an achievement list, which holds information
 /// about which achievements that the player has made some progress on, or
 /// completed.
@@ -127,11 +125,13 @@ impl Default for AchievementList {
 }
 
 impl AchievementList {
-    pub fn from(data: HashMap<String, CharacterAchievement>) -> Self { Self(data) }
+    pub fn new(items: HashMap<String, CharacterAchievement>) -> Self { Self(items) }
+
+    pub fn items(&self) -> HashMap<String, CharacterAchievement> { self.0.clone() }
 }
 
 impl Component for AchievementList {
-    type Storage = FlaggedStorage<Self, IdvStorage<Self>>; // TODO check
+    type Storage = IdvStorage<Self>;
 }
 
 impl AchievementList {
@@ -150,11 +150,17 @@ impl AchievementList {
         achievement: &Achievement,
         event: &AchievementEvent,
     ) -> Option<CharacterAchievement> {
+        tracing::info!(?achievement, "Processing achievement");
+
         let uuid = achievement.uuid.clone();
 
         self.0
             .entry(uuid)
-            .or_insert(CharacterAchievement::from(achievement.clone()))
+            .or_insert(CharacterAchievement {
+                achievement: achievement.clone(),
+                completed: false,
+                progress: 0,
+            })
             .increment_progress(event)
             .cloned()
     }

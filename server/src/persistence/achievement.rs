@@ -4,8 +4,7 @@ use super::{
     error::Error,
     establish_connection,
     models::{
-        Achievement as AchievementModel, CharacterAchievement, CharacterAchievementJoinData,
-        DataMigration, NewDataMigration,
+        Achievement as AchievementModel, CharacterAchievements, DataMigration, NewDataMigration,
     },
     schema,
 };
@@ -15,6 +14,7 @@ use diesel::{
     prelude::*,
     result::{DatabaseErrorKind, Error as DieselError},
 };
+use hashbrown::HashSet;
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
@@ -29,7 +29,10 @@ enum AchievementLoaderRequestKind {
     },
 }
 
-type LoadCharacterAchievementsResult = (specs::Entity, Result<comp::AchievementList, Error>);
+type LoadCharacterAchievementsResult = (
+    specs::Entity,
+    Result<HashSet<comp::CharacterAchievement>, Error>,
+);
 
 /// Wrapper for results
 #[derive(Debug)]
@@ -100,26 +103,15 @@ impl Drop for AchievementLoader {
 fn load_character_achievement_list(
     character_id: i32,
     db_dir: &str,
-) -> Result<comp::AchievementList, Error> {
-    let character_achievements = schema::character_achievement::dsl::character_achievement
-        .filter(schema::character_achievement::character_id.eq(character_id))
-        .inner_join(schema::achievements::table)
-        .load::<(CharacterAchievement, AchievementModel)>(&establish_connection(db_dir))?;
+) -> Result<HashSet<comp::CharacterAchievement>, Error> {
+    let character_achievements = schema::character_achievements::dsl::character_achievements
+        .filter(schema::character_achievements::character_id.eq(character_id))
+        .first::<CharacterAchievements>(&establish_connection(db_dir))?;
 
-    Ok(comp::AchievementList::from(
-        character_achievements
-            .iter()
-            .map(|(character_achievement, achievement)| {
-                (
-                    achievement.uuid.clone(),
-                    comp::CharacterAchievement::from(CharacterAchievementJoinData {
-                        character_achievement,
-                        achievement,
-                    }),
-                )
-            })
-            .collect(),
-    ))
+    let result: HashSet<comp::CharacterAchievement> =
+        character_achievements.items.0.iter().cloned().collect();
+
+    Ok(result)
 }
 
 pub fn sync(db_dir: &str) -> Result<Vec<comp::Achievement>, Error> {

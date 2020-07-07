@@ -40,6 +40,7 @@ use common::{
 use futures_executor::block_on;
 use futures_timer::Delay;
 use futures_util::{select, FutureExt};
+use hashbrown::HashSet;
 use metrics::{ServerMetrics, TickMetrics};
 use network::{Address, Network, Pid};
 use persistence::{
@@ -90,8 +91,8 @@ pub struct Server {
     metrics: ServerMetrics,
     tick_metrics: TickMetrics,
 
-    /// Holds a list of all available achievements
-    achievement_data: Vec<comp::Achievement>,
+    /// A list of all achievements available to characetrs on this server.
+    achievement_data: HashSet<comp::CharacterAchievement>,
 }
 
 impl Server {
@@ -266,11 +267,14 @@ impl Server {
         debug!("Syncing Achievement data...");
 
         let achievement_data = match persistence::achievement::sync(&settings.persistence_db_dir) {
-            Ok(achievements) => achievements,
+            Ok(achievements) => achievements
+                .iter()
+                .map(comp::CharacterAchievement::from)
+                .collect::<HashSet<comp::CharacterAchievement>>(),
             Err(e) => {
-                warn!(?e, "Achievement data migration error");
+                warn!(?e, "Achievement data migration or load error");
 
-                Vec::new()
+                HashSet::new()
             },
         };
 
@@ -445,8 +449,8 @@ impl Server {
 
         for trigger in achievement_events {
             // Get the achievement that matches this event
-            for achievement in &self.achievement_data {
-                if achievement.matches_event(&trigger.event) {
+            for item in &self.achievement_data {
+                if item.achievement.matches_event(&trigger.event) {
                     // Calls to `process_achievement` return true to indicate that the
                     // achievement is complete. In this case, we notify the client to notify them of
                     // completing the achievement
@@ -457,7 +461,7 @@ impl Server {
                         .get_mut(trigger.entity)
                     {
                         if let Some(character_achievement) =
-                            achievement_list.process_achievement(achievement, &trigger.event)
+                            achievement_list.process_achievement(&item.achievement, &trigger.event)
                         {
                             self.notify_client(
                                 trigger.entity,
@@ -526,10 +530,22 @@ impl Server {
                     entity,
                     result,
                 )) => match result {
-                    Ok(achievement_data) => self.notify_client(
-                        entity,
-                        ServerMsg::CharacterAchievementDataLoaded(achievement_data),
-                    ),
+                    Ok(character_achievements) => {
+                        // Merge the character's achievement data with the server list
+
+                        tracing::info!(?character_achievements, "character_achievements");
+                        tracing::info!(?self.achievement_data, "achievement_data");
+
+                        self.notify_client(
+                            entity,
+                            ServerMsg::CharacterAchievementDataLoaded(comp::AchievementList::new(
+                                self.achievement_data
+                                    .union(&character_achievements)
+                                    .map(|ca| (ca.achievement.uuid.to_owned(), ca.clone()))
+                                    .collect(),
+                            )),
+                        )
+                    },
                     Err(error) => self.notify_client(
                         entity,
                         ServerMsg::CharacterAchievementDataError(error.to_string()),

@@ -11,8 +11,8 @@ use super::{
     error::Error,
     establish_connection,
     models::{
-        Body, Character, Inventory, InventoryUpdate, Loadout, LoadoutUpdate, NewCharacter,
-        NewLoadout, Stats, StatsJoinData, StatsUpdate,
+        Body, Character, CharacterAchievements, Inventory, InventoryUpdate, Loadout, LoadoutUpdate,
+        NewCharacter, NewLoadout, Stats, StatsJoinData, StatsUpdate,
     },
     schema,
 };
@@ -446,7 +446,12 @@ fn check_character_limit(uuid: &str, db_dir: &str) -> Result<(), Error> {
     }
 }
 
-type CharacterUpdateData = (StatsUpdate, InventoryUpdate, LoadoutUpdate);
+type CharacterUpdateData = (
+    StatsUpdate,
+    InventoryUpdate,
+    LoadoutUpdate,
+    CharacterAchievements,
+);
 
 /// A unidirectional messaging resource for saving characters in a
 /// background thread.
@@ -476,16 +481,25 @@ impl CharacterUpdater {
     /// Updates a collection of characters based on their id and components
     pub fn batch_update<'a>(
         &self,
-        updates: impl Iterator<Item = (i32, &'a comp::Stats, &'a comp::Inventory, &'a comp::Loadout)>,
+        updates: impl Iterator<
+            Item = (
+                i32,
+                &'a comp::Stats,
+                &'a comp::Inventory,
+                &'a comp::Loadout,
+                &'a comp::AchievementList,
+            ),
+        >,
     ) {
         let updates = updates
-            .map(|(id, stats, inventory, loadout)| {
+            .map(|(id, stats, inventory, loadout, achievements)| {
                 (
                     id,
                     (
                         StatsUpdate::from(stats),
                         InventoryUpdate::from(inventory),
                         LoadoutUpdate::from((id, loadout)),
+                        CharacterAchievements::from((id, achievements)),
                     ),
                 )
             })
@@ -503,8 +517,15 @@ impl CharacterUpdater {
         stats: &comp::Stats,
         inventory: &comp::Inventory,
         loadout: &comp::Loadout,
+        achievements: &comp::AchievementList,
     ) {
-        self.batch_update(std::iter::once((character_id, stats, inventory, loadout)));
+        self.batch_update(std::iter::once((
+            character_id,
+            stats,
+            inventory,
+            loadout,
+            achievements,
+        )));
     }
 }
 
@@ -513,12 +534,16 @@ fn batch_update(updates: impl Iterator<Item = (i32, CharacterUpdateData)>, db_di
 
     if let Err(e) = connection.transaction::<_, diesel::result::Error, _>(|| {
         updates.for_each(
-            |(character_id, (stats_update, inventory_update, loadout_update))| {
+            |(
+                character_id,
+                (stats_update, inventory_update, loadout_update, achievements_update),
+            )| {
                 update(
                     character_id,
                     &stats_update,
                     &inventory_update,
                     &loadout_update,
+                    &achievements_update,
                     &connection,
                 )
             },
@@ -535,6 +560,7 @@ fn update(
     stats: &StatsUpdate,
     inventory: &InventoryUpdate,
     loadout: &LoadoutUpdate,
+    achievements: &CharacterAchievements,
     connection: &SqliteConnection,
 ) {
     // Update Stats
@@ -568,6 +594,19 @@ fn update(
     .execute(connection)
     {
         warn!(?e, ?character_id, "Failed to update loadout for character",)
+    }
+
+    // Update Achievements. Use `replace_into` as 'insert or update' as the
+    // characetr may not have a row
+    if let Err(e) = diesel::replace_into(schema::character_achievements::table)
+        .values(achievements)
+        .execute(connection)
+    {
+        warn!(
+            ?e,
+            ?character_id,
+            "Failed to update achievements for character",
+        )
     }
 }
 

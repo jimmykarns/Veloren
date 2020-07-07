@@ -1,7 +1,8 @@
 extern crate serde_json;
 
 use super::schema::{
-    achievements, body, character, character_achievement, data_migration, inventory, loadout, stats,
+    achievements, body, character, character_achievements, data_migration, inventory, loadout,
+    stats,
 };
 use crate::comp;
 use chrono::NaiveDateTime;
@@ -436,29 +437,74 @@ impl From<&Achievement> for comp::Achievement {
 /// In the interest of storing as little achievement data per-character as
 /// pssible, we only store a 'character_achievement' entry when a character has
 /// made some progress towards the completion of an achievement.
-#[derive(Queryable, Debug, Identifiable)]
+#[derive(Associations, AsChangeset, Identifiable, Queryable, Debug, Insertable)]
+#[belongs_to(Character)]
 #[primary_key(character_id)]
-#[table_name = "character_achievement"]
-pub struct CharacterAchievement {
-    pub character_id: i32,
-    pub achievement_uuid: String,
-    pub completed: i32,
-    pub progress: i32,
+#[table_name = "character_achievements"]
+pub struct CharacterAchievements {
+    character_id: i32,
+    pub items: CharacterAchievementData,
 }
 
-/// The required elements to build comp::CharacterAchievement from database data
-pub struct CharacterAchievementJoinData<'a> {
-    pub character_achievement: &'a CharacterAchievement,
-    pub achievement: &'a Achievement,
+/// The representation of each achievement in the Vec of achievement items
+/// within achievement data. The structure of that data follows the format:
+/// {
+///     character_id,
+///     items: [ CharacterAchievementItem ]
+/// }
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+pub struct CharacterAchievementItem {
+    achievement_uuid: String,
+    progress: i32,
 }
 
-impl From<CharacterAchievementJoinData<'_>> for comp::CharacterAchievement {
-    fn from(data: CharacterAchievementJoinData) -> comp::CharacterAchievement {
-        comp::CharacterAchievement {
-            achievement: comp::Achievement::from(data.achievement),
-            completed: data.character_achievement.completed == 1,
-            progress: data.character_achievement.progress as usize,
+/// When persisting the component to the database
+impl From<(i32, &comp::AchievementList)> for CharacterAchievements {
+    fn from(data: (i32, &comp::AchievementList)) -> CharacterAchievements {
+        let (character_id, achievements) = data;
+
+        let items = achievements
+            .items()
+            .iter()
+            .map(|(_, char_achievement)| char_achievement.clone())
+            .collect::<Vec<_>>();
+
+        CharacterAchievements {
+            character_id,
+            items: CharacterAchievementData(items),
         }
+    }
+}
+
+/// A wrapper type for Inventory components used to serialise to and from JSON
+/// If the column contains malformed JSON, a default inventory is returned
+#[derive(SqlType, AsExpression, Debug, Deserialize, Serialize, FromSqlRow, PartialEq)]
+#[sql_type = "Text"]
+pub struct CharacterAchievementData(pub Vec<comp::CharacterAchievement>);
+
+impl<DB> diesel::deserialize::FromSql<Text, DB> for CharacterAchievementData
+where
+    DB: diesel::backend::Backend,
+    String: diesel::deserialize::FromSql<Text, DB>,
+{
+    fn from_sql(
+        bytes: Option<&<DB as diesel::backend::Backend>::RawValue>,
+    ) -> diesel::deserialize::Result<Self> {
+        let t = String::from_sql(bytes)?;
+        serde_json::from_str(&t).map_err(Box::from)
+    }
+}
+
+impl<DB> diesel::serialize::ToSql<Text, DB> for CharacterAchievementData
+where
+    DB: diesel::backend::Backend,
+{
+    fn to_sql<W: std::io::Write>(
+        &self,
+        out: &mut diesel::serialize::Output<W, DB>,
+    ) -> diesel::serialize::Result {
+        let s = serde_json::to_string(&self.0)?;
+        <String as diesel::serialize::ToSql<Text, DB>>::to_sql(&s, out)
     }
 }
 
