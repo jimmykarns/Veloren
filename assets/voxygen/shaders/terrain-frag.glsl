@@ -290,7 +290,7 @@ void main() {
 
 	// vec3 surf_color = illuminate(srgb_to_linear(f_col), light, diffuse_light, ambient_light);
     vec3 f_chunk_pos = f_pos - (model_offs - focus_off.xyz);
-	vec3 col = /*srgb_to_linear*/(f_col + hash(vec4(floor(f_chunk_pos * 3.0 - f_norm * 0.5), 0)) * 0.01/* - 0.01*/); // Small-scale noise
+	vec3 col = /*srgb_to_linear*/srgb_to_linear((linear_to_srgb(f_col) + hash(vec4(floor(f_chunk_pos * 3.0 - f_norm * 0.5), 0)) * 0.01)/* - 0.01*/); // Small-scale noise
 	// vec3 col = /*srgb_to_linear*/(f_col + hash(vec4(floor(f_pos * 3.0 - f_norm * 0.5), 0)) * 0.01); // Small-scale noise
     vec3 surf_color = illuminate(max_light, view_dir, col * emitted_light, col * reflected_light);
 
