@@ -254,6 +254,14 @@ fn sprite_config_for(kind: BlockKind) -> Option<SpriteConfig> {
             variations: 1,
             wind_sway: 0.0,
         }),
+        BlockKind::DoorOpen1 => Some(SpriteConfig {
+            variations: 1,
+            wind_sway: 0.0,
+        }),
+        BlockKind::DoorOpen2 => Some(SpriteConfig {
+            variations: 1,
+            wind_sway: 0.0,
+        }),
         BlockKind::Bed => Some(SpriteConfig {
             variations: 1,
             wind_sway: 0.0,
@@ -2174,6 +2182,22 @@ impl<V: RectRasterableVol> Terrain<V> {
                     (BlockKind::Door, 0),
                     make_models(
                         "voxygen.voxel.sprite.door.door-0",
+                        Vec3::new(-5.5, -5.5, 0.0),
+                        Vec3::one(),
+                    ),
+                ),
+                (
+                    (BlockKind::DoorOpen1, 0),
+                    make_models(
+                        "voxygen.voxel.sprite.door.door-1",
+                        Vec3::new(-5.5, -5.5, 0.0),
+                        Vec3::one(),
+                    ),
+                ),
+                (
+                    (BlockKind::DoorOpen2, 0),
+                    make_models(
+                        "voxygen.voxel.sprite.door.door-2",
                         Vec3::new(-5.5, -5.5, 0.0),
                         Vec3::one(),
                     ),

@@ -268,7 +268,7 @@ impl PlayState for SessionState {
                     .state()
                     .terrain()
                     .get(*sp)
-                    .map(|b| b.is_collectible() || can_build)
+                    .map(|b| b.is_collectible() || can_build || b.is_interactable_terrain())
                     .unwrap_or(false)
             }));
 
@@ -453,9 +453,13 @@ impl PlayState for SessionState {
                     },
                     Event::InputUpdate(GameInput::Interact, state) => {
                         let mut client = self.client.borrow_mut();
+                        self.inputs.interact.set_state(state);
 
                         // Collect terrain sprites
                         if let Some(select_pos) = self.scene.select_pos() {
+                            if self.inputs.interact.is_just_pressed() {
+                                client.interact_with_door(select_pos);
+                            }
                             client.collect_block(select_pos);
                         }
 

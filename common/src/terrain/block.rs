@@ -61,6 +61,8 @@ pub enum BlockKind {
     StreetLamp,
     StreetLampTall,
     Door,
+    DoorOpen1,
+    DoorOpen2,
     Bed,
     Bench,
     ChairSingle,
@@ -89,6 +91,13 @@ impl BlockKind {
     pub const MAX_HEIGHT: f32 = 3.0;
 
     pub fn is_tangible(&self) -> bool {
+        match self {
+            BlockKind::Air => false,
+            kind => !kind.is_fluid(),
+        }
+    }
+
+    pub fn is_tangible2(&self) -> bool {
         match self {
             BlockKind::Air => false,
             kind => !kind.is_fluid(),
@@ -146,6 +155,8 @@ impl BlockKind {
             BlockKind::StreetLamp => true,
             BlockKind::StreetLampTall => true,
             BlockKind::Door => false,
+            BlockKind::DoorOpen1 => false,
+            BlockKind::DoorOpen2 => false,
             BlockKind::Bed => false,
             BlockKind::Bench => false,
             BlockKind::ChairSingle => false,
@@ -230,6 +241,8 @@ impl BlockKind {
             BlockKind::StreetLamp => false,
             BlockKind::StreetLampTall => false,
             BlockKind::Door => false,
+            BlockKind::DoorOpen1 => false,
+            BlockKind::DoorOpen2 => false,
             BlockKind::Bed => false,
             BlockKind::Bench => false,
             BlockKind::ChairSingle => false,
@@ -301,7 +314,9 @@ impl BlockKind {
             BlockKind::Scarecrow => true,
             BlockKind::StreetLamp => true,
             BlockKind::StreetLampTall => true,
-            BlockKind::Door => false,
+            BlockKind::Door => true,
+            BlockKind::DoorOpen1 => false,
+            BlockKind::DoorOpen2 => false,
             BlockKind::Bed => true,
             BlockKind::Bench => true,
             BlockKind::ChairSingle => true,
@@ -350,6 +365,8 @@ impl BlockKind {
             BlockKind::Carrot => 0.18,
             BlockKind::Radish => 0.18,
             BlockKind::Door => 3.0,
+            BlockKind::DoorOpen1 => 3.0,
+            BlockKind::DoorOpen2 => 3.0,
             BlockKind::Bed => 1.54,
             BlockKind::Bench => 1.45,
             BlockKind::ChairSingle => 1.36,
@@ -389,6 +406,18 @@ impl BlockKind {
             BlockKind::VeloriteFrag => true,
             BlockKind::Chest => true,
             BlockKind::Coconut => true,
+            BlockKind::Door => false,
+            BlockKind::DoorOpen1 => false,
+            BlockKind::DoorOpen2 => false,
+            _ => false,
+        }
+    }
+
+    pub fn is_interactable_terrain(&self) -> bool {
+        match self {
+            BlockKind::Door => true,
+            BlockKind::DoorOpen1 => true,
+            BlockKind::DoorOpen2 => true,
             _ => false,
         }
     }
@@ -423,6 +452,8 @@ impl Block {
             | BlockKind::Window2
             | BlockKind::Window3
             | BlockKind::Window4
+            | BlockKind::DoorOpen1
+            | BlockKind::DoorOpen2
             | BlockKind::Door => Some(self.color[0] & 0b111),
             _ => None,
         }

@@ -12,6 +12,7 @@ pub const DEFAULT_HOLD_DURATION: Duration = Duration::from_millis(200);
 pub enum InventoryManip {
     Pickup(Uid),
     Collect(Vec3<i32>),
+    DoorInteraction(Vec3<i32>),
     Use(Slot),
     Swap(Slot, Slot),
     Drop(Slot),
@@ -153,6 +154,7 @@ pub struct ControllerInputs {
     pub secondary: Input,
     pub ability3: Input,
     pub jump: Input,
+    pub interact: Input,
     pub roll: Input,
     pub glide: Input,
     pub wall_leap: Input,
@@ -178,6 +180,7 @@ impl ControllerInputs {
         self.secondary.tick(dt);
         self.ability3.tick(dt);
         self.jump.tick(dt);
+        self.interact.tick(dt);
         self.roll.tick(dt);
         self.glide.tick(dt);
         self.wall_leap.tick(dt);
@@ -190,6 +193,7 @@ impl ControllerInputs {
         self.secondary.tick_freshness();
         self.ability3.tick_freshness();
         self.jump.tick_freshness();
+        self.interact.tick_freshness();
         self.roll.tick_freshness();
         self.glide.tick_freshness();
         self.wall_leap.tick_freshness();
@@ -203,6 +207,7 @@ impl ControllerInputs {
         self.secondary.update_with_new(new.secondary);
         self.ability3.update_with_new(new.ability3);
         self.jump.update_with_new(new.jump);
+        self.interact.update_with_new(new.interact);
         self.roll.update_with_new(new.roll);
         self.glide.update_with_new(new.glide);
         self.wall_leap.update_with_new(new.wall_leap);

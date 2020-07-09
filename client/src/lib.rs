@@ -545,6 +545,14 @@ impl Client {
             .unwrap();
     }
 
+    pub fn interact_with_door(&mut self, pos: Vec3<i32>) {
+        self.singleton_stream
+            .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
+                InventoryManip::DoorInteraction(pos),
+            )))
+            .unwrap();
+    }
+
     pub fn collect_block(&mut self, pos: Vec3<i32>) {
         self.singleton_stream
             .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(

@@ -6,7 +6,7 @@ use common::{
         Pos, MAX_PICKUP_RANGE_SQR,
     },
     sync::{Uid, WorldSyncExt},
-    terrain::block::Block,
+    terrain::{Block, BlockKind},
     vol::{ReadVol, Vox},
 };
 use rand::Rng;
@@ -90,6 +90,83 @@ pub fn handle_inventory(server: &mut Server, entity: EcsEntity, manip: comp::Inv
             };
 
             state.write_component(entity, event);
+        },
+
+        // the interaction of opening and closing doors
+        // this might be better off in a different class
+        comp::InventoryManip::DoorInteraction(pos) => {
+            let first_door = state.terrain().get(pos).ok().copied();
+
+            if let Some(first_door) = first_door {
+                // check for block that is supported by this interaction (in case this method gets extended)
+                if first_door.is_interactable_terrain() {
+
+                    if first_door.kind() == BlockKind::Door {
+
+                        let ori = first_door.get_ori().unwrap();
+                        let color = first_door.get_color().unwrap();
+
+                        // the orientation of doors is saved in the first 'color' as the rgb color is not needed
+                        // the orientation is a value between 0 and 7, the function get ori retrieves a value modulo 8 automatically
+                        // the left and right closed doors facing in the same direction have different orientation so we add the difference (difference of 4, modulo 8)
+                        let rgb = [ori + 4, color[1], color[2]].into();
+                        state.try_set_block(pos, Block::new(BlockKind::DoorOpen2, rgb));
+
+                        // TODO add a sound effect for 'opening' doors here
+
+                        // calculate where to look for a second door
+                        let mut pos2 = pos.clone();
+                        if ori == 0 { pos2 += (1,0,0); }
+                        else if ori == 2 { pos2 += (0,1,0); }
+                        else if ori == 4 { pos2 += (-1,0,0); }
+                        else if ori == 6 { pos2 += (0,-1,0); }
+
+                        let second_door = state.terrain().get(pos2).ok().copied().unwrap();
+
+                        // check if there is a fitting door there
+                        if second_door.kind() == BlockKind::Door {
+                            if second_door.get_ori().unwrap() == (ori + 4) & 0b111 {
+                                state.try_set_block(pos2, Block::new(BlockKind::DoorOpen1, rgb));
+                            }
+                        }
+                    } else if first_door.kind() == BlockKind::DoorOpen1 || first_door.kind() == BlockKind::DoorOpen2 {
+
+                        let ori = first_door.get_ori().unwrap();
+                        let color = first_door.get_color().unwrap();
+
+                        // same as above, but only needed for open door 2
+                        let rgb = [ori + 4, color[1], color[2]].into();
+
+                        if first_door.kind() == BlockKind::DoorOpen1 {
+                            state.try_set_block(pos, Block::new(BlockKind::Door, color));
+                        }else{
+                            state.try_set_block(pos, Block::new(BlockKind::Door, rgb));
+                        }
+
+                        // TODO add a sound effect for 'closing' doors here
+
+                        // calculate where to look for a second door
+                        // (cant think of a smarter way to do this for the case of closing doors. kind and ori is not enough anymore to differentiate left and right)
+                        let positions = [(1,0,0),(0,1,0),(-1,0,0),(0,-1,0)];
+
+                        for i in 0..4 {
+                            let pos2 = pos.clone() + positions[i];
+                            let second_door = state.terrain().get(pos2).ok().copied().unwrap();
+
+                            //check if there is a fitting door there
+                            if second_door.kind() == BlockKind::DoorOpen1 || second_door.kind() == BlockKind::DoorOpen2 {
+                                if second_door.kind() != first_door.kind() {
+                                    if second_door.kind() == BlockKind::DoorOpen1 {
+                                        state.try_set_block(pos2, Block::new(BlockKind::Door, color));
+                                    }else{
+                                        state.try_set_block(pos2, Block::new(BlockKind::Door, rgb));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         },
 
         comp::InventoryManip::Collect(pos) => {
