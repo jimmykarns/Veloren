@@ -138,7 +138,12 @@ impl Scene {
         }
     }
 
-    pub fn maintain(&mut self, renderer: &mut Renderer, scene_data: SceneData) {
+    pub fn maintain(
+        &mut self,
+        renderer: &mut Renderer,
+        scene_data: SceneData,
+        loadout: Option<&Loadout>,
+    ) {
         self.camera.update(
             scene_data.time,
             1.0 / 60.0,

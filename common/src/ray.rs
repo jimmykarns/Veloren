@@ -119,12 +119,16 @@ impl<'a, V: ReadVol, F: RayUntil<V::Vox>, G: RayForEach<V::Vox>> Ray<'a, V, F, G
                 break;
             }
 
+            let vox = self.vol.get(ipos);
+
             // for_each
             if let Some(g) = &mut self.for_each {
-                g(ipos);
+                if let Ok(vox) = vox {
+                    g(vox, ipos);
+                }
             }
 
-            match self.vol.get(ipos).map(|vox| (vox, (self.until)(vox))) {
+            match vox.map(|vox| (vox, (self.until)(vox))) {
                 Ok((_vox, true)) => {
                     if !until_condition_met {
                         // This is an edge
