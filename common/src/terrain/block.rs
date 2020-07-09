@@ -97,13 +97,6 @@ impl BlockKind {
         }
     }
 
-    pub fn is_tangible2(&self) -> bool {
-        match self {
-            BlockKind::Air => false,
-            kind => !kind.is_fluid(),
-        }
-    }
-
     pub fn is_air(&self) -> bool {
         match self {
             BlockKind::Air => true,
