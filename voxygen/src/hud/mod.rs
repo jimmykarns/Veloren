@@ -241,7 +241,7 @@ pub struct HudInfo {
     pub is_aiming: bool,
     pub is_first_person: bool,
     pub target_entity: Option<specs::Entity>,
-    pub selected_entity: Option<specs::Entity>,
+    pub selected_entity: Option<(specs::Entity, std::time::Instant)>,
 }
 
 pub enum Event {
@@ -297,7 +297,6 @@ pub enum Event {
     ChangeAutoWalkBehavior(PressBehavior),
     ChangeStopAutoWalkOnInput(bool),
     CraftRecipe(String),
-    SelectEntity(specs::Entity),
     InviteMember(common::sync::Uid),
     AcceptInvite,
     RejectInvite,
@@ -1031,7 +1030,7 @@ impl Hud {
                 .filter(|(entity, _, _, stats, _, _, _, _, _, _)| *entity != me && !stats.is_dead
                     && (stats.health.current() != stats.health.maximum()
                          || info.target_entity.map_or(false, |e| e == *entity)
-                         || info.selected_entity.map_or(false, |e| e == *entity)
+                         || info.selected_entity.map_or(false, |s| s.0 == *entity)
                     ))
                 // Don't show outside a certain range
                 .filter(|(_, pos, _, _, _, _, _, _, hpfl, _)| {
@@ -1863,7 +1862,6 @@ impl Hud {
                     social::Event::ChangeSocialTab(social_tab) => {
                         self.show.open_social_tab(social_tab)
                     },
-                    social::Event::Select(e) => events.push(Event::SelectEntity(e)),
                     social::Event::Invite(uid) => events.push(Event::InviteMember(uid)),
                     social::Event::Accept => events.push(Event::AcceptInvite),
                     social::Event::Reject => events.push(Event::RejectInvite),
