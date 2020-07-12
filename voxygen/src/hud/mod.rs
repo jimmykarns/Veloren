@@ -3,6 +3,7 @@ mod buttons;
 mod chat;
 mod crafting;
 mod esc_menu;
+mod group;
 mod hotbar;
 mod img_ids;
 mod item_imgs;
@@ -29,6 +30,7 @@ use chat::Chat;
 use chrono::NaiveTime;
 use crafting::Crafting;
 use esc_menu::EscMenu;
+use group::Group;
 use img_ids::Imgs;
 use item_imgs::ItemImgs;
 use map::Map;
@@ -68,7 +70,7 @@ const TEXT_COLOR: Color = Color::Rgba(1.0, 1.0, 1.0, 1.0);
 const TEXT_GRAY_COLOR: Color = Color::Rgba(0.5, 0.5, 0.5, 1.0);
 const TEXT_DULL_RED_COLOR: Color = Color::Rgba(0.56, 0.2, 0.2, 1.0);
 const TEXT_BG: Color = Color::Rgba(0.0, 0.0, 0.0, 1.0);
-//const TEXT_COLOR_GREY: Color = Color::Rgba(1.0, 1.0, 1.0, 0.5);
+const TEXT_COLOR_GREY: Color = Color::Rgba(1.0, 1.0, 1.0, 0.5);
 const MENU_BG: Color = Color::Rgba(0.0, 0.0, 0.0, 0.4);
 //const TEXT_COLOR_2: Color = Color::Rgba(0.0, 0.0, 0.0, 1.0);
 const TEXT_COLOR_3: Color = Color::Rgba(1.0, 1.0, 1.0, 0.1);
@@ -206,6 +208,7 @@ widget_ids! {
         social_window,
         crafting_window,
         settings_window,
+        group_window,
 
         // Free look indicator
         free_look_txt,
@@ -358,6 +361,7 @@ pub struct Show {
     bag: bool,
     social: bool,
     spell: bool,
+    group: bool,
     esc_menu: bool,
     open_windows: Windows,
     map: bool,
@@ -392,6 +396,11 @@ impl Show {
         }
     }
 
+    fn group(&mut self, open: bool) {
+        self.group = open;
+        self.want_grab = !open;
+    }
+
     fn social(&mut self, open: bool) {
         if !self.esc_menu {
             self.social = open;
@@ -419,6 +428,8 @@ impl Show {
     }
 
     fn toggle_map(&mut self) { self.map(!self.map) }
+
+    fn toggle_group(&mut self) { self.group(!self.group) }
 
     fn toggle_mini_map(&mut self) { self.mini_map = !self.mini_map; }
 
@@ -604,6 +615,7 @@ impl Hud {
                 ui: true,
                 social: false,
                 spell: false,
+                group: false,
                 mini_map: true,
                 settings_tab: SettingsTab::Interface,
                 social_tab: SocialTab::Online,
@@ -1529,6 +1541,7 @@ impl Hud {
                 Some(buttons::Event::ToggleSpell) => self.show.toggle_spell(),
                 Some(buttons::Event::ToggleMap) => self.show.toggle_map(),
                 Some(buttons::Event::ToggleCrafting) => self.show.toggle_crafting(),
+                Some(buttons::Event::ToggleGroup) => self.show.toggle_group(),
                 None => {},
             }
         }
@@ -1868,6 +1881,28 @@ impl Hud {
                     social::Event::Kick(uid) => events.push(Event::KickMember(uid)),
                     social::Event::LeaveGroup => events.push(Event::LeaveGroup),
                     social::Event::AssignLeader(uid) => events.push(Event::AssignLeader(uid)),
+                }
+            }
+        }
+        // Group Window
+        if self.show.group {
+            for event in Group::new(
+                &self.show,
+                client,
+                &self.imgs,
+                &self.fonts,
+                &self.voxygen_i18n,
+                info.selected_entity,
+            )
+            .set(self.ids.group_window, ui_widgets)
+            {
+                match event {
+                    group::Event::Close => self.show.social(false),
+                    group::Event::Accept => events.push(Event::AcceptInvite),
+                    group::Event::Reject => events.push(Event::RejectInvite),
+                    group::Event::Kick(uid) => events.push(Event::KickMember(uid)),
+                    group::Event::LeaveGroup => events.push(Event::LeaveGroup),
+                    group::Event::AssignLeader(uid) => events.push(Event::AssignLeader(uid)),
                 }
             }
         }
