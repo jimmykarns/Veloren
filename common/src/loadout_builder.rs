@@ -78,6 +78,7 @@ impl LoadoutBuilder {
             ring: None,
             neck: None,
             lantern: None,
+            glider: None,
             head: None,
             tabard: None,
         })
@@ -97,6 +98,9 @@ impl LoadoutBuilder {
         )))
         .lantern(Some(assets::load_expect_cloned(
             "common.items.armor.starter.lantern",
+        )))
+        .glider(Some(assets::load_expect_cloned(
+            "common.items.armor.starter.glider",
         )))
     }
 
@@ -129,6 +133,7 @@ impl LoadoutBuilder {
             ring: None,
             neck: None,
             lantern: None,
+            glider: None,
             head: None,
             tabard: None,
         })
@@ -230,6 +235,11 @@ impl LoadoutBuilder {
 
     pub fn neck(mut self, item: Option<Item>) -> Self {
         self.0.neck = item;
+        self
+    }
+
+    pub fn glider(mut self, item: Option<Item>) -> Self {
+        self.0.lantern = item;
         self
     }
 

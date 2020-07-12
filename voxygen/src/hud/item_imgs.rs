@@ -4,7 +4,8 @@ use common::{
     comp::item::{
         armor::Armor,
         tool::{Tool, ToolKind},
-        Consumable, Ingredient, Item, ItemKind, Lantern, LanternKind, Throwable, Utility,
+        Consumable, Glider, GliderKind, Ingredient, Item, ItemKind, Lantern, LanternKind,
+        Throwable, Utility,
     },
     figure::Segment,
 };
@@ -21,6 +22,7 @@ use vek::*;
 pub enum ItemKey {
     Tool(ToolKind),
     Lantern(LanternKind),
+    Glider(GliderKind),
     Armor(Armor),
     Utility(Utility),
     Consumable(Consumable),
@@ -33,6 +35,7 @@ impl From<&Item> for ItemKey {
         match &item.kind {
             ItemKind::Tool(Tool { kind, .. }) => ItemKey::Tool(*kind),
             ItemKind::Lantern(Lantern { kind, .. }) => ItemKey::Lantern(*kind),
+            ItemKind::Glider(Glider { kind, .. }) => ItemKey::Glider(*kind),
             ItemKind::Armor { kind, .. } => ItemKey::Armor(*kind),
             ItemKind::Utility { kind, .. } => ItemKey::Utility(*kind),
             ItemKind::Consumable { kind, .. } => ItemKey::Consumable(*kind),

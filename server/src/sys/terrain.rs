@@ -184,6 +184,7 @@ impl<'a> System<'a> for Sys {
                         ring: None,
                         neck: None,
                         lantern: None,
+                        glider: None,
                         head: None,
                         tabard: None,
                     },
@@ -212,6 +213,7 @@ impl<'a> System<'a> for Sys {
                         ring: None,
                         neck: None,
                         lantern: Some(assets::load_expect_cloned("common.items.lantern.black_0")),
+                        glider: None,
                         head: None,
                         tabard: None,
                     },
@@ -288,6 +290,7 @@ impl<'a> System<'a> for Sys {
                         ring: None,
                         neck: None,
                         lantern: None,
+                        glider: None,
                         head: None,
                         tabard: None,
                     };

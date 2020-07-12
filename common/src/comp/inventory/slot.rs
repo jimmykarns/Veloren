@@ -15,6 +15,7 @@ pub enum EquipSlot {
     Mainhand,
     Offhand,
     Lantern,
+    Glider,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
@@ -53,6 +54,7 @@ impl EquipSlot {
             (Self::Mainhand, ItemKind::Tool(_)) => true,
             (Self::Offhand, ItemKind::Tool(_)) => true,
             (Self::Lantern, ItemKind::Lantern(_)) => true,
+            (Self::Glider, ItemKind::Glider(_)) => true,
             _ => false,
         }
     }
@@ -122,6 +124,7 @@ fn loadout_replace(
         EquipSlot::Armor(ArmorSlot::Feet) => replace(&mut loadout.foot, item),
         EquipSlot::Armor(ArmorSlot::Tabard) => replace(&mut loadout.tabard, item),
         EquipSlot::Lantern => replace(&mut loadout.lantern, item),
+        EquipSlot::Glider => replace(&mut loadout.glider, item),
         EquipSlot::Mainhand => {
             replace(&mut loadout.active_item, item.map(item_config)).map(|i| i.item)
         },
@@ -303,6 +306,7 @@ pub fn equip(slot: usize, inventory: &mut Inventory, loadout: &mut Loadout) {
             Armor::Tabard(_) => ArmorSlot::Tabard,
         })),
         ItemKind::Lantern(_) => Some(EquipSlot::Lantern),
+        ItemKind::Glider(_) => Some(EquipSlot::Glider),
         _ => None,
     });
 

@@ -1,0 +1,10 @@
+Item(
+    name: "Swift Glider",
+    description: "Thank goodness for big pockets",
+    kind: Glider(
+        (
+            kind: Blue,
+            equip_time_millis: 400,
+        )
+    ),
+)

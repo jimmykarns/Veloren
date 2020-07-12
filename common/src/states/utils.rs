@@ -184,6 +184,15 @@ pub fn attempt_swap_loadout(data: &JoinData, update: &mut StateUpdate) {
 }
 
 /// Checks that player can wield the glider and updates `CharacterState` if so
+/*pub fn attempt_glide_wield(data: &JoinData, update: &mut StateUpdate) {
+    if let Some(ItemKind::Glider(glider)) = data.loadout.glider.as_ref().map(|i| &i.kind) {
+    if !data.physics.in_fluid && data.body.is_humanoid() {
+        update.character = CharacterState::GlideEquipping(glide_equipping::Data {
+            time_left: glider.equip_time(),
+        });
+    }
+}
+}*/
 pub fn attempt_glide_wield(data: &JoinData, update: &mut StateUpdate) {
     if data.physics.on_ground && !data.physics.in_fluid && data.body.is_humanoid() {
         update.character = CharacterState::GlideWield;

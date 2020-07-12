@@ -159,6 +159,7 @@ pub struct Loadout {
     pub ring: Option<Item>,
     pub neck: Option<Item>,
     pub lantern: Option<Item>,
+    pub glider: Option<Item>,
     pub head: Option<Item>,
     pub tabard: Option<Item>,
 }

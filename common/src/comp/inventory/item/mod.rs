@@ -13,7 +13,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use specs::{Component, FlaggedStorage};
 use specs_idvs::IdvStorage;
-use std::{fs::File, io::BufReader};
+use std::{fs::File, io::BufReader, time::Duration};
 use vek::Rgb;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -76,6 +76,23 @@ impl Lantern {
     pub fn color(&self) -> Rgb<f32> { self.color.map(|c| c as f32 / 255.0) }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[repr(u32)]
+pub enum GliderKind {
+    Blue = 1,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Glider {
+    pub kind: GliderKind,
+    equip_time_millis: u32,
+}
+
+pub const ALL_GLIDERS: [GliderKind; 1] = [GliderKind::Blue];
+impl Glider {
+    pub fn equip_time(&self) -> Duration { Duration::from_millis(self.equip_time_millis as u64) }
+}
+
 fn default_amount() -> u32 { 1 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -83,6 +100,7 @@ pub enum ItemKind {
     /// Something wieldable
     Tool(tool::Tool),
     Lantern(Lantern),
+    Glider(Glider),
     Armor {
         kind: armor::Armor,
         stats: armor::Stats,
@@ -148,7 +166,7 @@ impl Item {
                 *amount = give_amount;
                 Ok(())
             },
-            Tool { .. } | Lantern { .. } | Armor { .. } => {
+            Tool { .. } | Lantern { .. } | Glider { .. } | Armor { .. } => {
                 // Tools and armor don't stack
                 Err(assets::Error::InvalidType)
             },

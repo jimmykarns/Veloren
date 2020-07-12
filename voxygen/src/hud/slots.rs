@@ -39,7 +39,10 @@ impl SlotKey<Inventory, ItemImgs> for InventorySlot {
         source
             .get(self.0)
             .and_then(|item| match item.kind {
-                ItemKind::Tool { .. } | ItemKind::Lantern(_) | ItemKind::Armor { .. } => None,
+                ItemKind::Tool { .. }
+                | ItemKind::Lantern(_)
+                | ItemKind::Glider(_)
+                | ItemKind::Armor { .. } => None,
                 ItemKind::Utility { amount, .. }
                 | ItemKind::Consumable { amount, .. }
                 | ItemKind::Throwable { amount, .. }
@@ -72,6 +75,7 @@ impl SlotKey<Loadout, ItemImgs> for EquipSlot {
             EquipSlot::Mainhand => source.active_item.as_ref().map(|i| &i.item),
             EquipSlot::Offhand => source.second_item.as_ref().map(|i| &i.item),
             EquipSlot::Lantern => source.lantern.as_ref(),
+            EquipSlot::Glider => source.glider.as_ref(),
         };
 
         item.map(|i| (i.into(), None))
@@ -137,7 +141,10 @@ impl<'a> SlotKey<HotbarSource<'a>, HotbarImageSource<'a>> for HotbarSlot {
                 hotbar::SlotContents::Ability3 => None,
             })
             .and_then(|item| match item.kind {
-                ItemKind::Tool { .. } | ItemKind::Lantern(_) | ItemKind::Armor { .. } => None,
+                ItemKind::Tool { .. }
+                | ItemKind::Lantern(_)
+                | ItemKind::Glider(_)
+                | ItemKind::Armor { .. } => None,
                 ItemKind::Utility { amount, .. }
                 | ItemKind::Consumable { amount, .. }
                 | ItemKind::Throwable { amount, .. }

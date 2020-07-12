@@ -43,6 +43,7 @@ pub enum CharacterState {
     Sneak,
     Dance,
     Glide,
+    GlideEquipping(glide_equipping::Data),
     GlideWield,
     GlideWall,
     /// A basic blocking state

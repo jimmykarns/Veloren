@@ -83,6 +83,7 @@ impl<'a> System<'a> for Sys {
                 | CharacterState::Sneak { .. }
                 | CharacterState::Wielding { .. }
                 | CharacterState::Equipping { .. }
+                | CharacterState::GlideEquipping { .. }
                 | CharacterState::Boost { .. } => {
                     let res = {
                         let energy = energy.get_unchecked();
