@@ -111,41 +111,41 @@ impl Animation for ClimbAnimation {
             next.r_hand.ori = Quaternion::rotation_x(2.2 - quicka * 0.5);
             next.r_hand.scale = Vec3::one();
 
-        match active_tool_kind {
-            Some(ToolKind::Dagger(_)) => {
-                next.main.offset = Vec3::new(-4.0, -5.0, 7.0);
-                next.main.ori =
-                    Quaternion::rotation_y(0.25 * PI) * Quaternion::rotation_z(1.5 * PI);
-            },
-            Some(ToolKind::Shield(_)) => {
-                next.main.offset = Vec3::new(-0.0, -5.0, 3.0);
-                next.main.ori =
-                    Quaternion::rotation_y(0.25 * PI) * Quaternion::rotation_z(-1.5 * PI);
-            },
-            _ => {
-                next.main.offset = Vec3::new(-7.0, -5.0, 15.0);
-                next.main.ori = Quaternion::rotation_y(2.5) * Quaternion::rotation_z(1.57);
-            },
-        }
-        next.main.scale = Vec3::one();
+            match active_tool_kind {
+                Some(ToolKind::Dagger(_)) => {
+                    next.main.offset = Vec3::new(-4.0, -5.0, 7.0);
+                    next.main.ori =
+                        Quaternion::rotation_y(0.25 * PI) * Quaternion::rotation_z(1.5 * PI);
+                },
+                Some(ToolKind::Shield(_)) => {
+                    next.main.offset = Vec3::new(-0.0, -5.0, 3.0);
+                    next.main.ori =
+                        Quaternion::rotation_y(0.25 * PI) * Quaternion::rotation_z(-1.5 * PI);
+                },
+                _ => {
+                    next.main.offset = Vec3::new(-7.0, -5.0, 15.0);
+                    next.main.ori = Quaternion::rotation_y(2.5) * Quaternion::rotation_z(1.57);
+                },
+            }
+            next.main.scale = Vec3::one();
 
-        match second_tool_kind {
-            Some(ToolKind::Dagger(_)) => {
-                next.second.offset = Vec3::new(4.0, -6.0, 7.0);
-                next.second.ori =
-                    Quaternion::rotation_y(-0.25 * PI) * Quaternion::rotation_z(-1.5 * PI);
-            },
-            Some(ToolKind::Shield(_)) => {
-                next.second.offset = Vec3::new(0.0, -4.0, 3.0);
-                next.second.ori =
-                    Quaternion::rotation_y(-0.25 * PI) * Quaternion::rotation_z(1.5 * PI);
-            },
-            _ => {
-                next.second.offset = Vec3::new(-7.0, -5.0, 15.0);
-                next.second.ori = Quaternion::rotation_y(2.5) * Quaternion::rotation_z(1.57);
-            },
-        }
-        next.second.scale = Vec3::one();
+            match second_tool_kind {
+                Some(ToolKind::Dagger(_)) => {
+                    next.second.offset = Vec3::new(4.0, -6.0, 7.0);
+                    next.second.ori =
+                        Quaternion::rotation_y(-0.25 * PI) * Quaternion::rotation_z(-1.5 * PI);
+                },
+                Some(ToolKind::Shield(_)) => {
+                    next.second.offset = Vec3::new(0.0, -4.0, 3.0);
+                    next.second.ori =
+                        Quaternion::rotation_y(-0.25 * PI) * Quaternion::rotation_z(1.5 * PI);
+                },
+                _ => {
+                    next.second.offset = Vec3::new(-7.0, -5.0, 15.0);
+                    next.second.ori = Quaternion::rotation_y(2.5) * Quaternion::rotation_z(1.57);
+                },
+            }
+            next.second.scale = Vec3::one();
             next.l_foot.offset = Vec3::new(
                 -skeleton_attr.foot.0,
                 5.0 + skeleton_attr.foot.1,
@@ -355,7 +355,7 @@ impl Animation for ClimbAnimation {
                     7.0 + skeleton_attr.hand.2 + dropa * -1.0,
                 );
                 next.l_hand.ori =
-                Quaternion::rotation_x(2.2) * Quaternion::rotation_y(0.3 + dropa * 0.1);
+                    Quaternion::rotation_x(2.2) * Quaternion::rotation_y(0.3 + dropa * 0.1);
                 next.l_hand.scale = Vec3::one();
 
                 next.r_hand.offset = Vec3::new(
@@ -425,7 +425,8 @@ impl Animation for ClimbAnimation {
                 next.control.scale = Vec3::one();
 
                 next.l_control.scale = Vec3::one();
-
+            }
+        };
         next.r_control.scale = Vec3::one();
 
         next.second.scale = match (

@@ -5,15 +5,15 @@ use vek::*;
 
 pub struct GlideWieldAnimation;
 
-type GlideWieldAnimationDependency = (
-    Option<ToolKind>,
-    Option<ToolKind>,
-    Vec3<f32>,
-    Vec3<f32>,
-    Vec3<f32>,
-    f64,
-);
-
+impl Animation for GlideWieldAnimation {
+    type Dependency = (
+        Option<ToolKind>,
+        Option<ToolKind>,
+        Vec3<f32>,
+        Vec3<f32>,
+        Vec3<f32>,
+        f64,
+    );
     type Skeleton = CharacterSkeleton;
 
     #[cfg(feature = "use-dyn-lib")]

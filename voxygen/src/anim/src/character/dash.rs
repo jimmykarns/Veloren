@@ -8,7 +8,7 @@ pub struct Input {
 pub struct DashAnimation;
 
 impl Animation for DashAnimation {
-    type Dependency = (Option<ToolKind>, f64);
+    type Dependency = (Option<ToolKind>, Option<ToolKind>, f64);
     type Skeleton = CharacterSkeleton;
 
     #[cfg(feature = "use-dyn-lib")]
@@ -18,7 +18,7 @@ impl Animation for DashAnimation {
     #[allow(clippy::single_match)] // TODO: Pending review in #587
     fn update_skeleton_inner(
         skeleton: &Self::Skeleton,
-        (active_tool_kind, _global_time): Self::Dependency,
+        (active_tool_kind, _second_tool_kind, _global_time): Self::Dependency,
         anim_time: f64,
         rate: &mut f32,
         skeleton_attr: &SkeletonAttr,

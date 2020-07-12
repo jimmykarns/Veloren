@@ -603,7 +603,14 @@ impl FigureMgr {
                         // In air
                         (false, _, false) => anim::character::JumpAnimation::update_skeleton(
                             &CharacterSkeleton::new(),
-                            (active_tool_kind, second_tool_kind, vel.0, ori, state.last_ori, time),
+                            (
+                                active_tool_kind,
+                                second_tool_kind,
+                                vel.0,
+                                ori,
+                                state.last_ori,
+                                time,
+                            ),
                             state.state_time,
                             &mut state_animation_rate,
                             skeleton_attr,
@@ -2339,7 +2346,7 @@ impl<S: Skeleton> FigureState<S> {
 
         let smoothing = (5.0 * dt).min(1.0);
         if let Some(last_pos) = self.last_pos {
-            self.avg_vel = (1.0 - smoothing) * self.avg_vel + smoothing * (pos - last_pos) * dt;
+            self.avg_vel = (1.0 - smoothing) * self.avg_vel + smoothing * (pos - last_pos) / dt;
         }
         self.last_pos = Some(pos);
     }
@@ -2353,21 +2360,21 @@ impl<S: Skeleton> FigureState<S> {
 
 fn figure_bone_data_from_anim(mats: [anim::FigureBoneData; 16]) -> [FigureBoneData; 16] {
     [
-       FigureBoneData::new(mats[0].0),
-       FigureBoneData::new(mats[1].0),
-       FigureBoneData::new(mats[2].0),
-       FigureBoneData::new(mats[3].0),
-       FigureBoneData::new(mats[4].0),
-       FigureBoneData::new(mats[5].0),
-       FigureBoneData::new(mats[6].0),
-       FigureBoneData::new(mats[7].0),
-       FigureBoneData::new(mats[8].0),
-       FigureBoneData::new(mats[9].0),
-       FigureBoneData::new(mats[10].0),
-       FigureBoneData::new(mats[11].0),
-       FigureBoneData::new(mats[12].0),
-       FigureBoneData::new(mats[13].0),
-       FigureBoneData::new(mats[14].0),
-       FigureBoneData::new(mats[15].0),
+        FigureBoneData::new(mats[0].0),
+        FigureBoneData::new(mats[1].0),
+        FigureBoneData::new(mats[2].0),
+        FigureBoneData::new(mats[3].0),
+        FigureBoneData::new(mats[4].0),
+        FigureBoneData::new(mats[5].0),
+        FigureBoneData::new(mats[6].0),
+        FigureBoneData::new(mats[7].0),
+        FigureBoneData::new(mats[8].0),
+        FigureBoneData::new(mats[9].0),
+        FigureBoneData::new(mats[10].0),
+        FigureBoneData::new(mats[11].0),
+        FigureBoneData::new(mats[12].0),
+        FigureBoneData::new(mats[13].0),
+        FigureBoneData::new(mats[14].0),
+        FigureBoneData::new(mats[15].0),
     ]
 }

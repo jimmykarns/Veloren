@@ -167,7 +167,7 @@ pub fn attempt_sneak(data: &JoinData, update: &mut StateUpdate) {
 /// Checks that player can `Climb` and updates `CharacterState` if so
 pub fn handle_climb(data: &JoinData, update: &mut StateUpdate) {
     if data.physics.on_wall.is_some()
-        && !data.physics.on_ground
+        && data.physics.on_ground//flipped to deactivate climb
         //&& update.vel.0.z < 0.0
         && data.body.is_humanoid()
         && update.energy.current() > 100

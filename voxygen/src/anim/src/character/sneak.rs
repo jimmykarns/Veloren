@@ -231,10 +231,10 @@ impl Animation for SneakAnimation {
 
             next.l_hand.offset = Vec3::new(
                 1.0 - skeleton_attr.hand.0,
-                5.0 + skeleton_attr.hand.1,
-                0.0 + skeleton_attr.hand.2,
+                7.0 + skeleton_attr.hand.1,
+                2.0 + skeleton_attr.hand.2,
             );
-            next.l_hand.ori = Quaternion::rotation_x(1.35);
+            next.l_hand.ori = Quaternion::rotation_x(1.55);
             next.l_hand.scale = Vec3::one();
 
             next.r_hand.offset = Vec3::new(

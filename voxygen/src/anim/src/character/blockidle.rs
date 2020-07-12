@@ -9,7 +9,7 @@ pub struct Input {
 pub struct BlockIdleAnimation;
 
 impl Animation for BlockIdleAnimation {
-    type Dependency = (Option<ToolKind>, f64);
+    type Dependency = (Option<ToolKind>, Option<ToolKind>, f64);
     type Skeleton = CharacterSkeleton;
 
     #[cfg(feature = "use-dyn-lib")]
@@ -18,7 +18,7 @@ impl Animation for BlockIdleAnimation {
     #[cfg_attr(feature = "be-dyn-lib", export_name = "character_blockidle")]
     fn update_skeleton_inner(
         skeleton: &Self::Skeleton,
-        (active_tool_kind, global_time): Self::Dependency,
+        (active_tool_kind, _second_tool_kind, global_time): Self::Dependency,
         anim_time: f64,
         _rate: &mut f32,
         skeleton_attr: &SkeletonAttr,

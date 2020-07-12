@@ -29,9 +29,10 @@ pub use self::{
     alpha::AlphaAnimation, beta::BetaAnimation, block::BlockAnimation,
     blockidle::BlockIdleAnimation, charge::ChargeAnimation, climb::ClimbAnimation,
     dance::DanceAnimation, dash::DashAnimation, equip::EquipAnimation,
-    glidewield::GlideWieldAnimation, glidewall::GlideWallAnimation, gliding::GlidingAnimation, idle::IdleAnimation,
-    jump::JumpAnimation, leapmelee::LeapAnimation, roll::RollAnimation, run::RunAnimation, shoot::ShootAnimation,
-    sit::SitAnimation, spin::SpinAnimation, spinmelee::SpinMeleeAnimation, stand::StandAnimation, swim::SwimAnimation,
+    glidewall::GlideWallAnimation, glidewield::GlideWieldAnimation, gliding::GlidingAnimation,
+    idle::IdleAnimation, jump::JumpAnimation, leapmelee::LeapAnimation, roll::RollAnimation,
+    run::RunAnimation, shoot::ShootAnimation, sit::SitAnimation, sneak::SneakAnimation,
+    spin::SpinAnimation, spinmelee::SpinMeleeAnimation, stand::StandAnimation, swim::SwimAnimation,
     wield::WieldAnimation,
 };
 

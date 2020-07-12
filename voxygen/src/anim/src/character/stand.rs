@@ -6,7 +6,7 @@ use vek::*;
 pub struct StandAnimation;
 
 impl Animation for StandAnimation {
-    type Dependency = (Option<ToolKind>, f64);
+    type Dependency = (Option<ToolKind>, Option<ToolKind>, f64, Vec3<f32>);
     type Skeleton = CharacterSkeleton;
 
     #[cfg(feature = "use-dyn-lib")]
@@ -15,7 +15,7 @@ impl Animation for StandAnimation {
     #[cfg_attr(feature = "be-dyn-lib", export_name = "character_stand")]
     fn update_skeleton_inner(
         skeleton: &Self::Skeleton,
-        (_active_tool_kind, global_time): Self::Dependency,
+        (_active_tool_kind, _second_tool_kind, global_time, _avg_vel): Self::Dependency,
         anim_time: f64,
         _rate: &mut f32,
         skeleton_attr: &SkeletonAttr,

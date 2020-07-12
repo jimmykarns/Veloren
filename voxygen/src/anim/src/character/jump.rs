@@ -4,7 +4,8 @@ use std::f32::consts::PI;
 use vek::*;
 
 pub struct JumpAnimation;
-impl Animation for JumpAnimation {    type Dependency = (
+impl Animation for JumpAnimation {
+    type Dependency = (
         Option<ToolKind>,
         Option<ToolKind>,
         Vec3<f32>,
@@ -22,7 +23,7 @@ impl Animation for JumpAnimation {    type Dependency = (
     #[allow(clippy::identity_conversion)] // TODO: Pending review in #587
     fn update_skeleton_inner(
         skeleton: &Self::Skeleton,
-        (_active_tool_kind, second_tool_kind, velocity, orientation, last_ori, global_time): Self::Dependency,
+        (active_tool_kind, second_tool_kind, velocity, orientation, last_ori, global_time): Self::Dependency,
         anim_time: f64,
         rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
@@ -234,81 +235,81 @@ impl Animation for JumpAnimation {    type Dependency = (
             next.l_foot.ori = Quaternion::rotation_x(slow * -0.2);
             next.l_foot.scale = Vec3::one();
 
-        next.r_foot.offset = Vec3::new(
-            skeleton_attr.foot.0,
-            skeleton_attr.foot.1 + 6.0 * switch,
-            1.0 + skeleton_attr.foot.2 + slow * 1.5,
-        );
-        next.r_foot.ori = Quaternion::rotation_x(1.2 * switch + slow * 0.2 * switch);
-        next.r_foot.scale = Vec3::one();
+            next.r_foot.offset = Vec3::new(
+                skeleton_attr.foot.0,
+                skeleton_attr.foot.1 + 6.0 * switch,
+                1.0 + skeleton_attr.foot.2 + slow * 1.5,
+            );
+            next.r_foot.ori = Quaternion::rotation_x(1.2 * switch + slow * 0.2 * switch);
+            next.r_foot.scale = Vec3::one();
 
-        next.l_shoulder.offset = Vec3::new(
-            -skeleton_attr.shoulder.0,
-            skeleton_attr.shoulder.1,
-            skeleton_attr.shoulder.2,
-        );
-        next.l_shoulder.ori = Quaternion::rotation_x(0.4 * switch);
-        next.l_shoulder.scale = Vec3::one() * 1.1;
+            next.l_shoulder.offset = Vec3::new(
+                -skeleton_attr.shoulder.0,
+                skeleton_attr.shoulder.1,
+                skeleton_attr.shoulder.2,
+            );
+            next.l_shoulder.ori = Quaternion::rotation_x(0.4 * switch);
+            next.l_shoulder.scale = Vec3::one() * 1.1;
 
-        next.r_shoulder.offset = Vec3::new(
-            skeleton_attr.shoulder.0,
-            skeleton_attr.shoulder.1,
-            skeleton_attr.shoulder.2,
-        );
-        next.r_shoulder.ori = Quaternion::rotation_x(-0.4 * switch);
-        next.r_shoulder.scale = Vec3::one() * 1.1;
+            next.r_shoulder.offset = Vec3::new(
+                skeleton_attr.shoulder.0,
+                skeleton_attr.shoulder.1,
+                skeleton_attr.shoulder.2,
+            );
+            next.r_shoulder.ori = Quaternion::rotation_x(-0.4 * switch);
+            next.r_shoulder.scale = Vec3::one() * 1.1;
 
-        next.glider.offset = Vec3::new(0.0, 0.0, 10.0);
-        next.glider.scale = Vec3::one() * 0.0;
+            next.glider.offset = Vec3::new(0.0, 0.0, 10.0);
+            next.glider.scale = Vec3::one() * 0.0;
 
-        match active_tool_kind {
-            Some(ToolKind::Dagger(_)) => {
-                next.main.offset = Vec3::new(-4.0, -5.0, 7.0);
-                next.main.ori =
-                    Quaternion::rotation_y(0.25 * PI) * Quaternion::rotation_z(1.5 * PI);
-            },
-            Some(ToolKind::Shield(_)) => {
-                next.main.offset = Vec3::new(-0.0, -5.0, 3.0);
-                next.main.ori =
-                    Quaternion::rotation_y(0.25 * PI) * Quaternion::rotation_z(-1.5 * PI);
-            },
-            _ => {
-                next.main.offset = Vec3::new(-7.0, -5.0, 15.0);
-                next.main.ori = Quaternion::rotation_y(2.5) * Quaternion::rotation_z(1.57);
-            },
-        }
-        next.main.scale = Vec3::one();
+            match active_tool_kind {
+                Some(ToolKind::Dagger(_)) => {
+                    next.main.offset = Vec3::new(-4.0, -5.0, 7.0);
+                    next.main.ori =
+                        Quaternion::rotation_y(0.25 * PI) * Quaternion::rotation_z(1.5 * PI);
+                },
+                Some(ToolKind::Shield(_)) => {
+                    next.main.offset = Vec3::new(-0.0, -5.0, 3.0);
+                    next.main.ori =
+                        Quaternion::rotation_y(0.25 * PI) * Quaternion::rotation_z(-1.5 * PI);
+                },
+                _ => {
+                    next.main.offset = Vec3::new(-7.0, -5.0, 15.0);
+                    next.main.ori = Quaternion::rotation_y(2.5) * Quaternion::rotation_z(1.57);
+                },
+            }
+            next.main.scale = Vec3::one();
 
-        match second_tool_kind {
-            Some(ToolKind::Dagger(_)) => {
-                next.second.offset = Vec3::new(4.0, -6.0, 7.0);
-                next.second.ori =
-                    Quaternion::rotation_y(-0.25 * PI) * Quaternion::rotation_z(-1.5 * PI);
-            },
-            Some(ToolKind::Shield(_)) => {
-                next.second.offset = Vec3::new(0.0, -4.0, 3.0);
-                next.second.ori =
-                    Quaternion::rotation_y(-0.25 * PI) * Quaternion::rotation_z(1.5 * PI);
-            },
-            _ => {
-                next.second.offset = Vec3::new(-7.0, -5.0, 15.0);
-                next.second.ori = Quaternion::rotation_y(2.5) * Quaternion::rotation_z(1.57);
-            },
-        }
-        next.second.scale = Vec3::one();
+            match second_tool_kind {
+                Some(ToolKind::Dagger(_)) => {
+                    next.second.offset = Vec3::new(4.0, -6.0, 7.0);
+                    next.second.ori =
+                        Quaternion::rotation_y(-0.25 * PI) * Quaternion::rotation_z(-1.5 * PI);
+                },
+                Some(ToolKind::Shield(_)) => {
+                    next.second.offset = Vec3::new(0.0, -4.0, 3.0);
+                    next.second.ori =
+                        Quaternion::rotation_y(-0.25 * PI) * Quaternion::rotation_z(1.5 * PI);
+                },
+                _ => {
+                    next.second.offset = Vec3::new(-7.0, -5.0, 15.0);
+                    next.second.ori = Quaternion::rotation_y(2.5) * Quaternion::rotation_z(1.57);
+                },
+            }
+            next.second.scale = Vec3::one();
 
-        next.lantern.offset = Vec3::new(
-            skeleton_attr.lantern.0,
-            skeleton_attr.lantern.1,
-            skeleton_attr.lantern.2,
-        );
-        next.lantern.ori = Quaternion::rotation_x(1.0 * switch + slow * 0.3 * switch)
-            * Quaternion::rotation_y(0.6 * switch + slow * 0.3 * switch);
-        next.lantern.scale = Vec3::one() * 0.65;
+            next.lantern.offset = Vec3::new(
+                skeleton_attr.lantern.0,
+                skeleton_attr.lantern.1,
+                skeleton_attr.lantern.2,
+            );
+            next.lantern.ori = Quaternion::rotation_x(1.0 * switch + slow * 0.3 * switch)
+                * Quaternion::rotation_y(0.6 * switch + slow * 0.3 * switch);
+            next.lantern.scale = Vec3::one() * 0.65;
 
-        next.torso.offset = Vec3::new(0.0, 0.0, 0.0) * skeleton_attr.scaler;
-        next.torso.ori = Quaternion::rotation_x(-0.2);
-        next.torso.scale = Vec3::one() / 11.0 * skeleton_attr.scaler;
+            next.torso.offset = Vec3::new(0.0, 0.0, 0.0) * skeleton_attr.scaler;
+            next.torso.ori = Quaternion::rotation_x(-0.2);
+            next.torso.scale = Vec3::one() / 11.0 * skeleton_attr.scaler;
 
             next.r_foot.offset = Vec3::new(
                 skeleton_attr.foot.0,
