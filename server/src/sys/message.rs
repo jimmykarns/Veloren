@@ -1,11 +1,7 @@
 use super::SysTimer;
 use crate::{
-    alias_validator::AliasValidator,
-    auth_provider::AuthProvider,
-    client::Client,
-    persistence,
-    settings::PersistenceDBDir,
-    CLIENT_TIMEOUT,
+    alias_validator::AliasValidator, auth_provider::AuthProvider, client::Client, persistence,
+    settings::PersistenceDBDir, CLIENT_TIMEOUT,
 };
 use common::{
     comp::{

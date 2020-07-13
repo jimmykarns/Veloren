@@ -1,12 +1,13 @@
-
 #[derive(Debug)]
 pub struct AliasValidator {
-    banned_substrings : Vec<String>,
+    banned_substrings: Vec<String>,
 }
 
 impl Default for AliasValidator {
     fn default() -> Self {
-        AliasValidator{banned_substrings: Vec::new()}
+        AliasValidator {
+            banned_substrings: Vec::new(),
+        }
     }
 }
 
@@ -17,7 +18,7 @@ impl AliasValidator {
             .map(|string| string.to_lowercase())
             .collect();
 
-        AliasValidator{banned_substrings}
+        AliasValidator { banned_substrings }
     }
 
     pub fn validate(&self, alias: &str) -> Result<(), String> {
@@ -25,7 +26,10 @@ impl AliasValidator {
 
         for banned_word in self.banned_substrings.iter() {
             if lowercase_alias.contains(banned_word) {
-                return Err(format!("Character name \"{}\" contains a banned word: \"{}\"", alias, banned_word));
+                return Err(format!(
+                    "Character name \"{}\" contains a banned word: \"{}\"",
+                    alias, banned_word
+                ));
             }
         }
         Ok(())

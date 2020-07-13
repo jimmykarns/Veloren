@@ -135,7 +135,7 @@ impl Server {
             Ok(file) => match ron::de::from_reader(&file) {
                 Ok(vec) => AliasValidator::new(vec),
                 Err(_) => AliasValidator::default(),
-            }
+            },
             Err(_) => AliasValidator::default(),
         };
         state.ecs_mut().insert(alias_validator);
