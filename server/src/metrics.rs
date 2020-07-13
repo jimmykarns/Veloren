@@ -1,4 +1,4 @@
-use prometheus::{Encoder, Gauge, IntGauge, IntGaugeVec, Opts, Registry, TextEncoder};
+use prometheus::{Encoder, Gauge, IntGauge, Opts, Registry, TextEncoder, IntGaugeVec, IntCounterVec, HistogramVec, HistogramOpts};
 use std::{
     convert::TryInto,
     error::Error,
@@ -22,6 +22,8 @@ pub struct TickMetrics {
     pub start_time: IntGauge,
     pub time_of_day: Gauge,
     pub light_count: IntGauge,
+    pub tick_time_histogram: HistogramVec,
+    pub server_events_histogram: HistogramVec,
     tick: Arc<AtomicU64>,
 }
 
@@ -33,7 +35,7 @@ pub struct ServerMetrics {
 }
 
 impl TickMetrics {
-    #[allow(clippy::useless_conversion)] // TODO: Pending review in #587
+
     pub fn new(registry: &Registry, tick: Arc<AtomicU64>) -> Result<Self, Box<dyn Error>> {
         let player_online = IntGauge::with_opts(Opts::new(
             "player_online",
@@ -70,6 +72,23 @@ impl TickMetrics {
             &["period"],
         )?);
 
+        // 10ns, 100ns, 1us, 10us, 100us, 500us, 1ms, 10ms, 15ms, 50ms buckets
+        let histogram_buckets: Vec<f64> = [10, 100, 1000, 10000, 100000, 500000, 1000000, 10000000, 15000000, 50000000].iter().map(|bucket| Duration::from_nanos(*bucket).as_nanos() as f64).collect();
+
+        let mut histogram_opts = HistogramOpts::new("tick_time_histogram", "histogram of tick period processing time");
+        histogram_opts.buckets = histogram_buckets.clone();
+
+        let tick_time_histogram = HistogramVec::from(HistogramVec::new(
+            histogram_opts,
+            &["period"])?);
+
+        let mut histogram_opts = HistogramOpts::new("server_events_histogram", "histogram of tick processing time for server events");
+        histogram_opts.buckets = histogram_buckets;
+
+        let server_events_histogram = HistogramVec::from(HistogramVec::new(
+            histogram_opts,
+            &["event"])?);
+
         let since_the_epoch = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("Time went backwards");
@@ -83,6 +102,8 @@ impl TickMetrics {
         registry.register(Box::new(chonks_count.clone()))?;
         registry.register(Box::new(chunks_count.clone()))?;
         registry.register(Box::new(tick_time.clone()))?;
+        registry.register(Box::new(tick_time_histogram.clone()))?;
+        registry.register(Box::new(server_events_histogram.clone()))?;
 
         Ok(Self {
             chonks_count,
@@ -94,6 +115,8 @@ impl TickMetrics {
             start_time,
             time_of_day,
             light_count,
+            tick_time_histogram,
+            server_events_histogram,
             tick,
         })
     }

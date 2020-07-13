@@ -3,6 +3,7 @@ use comp::item::Item;
 use parking_lot::Mutex;
 use specs::Entity as EcsEntity;
 use std::{collections::VecDeque, ops::DerefMut};
+use strum_macros::Display;
 use vek::*;
 
 pub enum LocalEvent {
@@ -20,6 +21,7 @@ pub enum LocalEvent {
 }
 
 #[allow(clippy::large_enum_variant)] // TODO: Pending review in #587
+#[derive(Display)]
 pub enum ServerEvent {
     Explosion {
         pos: Vec3<f32>,

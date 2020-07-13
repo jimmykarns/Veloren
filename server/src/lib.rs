@@ -343,14 +343,18 @@ impl Server {
 
         // 3) Handle inputs from clients
         block_on(async {
-            //TIMEOUT 0.01 ms for msg handling
+            //TIMEOUT 0.1 ms for msg handling
             select!(
-                _ = Delay::new(std::time::Duration::from_micros(10)).fuse() => Ok(()),
+                _ = Delay::new(std::time::Duration::from_micros(100)).fuse() => Ok(()),
                 err = self.handle_new_connections(&mut frontend_events).fuse() => err,
             )
         })?;
 
+        //block_on(self.handle_new_connections(&mut frontend_events));
+
         let before_message_system = Instant::now();
+
+        //debug!("handle_new_connections duration: {}ms", (before_message_system - before_new_connections).as_millis());
 
         // Run message recieving sys before the systems in common for decreased latency
         // (e.g. run before controller system)
@@ -466,92 +470,92 @@ impl Server {
             .state
             .ecs()
             .read_resource::<sys::EntitySyncTimer>()
-            .nanos as i64;
-        let message_nanos = self.state.ecs().read_resource::<sys::MessageTimer>().nanos as i64;
-        let sentinel_nanos = self.state.ecs().read_resource::<sys::SentinelTimer>().nanos as i64;
+            .nanos;
+        let message_nanos = self.state.ecs().read_resource::<sys::MessageTimer>().nanos;
+        let sentinel_nanos = self.state.ecs().read_resource::<sys::SentinelTimer>().nanos;
         let subscription_nanos = self
             .state
             .ecs()
             .read_resource::<sys::SubscriptionTimer>()
-            .nanos as i64;
+            .nanos;
         let terrain_sync_nanos = self
             .state
             .ecs()
             .read_resource::<sys::TerrainSyncTimer>()
-            .nanos as i64;
-        let terrain_nanos = self.state.ecs().read_resource::<sys::TerrainTimer>().nanos as i64;
-        let waypoint_nanos = self.state.ecs().read_resource::<sys::WaypointTimer>().nanos as i64;
+            .nanos;
+        let terrain_nanos = self.state.ecs().read_resource::<sys::TerrainTimer>().nanos;
+        let waypoint_nanos = self.state.ecs().read_resource::<sys::WaypointTimer>().nanos;
         let stats_persistence_nanos = self
             .state
             .ecs()
             .read_resource::<sys::PersistenceTimer>()
-            .nanos as i64;
+            .nanos;
         let total_sys_ran_in_dispatcher_nanos = terrain_nanos + waypoint_nanos;
 
         // Report timing info
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["new connections"])
-            .set((before_message_system - before_new_connections).as_nanos() as i64);
+            .observe((before_message_system - before_new_connections).as_nanos() as f64);
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["state tick"])
-            .set(
-                (before_handle_events - before_state_tick).as_nanos() as i64
-                    - total_sys_ran_in_dispatcher_nanos,
+            .observe(
+                (before_handle_events - before_state_tick).as_nanos() as f64
+                    - total_sys_ran_in_dispatcher_nanos as f64,
             );
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["handle server events"])
-            .set((before_update_terrain_and_regions - before_handle_events).as_nanos() as i64);
+            .observe((before_update_terrain_and_regions - before_handle_events).as_nanos() as f64);
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["update terrain and region map"])
-            .set((before_sync - before_update_terrain_and_regions).as_nanos() as i64);
+            .observe((before_sync - before_update_terrain_and_regions).as_nanos() as f64);
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["world tick"])
-            .set((before_entity_cleanup - before_world_tick).as_nanos() as i64);
+            .observe((before_entity_cleanup - before_world_tick).as_nanos() as f64);
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["entity cleanup"])
-            .set((before_persistence_updates - before_entity_cleanup).as_nanos() as i64);
+            .observe((before_persistence_updates - before_entity_cleanup).as_nanos() as f64);
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["persistence_updates"])
-            .set((end_of_server_tick - before_persistence_updates).as_nanos() as i64);
+            .observe((end_of_server_tick - before_persistence_updates).as_nanos() as f64);
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["entity sync"])
-            .set(entity_sync_nanos);
+            .observe(entity_sync_nanos as f64);
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["message"])
-            .set(message_nanos);
+            .observe(message_nanos as f64);
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["sentinel"])
-            .set(sentinel_nanos);
+            .observe(sentinel_nanos as f64);
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["subscription"])
-            .set(subscription_nanos);
+            .observe(subscription_nanos as f64);
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["terrain sync"])
-            .set(terrain_sync_nanos);
+            .observe(terrain_sync_nanos as f64);
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["terrain"])
-            .set(terrain_nanos);
+            .observe(terrain_nanos as f64);
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["waypoint"])
-            .set(waypoint_nanos);
+            .observe(waypoint_nanos as f64);
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["persistence:stats"])
-            .set(stats_persistence_nanos);
+            .observe(stats_persistence_nanos as f64);
 
         // Report other info
         self.tick_metrics
@@ -574,9 +578,9 @@ impl Server {
         }
         //self.metrics.entity_count.set(self.state.);
         self.tick_metrics
-            .tick_time
+            .tick_time_histogram
             .with_label_values(&["metrics"])
-            .set(end_of_server_tick.elapsed().as_nanos() as i64);
+            .observe(end_of_server_tick.elapsed().as_nanos() as f64);
         self.metrics.tick();
 
         // 9) Finish the tick, pass control back to the frontend.

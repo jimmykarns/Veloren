@@ -12,6 +12,8 @@ use interaction::{handle_lantern, handle_mount, handle_possess, handle_unmount};
 use inventory_manip::handle_inventory;
 use player::{handle_client_disconnect, handle_exit_ingame};
 use specs::{Entity as EcsEntity, WorldExt};
+use std::string::ToString;
+use std::time::Instant;
 
 mod entity_creation;
 mod entity_manipulation;
@@ -47,6 +49,9 @@ impl Server {
             .recv_all();
 
         for event in events {
+            let handle_event_start = Instant::now();
+            let event_display = event.to_string();
+
             match event {
                 ServerEvent::Explosion { pos, power, owner } => {
                     handle_explosion(&self, pos, power, owner)
@@ -108,6 +113,11 @@ impl Server {
                     chat_messages.push(msg);
                 },
             }
+            let event_ns = (Instant::now() - handle_event_start).as_nanos() as i64;
+            self.tick_metrics
+                .server_events_histogram
+                .with_label_values(&[&event_display])
+                .observe(event_ns as f64);
         }
 
         // Generate requested chunks.
