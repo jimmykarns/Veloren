@@ -458,7 +458,7 @@ impl<'a> System<'a> for Sys {
 }
 
 fn filter_banned_words(alias: &str) -> Result<(), String> {
-    let lowercase_alias = helper_to_lowercase(&alias);
+    let lowercase_alias = alias.to_lowercase();
 
     let server_settings = ServerSettings::load();
     let banned_words_path = server_settings.banned_words_file;
@@ -470,7 +470,7 @@ fn filter_banned_words(alias: &str) -> Result<(), String> {
         };
 
         for banned_word in banned_words {
-            let lowercase_banned_word = helper_to_lowercase(&banned_word);
+            let lowercase_banned_word = banned_word.to_uppercase();
             if lowercase_alias.contains(&lowercase_banned_word) {
                 return Err(format!(
                     "Character name \"{}\" contains a banned word: \"{}\"",
@@ -480,11 +480,4 @@ fn filter_banned_words(alias: &str) -> Result<(), String> {
         }
     }
     Ok(())
-}
-
-fn helper_to_lowercase(string: &str) -> String {
-    string
-        .chars()
-        .map(|c| c.to_uppercase().collect::<String>())
-        .collect()
 }
