@@ -1,9 +1,10 @@
 use super::SysTimer;
 use crate::{
+    alias_validator::AliasValidator,
     auth_provider::AuthProvider,
     client::Client,
     persistence,
-    settings::{PersistenceDBDir, ServerSettings},
+    settings::PersistenceDBDir,
     CLIENT_TIMEOUT,
 };
 use common::{
@@ -25,8 +26,6 @@ use hashbrown::HashMap;
 use specs::{
     Entities, Join, Read, ReadExpect, ReadStorage, System, Write, WriteExpect, WriteStorage,
 };
-
-use std::fs;
 
 /// This system will handle new messages from clients
 pub struct Sys;
@@ -53,6 +52,7 @@ impl<'a> System<'a> for Sys {
         WriteStorage<'a, Client>,
         WriteStorage<'a, Controller>,
         WriteStorage<'a, SpeechBubble>,
+        ReadExpect<'a, AliasValidator>,
     );
 
     #[allow(clippy::match_ref_pats)] // TODO: Pending review in #587
@@ -81,6 +81,7 @@ impl<'a> System<'a> for Sys {
             mut clients,
             mut controllers,
             mut speech_bubbles,
+            alias_validator,
         ): Self::SystemData,
     ) {
         timer.start();
@@ -353,7 +354,7 @@ impl<'a> System<'a> for Sys {
                         }
                     },
                     ClientMsg::CreateCharacter { alias, tool, body } => {
-                        if let Err(error) = filter_banned_words(&alias) {
+                        if let Err(error) = alias_validator.validate(&alias) {
                             client.notify(ServerMsg::CharacterActionError(error));
                         } else if let Some(player) = players.get(entity) {
                             match persistence::character::create_character(
@@ -455,29 +456,4 @@ impl<'a> System<'a> for Sys {
 
         timer.end()
     }
-}
-
-fn filter_banned_words(alias: &str) -> Result<(), String> {
-    let lowercase_alias = alias.to_lowercase();
-
-    let server_settings = ServerSettings::load();
-    let banned_words_path = server_settings.banned_words_file;
-
-    if let Ok(banned_words_file) = fs::File::open(banned_words_path) {
-        let banned_words: Vec<String> = match ron::de::from_reader(banned_words_file) {
-            Ok(vec) => vec,
-            Err(_) => vec![],
-        };
-
-        for banned_word in banned_words {
-            let lowercase_banned_word = banned_word.to_uppercase();
-            if lowercase_alias.contains(&lowercase_banned_word) {
-                return Err(format!(
-                    "Character name \"{}\" contains a banned word: \"{}\"",
-                    alias, banned_word
-                ));
-            }
-        }
-    }
-    Ok(())
 }
