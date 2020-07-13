@@ -2,6 +2,7 @@
 #![allow(clippy::option_map_unit_fn)]
 #![feature(drain_filter)]
 
+pub mod alias_validator;
 pub mod auth_provider;
 pub mod chunk_generator;
 pub mod client;
@@ -20,6 +21,7 @@ pub mod sys;
 pub use crate::{error::Error, events::Event, input::Input, settings::ServerSettings};
 
 use crate::{
+    alias_validator::AliasValidator,
     auth_provider::AuthProvider,
     chunk_generator::ChunkGenerator,
     client::{Client, RegionSubscription},
@@ -126,6 +128,17 @@ impl Server {
         // Server-only components
         state.ecs_mut().register::<RegionSubscription>();
         state.ecs_mut().register::<Client>();
+
+        // Alias validator
+        let banned_words_path = &settings.banned_words_file;
+        let alias_validator = match std::fs::File::open(banned_words_path) {
+            Ok(file) => match ron::de::from_reader(&file) {
+                Ok(vec) => AliasValidator::new(vec),
+                Err(_) => AliasValidator::default(),
+            }
+            Err(_) => AliasValidator::default(),
+        };
+        state.ecs_mut().insert(alias_validator);
 
         #[cfg(feature = "worldgen")]
         let world = World::generate(settings.world_seed, WorldOpts {
