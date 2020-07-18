@@ -308,7 +308,7 @@ pub enum Event {
     CraftRecipe(String),
     InviteMember(common::sync::Uid),
     AcceptInvite,
-    RejectInvite,
+    DeclineInvite,
     KickMember(common::sync::Uid),
     LeaveGroup,
     AssignLeader(common::sync::Uid),
@@ -1057,7 +1057,7 @@ impl Hud {
                         h,
                         i,
                         uid,
-                        client.group_members.contains(uid),
+                        client.group_members().contains(uid),
                     )
                 })
                 .filter(|(entity, pos, _, stats, _, _, _, _, hpfl, _, in_group)| {
@@ -1917,19 +1917,15 @@ impl Hud {
                         self.show.open_social_tab(social_tab)
                     },
                     social::Event::Invite(uid) => events.push(Event::InviteMember(uid)),
-                    social::Event::Accept => events.push(Event::AcceptInvite),
-                    social::Event::Reject => events.push(Event::RejectInvite),
-                    social::Event::Kick(uid) => events.push(Event::KickMember(uid)),
-                    social::Event::LeaveGroup => events.push(Event::LeaveGroup),
-                    social::Event::AssignLeader(uid) => events.push(Event::AssignLeader(uid)),
                 }
             }
         }
         // Group Window
         if self.show.group {
             for event in Group::new(
-                &self.show,
+                &mut self.show,
                 client,
+                &global_state.settings,
                 &self.imgs,
                 &self.fonts,
                 &self.voxygen_i18n,
@@ -1940,7 +1936,7 @@ impl Hud {
                 match event {
                     group::Event::Close => self.show.social(false),
                     group::Event::Accept => events.push(Event::AcceptInvite),
-                    group::Event::Reject => events.push(Event::RejectInvite),
+                    group::Event::Decline => events.push(Event::DeclineInvite),
                     group::Event::Kick(uid) => events.push(Event::KickMember(uid)),
                     group::Event::LeaveGroup => events.push(Event::LeaveGroup),
                     group::Event::AssignLeader(uid) => events.push(Event::AssignLeader(uid)),
