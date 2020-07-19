@@ -18,7 +18,7 @@ use common::{
     character::CharacterItem,
     comp::{
         self, ControlAction, ControlEvent, Controller, ControllerInputs, GroupManip,
-        InventoryManip, InventoryUpdateEvent,
+        InventoryManip, InventoryUpdateEvent, group,
     },
     msg::{
         validate_chat_msg, ChatMsgValidationError, ClientMsg, ClientState, Notification,
@@ -34,7 +34,7 @@ use common::{
 use futures_executor::block_on;
 use futures_timer::Delay;
 use futures_util::{select, FutureExt};
-use hashbrown::{HashMap, HashSet};
+use hashbrown::HashMap;
 use image::DynamicImage;
 use network::{
     Network, Participant, Pid, ProtocolAddr, Stream, PROMISES_CONSISTENCY, PROMISES_ORDERED,
@@ -81,7 +81,7 @@ pub struct Client {
 
     group_invite: Option<Uid>,
     group_leader: Option<Uid>,
-    group_members: HashSet<Uid>,
+    group_members: HashMap<Uid, group::Role>,
 
     _network: Network,
     participant: Option<Participant>,
@@ -212,7 +212,7 @@ impl Client {
             server_info,
             world_map,
             player_list: HashMap::new(),
-            group_members: HashSet::new(),
+            group_members: HashMap::new(),
             character_list: CharacterList::default(),
             active_character_id: None,
             recipe_book,
@@ -436,7 +436,7 @@ impl Client {
 
     pub fn group_info(&self) -> Option<(String, Uid)> { self.group_leader.map(|l| ("TODO".into(), l)) }
 
-    pub fn group_members(&self) -> &HashSet<Uid> { &self.group_members }
+    pub fn group_members(&self) -> &HashMap<Uid, group::Role> { &self.group_members }
 
     pub fn send_group_invite(&mut self, invitee: Uid) {
         self.singleton_stream
@@ -1006,8 +1006,8 @@ impl Client {
                     // Note: we use a hashmap since this would not work with entities outside
                     // the view distance
                     match change_notification {
-                        Added(uid) => {
-                            if !self.group_members.insert(uid) {
+                        Added(uid, role) => {
+                            if self.group_members.insert(uid, role) == Some(role) {
                                 warn!(
                                     "Received msg to add uid {} to the group members but they \
                                      were already there",
@@ -1016,7 +1016,7 @@ impl Client {
                             }
                         },
                         Removed(uid) => {
-                            if !self.group_members.remove(&uid) {
+                            if self.group_members.remove(&uid).is_none() {
                                 warn!(
                                     "Received msg to remove uid {} from group members but by they \
                                      weren't in there!",
@@ -1040,7 +1040,7 @@ impl Client {
                         },
                         NoGroup => {
                             self.group_leader = None;
-                            self.group_members = HashSet::new();
+                            self.group_members = HashMap::new();
                         },
                     }
                 },

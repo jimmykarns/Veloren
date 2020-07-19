@@ -5,7 +5,7 @@ use crate::{
 };
 use client::{self, Client};
 use common::{
-    comp::Stats,
+    comp::{group::Role, Stats},
     sync::{Uid, WorldSyncExt},
 };
 use conrod_core::{
@@ -53,8 +53,6 @@ pub struct Group<'a> {
     fonts: &'a ConrodVoxygenFonts,
     localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
 
-    selected_entity: Option<(specs::Entity, Instant)>,
-
     #[conrod(common_builder)]
     common: widget::CommonBuilder,
 }
@@ -67,7 +65,6 @@ impl<'a> Group<'a> {
         imgs: &'a Imgs,
         fonts: &'a ConrodVoxygenFonts,
         localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
-        selected_entity: Option<(specs::Entity, Instant)>,
     ) -> Self {
         Self {
             show,
@@ -76,7 +73,6 @@ impl<'a> Group<'a> {
             imgs,
             fonts,
             localized_strings,
-            selected_entity,
             common: widget::CommonBuilder::default(),
         }
     }
@@ -111,6 +107,20 @@ impl<'a> Widget for Group<'a> {
 
         let mut events = Vec::new();
 
+        // Don't show pets
+        let group_members = self
+            .client
+            .group_members()
+            .iter()
+            .filter_map(|(u, r)| match r {
+                Role::Member => Some(u),
+                Role::Pet => None,
+            })
+            .collect::<Vec<_>>();
+
+        // Not considered in group for ui purposes if it is just pets
+        let in_group = !group_members.is_empty();
+
         // Helper
         let uid_to_name_text = |uid, client: &Client| match client.player_list.get(&uid) {
             Some(player_info) => player_info
@@ -140,7 +150,7 @@ impl<'a> Widget for Group<'a> {
         // they are not in a group so that it doesn't look like the button is
         // broken
 
-        if self.client.group_info().is_some() || open_invite.is_some() {
+        if in_group || open_invite.is_some() {
             // Frame
             Rectangle::fill_with([220.0, 230.0], color::Color::Rgba(0.0, 0.0, 0.0, 0.8))
                 .bottom_left_with_margins_on(ui.window, 220.0, 10.0)
@@ -151,7 +161,7 @@ impl<'a> Widget for Group<'a> {
         }
 
         // Buttons
-        if let Some((group_name, leader)) = self.client.group_info() {
+        if let Some((group_name, leader)) = self.client.group_info().filter(|_| in_group) {
             let selected = state.selected_member;
             Text::new(&group_name)
                 .mid_top_with_margin_on(state.ids.bg, 2.0)
@@ -249,7 +259,7 @@ impl<'a> Widget for Group<'a> {
             }
             // Group Members, only character names, cut long names when they exceed the
             // button size
-            let group_size = self.client.group_members().len() + 1;
+            let group_size = group_members.len() + 1;
             if state.ids.members.len() < group_size {
                 state.update(|s| {
                     s.ids
@@ -272,7 +282,7 @@ impl<'a> Widget for Group<'a> {
                 .client
                 .uid()
                 .iter()
-                .chain(self.client.group_members().iter())
+                .chain(group_members.iter().copied())
                 .enumerate()
             {
                 let selected = state.selected_member.map_or(false, |u| u == uid);

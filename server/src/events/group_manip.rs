@@ -296,6 +296,8 @@ pub fn handle_group(server: &mut Server, entity: specs::Entity, manip: GroupMani
                         target,
                         &groups,
                         &state.ecs().entities(),
+                        &state.ecs().read_storage(),
+                        &uids,
                         |entity, group_change| {
                             clients
                                 .get_mut(entity)
