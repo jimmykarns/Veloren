@@ -3,10 +3,17 @@ mod client_init;
 
 use super::char_selection::CharSelectionState;
 use crate::{
-    singleplayer::Singleplayer, window::Event, Direction, GlobalState, PlayState, PlayStateResult,
+    i18n::{i18n_asset_key, Localization},
+    singleplayer::Singleplayer,
+    window::Event,
+    Direction, GlobalState, PlayState, PlayStateResult,
 };
 use client_init::{ClientInit, Error as InitError, Msg as InitMsg};
-use common::{assets::load_expect, clock::Clock, comp};
+use common::{
+    assets::{load_watched, watch},
+    clock::Clock,
+    comp,
+};
 #[cfg(feature = "singleplayer")]
 use std::time::Duration;
 use tracing::{error, warn};
@@ -44,9 +51,13 @@ impl PlayState for MainMenuState {
         // Reset singleplayer server if it was running already
         global_state.singleplayer = None;
 
-        let localized_strings = load_expect::<crate::i18n::Localization>(
-            &crate::i18n::i18n_asset_key(&global_state.settings.language.selected_language),
-        );
+        // Keep a watcher on localizations
+        let mut localization_watcher = watch::ReloadIndicator::new();
+        let mut localized_strings = load_watched::<Localization>(
+            &i18n_asset_key(&global_state.settings.language.selected_language),
+            &mut localization_watcher,
+        )
+        .unwrap();
 
         loop {
             // Handle window events.
@@ -199,6 +210,17 @@ impl PlayState for MainMenuState {
                         global_state.singleplayer = None;
                         client_init = None;
                         self.main_menu_ui.cancel_connection();
+                    },
+                    MainMenuEvent::ChangeLanguage(new_language) => {
+                        global_state.settings.language.selected_language =
+                            new_language.language_identifier;
+                        localized_strings = load_watched::<Localization>(
+                            &i18n_asset_key(&global_state.settings.language.selected_language),
+                            &mut localization_watcher,
+                        )
+                        .unwrap();
+                        localized_strings.log_missing_entries();
+                        self.main_menu_ui.update_language(localized_strings.clone());
                     },
                     #[cfg(feature = "singleplayer")]
                     MainMenuEvent::StartSingleplayer => {
