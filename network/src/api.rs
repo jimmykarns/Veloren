@@ -837,8 +837,11 @@ impl Stream {
     /// # }
     /// ```
     #[inline]
-    pub async fn recv<M: DeserializeOwned>(&mut self) -> Result<M, StreamError> {
-        Ok(message::deserialize(self.recv_raw().await?)?)
+    pub async fn recv<M: DeserializeOwned>(
+        &mut self,
+        wire_size: &mut usize,
+    ) -> Result<M, StreamError> {
+        Ok(message::deserialize(self.recv_raw().await?, wire_size)?)
     }
 
     /// the equivalent like [`send_raw`] but for [`recv`], no [`bincode`] is

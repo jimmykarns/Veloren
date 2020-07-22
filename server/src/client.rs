@@ -36,7 +36,8 @@ impl Client {
 
     pub async fn recv(&mut self) -> Result<ClientMsg, Error> {
         if !self.network_error.load(Ordering::Relaxed) {
-            match self.singleton_stream.recv().await {
+            let mut wire_size: usize = 0;
+            match self.singleton_stream.recv(&mut wire_size).await {
                 Ok(r) => Ok(r),
                 Err(e) => {
                     debug!(?e, "got a network error with client while recv");

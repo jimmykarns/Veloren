@@ -88,6 +88,9 @@ pub struct Client {
     last_ping_delta: f64,
     ping_deltas: VecDeque<f64>,
 
+    chunk_total: usize,
+    other_total: usize,
+
     tick: u64,
     state: State,
     entity: EcsEntity,
@@ -128,7 +131,8 @@ impl Client {
         // Wait for initial sync
         let (state, entity, server_info, world_map, recipe_book) = block_on(async {
             loop {
-                match stream.recv().await? {
+                let mut wire_size: usize = 0;
+                match stream.recv(&mut wire_size).await? {
                     ServerMsg::InitialSync {
                         entity_package,
                         server_info,
@@ -168,13 +172,18 @@ impl Client {
                         let world_map = Arc::new(
                             image::DynamicImage::ImageRgba8({
                                 // Should not fail if the dimensions are correct.
-                                let world_map =
-                                    image::ImageBuffer::from_raw(map_size.x, map_size.y, world_map_raw);
-                                world_map.ok_or_else(|| Error::Other("Server sent a bad world map image".into()))?
+                                let world_map = image::ImageBuffer::from_raw(
+                                    map_size.x,
+                                    map_size.y,
+                                    world_map_raw,
+                                );
+                                world_map.ok_or_else(|| {
+                                    Error::Other("Server sent a bad world map image".into())
+                                })?
                             })
-                                // Flip the image, since Voxygen uses an orientation where rotation from
-                                // positive x axis to positive y axis is counterclockwise around the z axis.
-                                .flipv(),
+                            // Flip the image, since Voxygen uses an orientation where rotation from
+                            // positive x axis to positive y axis is counterclockwise around the z axis.
+                            .flipv(),
                         );
                         debug!("Done preparing image...");
 
@@ -222,6 +231,9 @@ impl Client {
             last_ping_delta: 0.0,
             ping_deltas: VecDeque::new(),
 
+            chunk_total: 0,
+            other_total: 0,
+
             tick: 0,
             state,
             entity,
@@ -264,7 +276,8 @@ impl Client {
 
         block_on(async {
             loop {
-                match self.singleton_stream.recv().await? {
+                let mut wire_size: usize = 0;
+                match self.singleton_stream.recv(&mut wire_size).await? {
                     ServerMsg::StateAnswer(Err((
                         RequestStateError::RegisterDenied(err),
                         state,
@@ -834,7 +847,9 @@ impl Client {
         cnt: &mut u64,
     ) -> Result<(), Error> {
         loop {
-            let msg = self.singleton_stream.recv().await?;
+            let mut wire_size: usize = 0;
+            let msg = self.singleton_stream.recv(&mut wire_size).await?;
+            self.other_total += wire_size;
             *cnt += 1;
             match msg {
                 ServerMsg::TooManyPlayers => {
@@ -1000,6 +1015,12 @@ impl Client {
                     frontend_events.push(Event::InventoryUpdated(event));
                 },
                 ServerMsg::TerrainChunkUpdate { key, chunk } => {
+                    self.other_total -= wire_size;
+                    self.chunk_total += wire_size;
+                    println!(
+                        "Terrain total: {}\nOther total: {}",
+                        self.chunk_total, self.other_total
+                    );
                     if let Ok(chunk) = chunk {
                         self.state.insert_chunk(key, *chunk);
                     }
