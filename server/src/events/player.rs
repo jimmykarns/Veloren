@@ -5,7 +5,7 @@ use crate::{
 use common::{
     comp,
     comp::Player,
-    msg::{ClientState, PlayerListUpdate, ServerMsg},
+    msg::{ClientState, PlayerListUpdate, ServerMsg, ServerStateMsg},
     sync::{Uid, UidAllocator},
 };
 use futures_executor::block_on;
@@ -26,7 +26,7 @@ pub fn handle_exit_ingame(server: &mut Server, entity: EcsEntity) {
         // Tell client its request was successful
         client.allow_state(ClientState::Registered);
         // Tell client to clear out other entities and its own components
-        client.notify(ServerMsg::ExitIngameCleanup);
+        client.notify_state(ServerStateMsg::ExitIngameCleanup);
 
         let entity_builder = state.ecs_mut().create_entity().with(client).with(player);
         // Ensure UidAllocator maps this uid to the new entity

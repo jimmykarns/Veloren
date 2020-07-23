@@ -21,9 +21,9 @@ use common::{
         InventoryUpdateEvent,
     },
     msg::{
-        validate_chat_msg, ChatMsgValidationError, ClientMsg, ClientState, Notification,
-        PlayerInfo, PlayerListUpdate, RegisterError, RequestStateError, ServerInfo, ServerMsg,
-        MAX_BYTES_CHAT_MSG,
+        validate_chat_msg, ChatMsgValidationError, ClientMsg, ClientState, ClientStateMsg,
+        Notification, PlayerInfo, PlayerListUpdate, RegisterError, RequestStateError, ServerInfo,
+        ServerLoginMsg, ServerMsg, ServerStateMsg, MAX_BYTES_CHAT_MSG,
     },
     recipe::RecipeBook,
     state::State,
@@ -81,7 +81,9 @@ pub struct Client {
 
     _network: Network,
     participant: Option<Participant>,
-    singleton_stream: Stream,
+    state_stream: Stream,
+    default_stream: Stream,
+    _chunks_stream: Stream,
 
     last_server_ping: f64,
     last_server_pong: f64,
@@ -123,50 +125,54 @@ impl Client {
         thread_pool.execute(f);
 
         let participant = block_on(network.connect(ProtocolAddr::Tcp(addr.into())))?;
-        let mut stream = block_on(participant.open(10, PROMISES_ORDERED | PROMISES_CONSISTENCY))?;
+        let mut state_stream =
+            block_on(participant.open(10, PROMISES_ORDERED | PROMISES_CONSISTENCY))?;
+        let mut default_stream =
+            block_on(participant.open(10, PROMISES_ORDERED | PROMISES_CONSISTENCY))?;
+        let chunks_stream =
+            block_on(participant.open(20, PROMISES_ORDERED | PROMISES_CONSISTENCY))?;
 
         // Wait for initial sync
-        let (state, entity, server_info, world_map, recipe_book) = block_on(async {
-            loop {
-                match stream.recv().await? {
-                    ServerMsg::InitialSync {
-                        entity_package,
-                        server_info,
-                        time_of_day,
-                        world_map: (map_size, world_map),
-                        recipe_book,
-                    } => {
-                        // TODO: Display that versions don't match in Voxygen
-                        if &server_info.git_hash != *common::util::GIT_HASH {
-                            warn!(
-                                "Server is running {}[{}], you are running {}[{}], versions might \
-                                 be incompatible!",
-                                server_info.git_hash,
-                                server_info.git_date,
-                                common::util::GIT_HASH.to_string(),
-                                common::util::GIT_DATE.to_string(),
-                            );
-                        }
+        let (state, entity, server_info, world_map, recipe_book) = match block_on(
+            state_stream.recv(),
+        )? {
+            ServerLoginMsg::InitialSync {
+                entity_package,
+                server_info,
+                time_of_day,
+                world_map: (map_size, world_map),
+                recipe_book,
+            } => {
+                // TODO: Display that versions don't match in Voxygen
+                if &server_info.git_hash != *common::util::GIT_HASH {
+                    warn!(
+                        "Server is running {}[{}], you are running {}[{}], versions might be \
+                         incompatible!",
+                        server_info.git_hash,
+                        server_info.git_date,
+                        common::util::GIT_HASH.to_string(),
+                        common::util::GIT_DATE.to_string(),
+                    );
+                }
 
-                        debug!("Auth Server: {:?}", server_info.auth_provider);
+                debug!("Auth Server: {:?}", server_info.auth_provider);
 
-                        // Initialize `State`
-                        let mut state = State::default();
-                        // Client-only components
-                        state
-                            .ecs_mut()
-                            .register::<comp::Last<comp::CharacterState>>();
+                // Initialize `State`
+                let mut state = State::default();
+                // Client-only components
+                state
+                    .ecs_mut()
+                    .register::<comp::Last<comp::CharacterState>>();
 
-                        let entity = state.ecs_mut().apply_entity_package(entity_package);
-                        *state.ecs_mut().write_resource() = time_of_day;
+                let entity = state.ecs_mut().apply_entity_package(entity_package);
+                *state.ecs_mut().write_resource() = time_of_day;
 
-                        assert_eq!(world_map.len(), (map_size.x * map_size.y) as usize);
-                        let mut world_map_raw =
-                            vec![0u8; 4 * world_map.len()/*map_size.x * map_size.y*/];
-                        LittleEndian::write_u32_into(&world_map, &mut world_map_raw);
-                        debug!("Preparing image...");
-                        let world_map = Arc::new(
-                            image::DynamicImage::ImageRgba8({
+                assert_eq!(world_map.len(), (map_size.x * map_size.y) as usize);
+                let mut world_map_raw = vec![0u8; 4 * world_map.len()/*map_size.x * map_size.y*/];
+                LittleEndian::write_u32_into(&world_map, &mut world_map_raw);
+                debug!("Preparing image...");
+                let world_map = Arc::new(
+                    image::DynamicImage::ImageRgba8({
                                 // Should not fail if the dimensions are correct.
                                 let world_map =
                                     image::ImageBuffer::from_raw(map_size.x, map_size.y, world_map_raw);
@@ -175,26 +181,21 @@ impl Client {
                                 // Flip the image, since Voxygen uses an orientation where rotation from
                                 // positive x axis to positive y axis is counterclockwise around the z axis.
                                 .flipv(),
-                        );
-                        debug!("Done preparing image...");
+                );
+                debug!("Done preparing image...");
 
-                        break Ok((
-                            state,
-                            entity,
-                            server_info,
-                            (world_map, map_size),
-                            recipe_book,
-                        ));
-                    },
-                    ServerMsg::TooManyPlayers => break Err(Error::TooManyPlayers),
-                    err => {
-                        warn!("whoops, server mad {:?}, ignoring", err);
-                    },
-                }
-            }
-        })?;
+                Ok((
+                    state,
+                    entity,
+                    server_info,
+                    (world_map, map_size),
+                    recipe_book,
+                ))
+            },
+            ServerLoginMsg::TooManyPlayers => Err(Error::TooManyPlayers),
+        }?;
 
-        stream.send(ClientMsg::Ping)?;
+        default_stream.send(ClientMsg::Ping)?;
 
         let mut thread_pool = ThreadPoolBuilder::new()
             .name("veloren-worker".into())
@@ -215,7 +216,9 @@ impl Client {
 
             _network: network,
             participant: Some(participant),
-            singleton_stream: stream,
+            state_stream,
+            default_stream,
+            _chunks_stream: chunks_stream,
 
             last_server_ping: 0.0,
             last_server_pong: 0.0,
@@ -244,7 +247,7 @@ impl Client {
         password: String,
         mut auth_trusted: impl FnMut(&str) -> bool,
     ) -> Result<(), Error> {
-        // Authentication
+        // AuthenticationInitialSync
         let token_or_username = self.server_info.auth_provider.as_ref().map(|addr|
                 // Query whether this is a trusted auth server
                 if auth_trusted(&addr) {
@@ -256,44 +259,34 @@ impl Client {
                 }
         ).unwrap_or(Ok(username))?;
 
-        self.singleton_stream.send(ClientMsg::Register {
+        self.state_stream.send(ClientStateMsg::Register {
             view_distance: self.view_distance,
             token_or_username,
         })?;
         self.client_state = ClientState::Pending;
 
-        block_on(async {
-            loop {
-                match self.singleton_stream.recv().await? {
-                    ServerMsg::StateAnswer(Err((
-                        RequestStateError::RegisterDenied(err),
-                        state,
-                    ))) => {
-                        self.client_state = state;
-                        break Err(match err {
-                            RegisterError::AlreadyLoggedIn => Error::AlreadyLoggedIn,
-                            RegisterError::AuthError(err) => Error::AuthErr(err),
-                            RegisterError::InvalidCharacter => Error::InvalidCharacter,
-                            RegisterError::NotOnWhitelist => Error::NotOnWhitelist,
-                        });
-                    },
-                    ServerMsg::StateAnswer(Ok(ClientState::Registered)) => break Ok(()),
-                    ignore => {
-                        warn!(
-                            "Ignoring what the server send till registered: {:? }",
-                            ignore
-                        );
-                        //return Err(Error::ServerWentMad)
-                    },
-                }
-            }
-        })
+        match block_on(self.state_stream.recv())? {
+            ServerStateMsg::StateAnswer(Err((RequestStateError::RegisterDenied(err), state))) => {
+                self.client_state = state;
+                Err(match err {
+                    RegisterError::AlreadyLoggedIn => Error::AlreadyLoggedIn,
+                    RegisterError::AuthError(err) => Error::AuthErr(err),
+                    RegisterError::InvalidCharacter => Error::InvalidCharacter,
+                    RegisterError::NotOnWhitelist => Error::NotOnWhitelist,
+                })
+            },
+            ServerStateMsg::StateAnswer(Ok(ClientState::Registered)) => Ok(()),
+            wrong => {
+                warn!("Server Send Wrong Answer: {:? }", wrong);
+                Err(Error::ServerWentMad)
+            },
+        }
     }
 
     /// Request a state transition to `ClientState::Character`.
     pub fn request_character(&mut self, character_id: i32) {
-        self.singleton_stream
-            .send(ClientMsg::Character(character_id))
+        self.state_stream
+            .send(ClientStateMsg::Character(character_id))
             .unwrap();
 
         self.active_character_id = Some(character_id);
@@ -303,31 +296,31 @@ impl Client {
     /// Load the current players character list
     pub fn load_character_list(&mut self) {
         self.character_list.loading = true;
-        self.singleton_stream
-            .send(ClientMsg::RequestCharacterList)
+        self.state_stream
+            .send(ClientStateMsg::RequestCharacterList)
             .unwrap();
     }
 
     /// New character creation
     pub fn create_character(&mut self, alias: String, tool: Option<String>, body: comp::Body) {
         self.character_list.loading = true;
-        self.singleton_stream
-            .send(ClientMsg::CreateCharacter { alias, tool, body })
+        self.state_stream
+            .send(ClientStateMsg::CreateCharacter { alias, tool, body })
             .unwrap();
     }
 
     /// Character deletion
     pub fn delete_character(&mut self, character_id: i32) {
         self.character_list.loading = true;
-        self.singleton_stream
-            .send(ClientMsg::DeleteCharacter(character_id))
+        self.state_stream
+            .send(ClientStateMsg::DeleteCharacter(character_id))
             .unwrap();
     }
 
     /// Send disconnect message to the server
     pub fn request_logout(&mut self) {
         debug!("Requesting logout from server");
-        if let Err(e) = self.singleton_stream.send(ClientMsg::Disconnect) {
+        if let Err(e) = self.default_stream.send(ClientMsg::Disconnect) {
             error!(
                 ?e,
                 "Couldn't send disconnect package to server, did server close already?"
@@ -338,20 +331,20 @@ impl Client {
     /// Request a state transition to `ClientState::Registered` from an ingame
     /// state.
     pub fn request_remove_character(&mut self) {
-        self.singleton_stream.send(ClientMsg::ExitIngame).unwrap();
+        self.state_stream.send(ClientStateMsg::ExitIngame).unwrap();
         self.client_state = ClientState::Pending;
     }
 
     pub fn set_view_distance(&mut self, view_distance: u32) {
         self.view_distance = Some(view_distance.max(1).min(65));
-        self.singleton_stream
+        self.default_stream
             .send(ClientMsg::SetViewDistance(self.view_distance.unwrap()))
             .unwrap();
         // Can't fail
     }
 
     pub fn use_slot(&mut self, slot: comp::slot::Slot) {
-        self.singleton_stream
+        self.default_stream
             .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
                 InventoryManip::Use(slot),
             )))
@@ -359,7 +352,7 @@ impl Client {
     }
 
     pub fn swap_slots(&mut self, a: comp::slot::Slot, b: comp::slot::Slot) {
-        self.singleton_stream
+        self.default_stream
             .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
                 InventoryManip::Swap(a, b),
             )))
@@ -367,7 +360,7 @@ impl Client {
     }
 
     pub fn drop_slot(&mut self, slot: comp::slot::Slot) {
-        self.singleton_stream
+        self.default_stream
             .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
                 InventoryManip::Drop(slot),
             )))
@@ -376,7 +369,7 @@ impl Client {
 
     pub fn pick_up(&mut self, entity: EcsEntity) {
         if let Some(uid) = self.state.ecs().read_storage::<Uid>().get(entity).copied() {
-            self.singleton_stream
+            self.default_stream
                 .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
                     InventoryManip::Pickup(uid),
                 )))
@@ -398,7 +391,7 @@ impl Client {
 
     pub fn craft_recipe(&mut self, recipe: &str) -> bool {
         if self.can_craft_recipe(recipe) {
-            self.singleton_stream
+            self.default_stream
                 .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
                     InventoryManip::CraftRecipe(recipe.to_string()),
                 )))
@@ -419,7 +412,7 @@ impl Client {
     }
 
     pub fn toggle_lantern(&mut self) {
-        self.singleton_stream
+        self.default_stream
             .send(ClientMsg::ControlEvent(ControlEvent::ToggleLantern))
             .unwrap();
     }
@@ -434,14 +427,14 @@ impl Client {
 
     pub fn mount(&mut self, entity: EcsEntity) {
         if let Some(uid) = self.state.ecs().read_storage::<Uid>().get(entity).copied() {
-            self.singleton_stream
+            self.default_stream
                 .send(ClientMsg::ControlEvent(ControlEvent::Mount(uid)))
                 .unwrap();
         }
     }
 
     pub fn unmount(&mut self) {
-        self.singleton_stream
+        self.default_stream
             .send(ClientMsg::ControlEvent(ControlEvent::Unmount))
             .unwrap();
     }
@@ -454,7 +447,7 @@ impl Client {
             .get(self.entity)
             .map_or(false, |s| s.is_dead)
         {
-            self.singleton_stream
+            self.default_stream
                 .send(ClientMsg::ControlEvent(ControlEvent::Respawn))
                 .unwrap();
         }
@@ -538,7 +531,7 @@ impl Client {
         {
             controller.actions.push(control_action);
         }
-        self.singleton_stream
+        self.default_stream
             .send(ClientMsg::ControlAction(control_action))
             .unwrap();
     }
@@ -570,7 +563,7 @@ impl Client {
     pub fn send_chat(&mut self, message: String) {
         match validate_chat_msg(&message) {
             Ok(()) => self
-                .singleton_stream
+                .default_stream
                 .send(ClientMsg::ChatMsg(message))
                 .unwrap(),
             Err(ChatMsgValidationError::TooLong) => tracing::warn!(
@@ -587,19 +580,19 @@ impl Client {
     }
 
     pub fn place_block(&mut self, pos: Vec3<i32>, block: Block) {
-        self.singleton_stream
+        self.default_stream
             .send(ClientMsg::PlaceBlock(pos, block))
             .unwrap();
     }
 
     pub fn remove_block(&mut self, pos: Vec3<i32>) {
-        self.singleton_stream
+        self.default_stream
             .send(ClientMsg::BreakBlock(pos))
             .unwrap();
     }
 
     pub fn collect_block(&mut self, pos: Vec3<i32>) {
-        self.singleton_stream
+        self.default_stream
             .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
                 InventoryManip::Collect(pos),
             )))
@@ -658,7 +651,7 @@ impl Client {
                     "Couldn't access controller component on client entity"
                 );
             }
-            self.singleton_stream
+            self.default_stream
                 .send(ClientMsg::ControllerInputs(inputs))?;
         }
 
@@ -756,7 +749,7 @@ impl Client {
                         if self.state.terrain().get_key(*key).is_none() {
                             if !skip_mode && !self.pending_chunks.contains_key(key) {
                                 if self.pending_chunks.len() < 4 {
-                                    self.singleton_stream
+                                    self.default_stream
                                         .send(ClientMsg::TerrainChunkRequest { key: *key })?;
                                     self.pending_chunks.insert(*key, Instant::now());
                                 } else {
@@ -789,7 +782,7 @@ impl Client {
 
         // Send a ping to the server once every second
         if self.state.get_time() - self.last_server_ping > 1. {
-            self.singleton_stream.send(ClientMsg::Ping)?;
+            self.default_stream.send(ClientMsg::Ping)?;
             self.last_server_ping = self.state.get_time();
         }
 
@@ -800,7 +793,7 @@ impl Client {
                 self.state.read_storage().get(self.entity).cloned(),
                 self.state.read_storage().get(self.entity).cloned(),
             ) {
-                self.singleton_stream
+                self.default_stream
                     .send(ClientMsg::PlayerPhysics { pos, vel, ori })?;
             }
         }
@@ -828,20 +821,49 @@ impl Client {
         self.state.cleanup();
     }
 
+    async fn handle_state_message(&mut self, msg: ServerStateMsg) {
+        match msg {
+            // Cleanup for when the client goes back to the `Registered` state
+            ServerStateMsg::ExitIngameCleanup => {
+                self.clean_state();
+            },
+            ServerStateMsg::StateAnswer(Ok(state)) => {
+                self.client_state = state;
+            },
+            ServerStateMsg::StateAnswer(Err((error, state))) => {
+                warn!(
+                    "StateAnswer: {:?}. Server thinks client is in state {:?}.",
+                    error, state
+                );
+            },
+            ServerStateMsg::CharacterListUpdate(character_list) => {
+                self.character_list.characters = character_list;
+                self.character_list.loading = false;
+            },
+            ServerStateMsg::CharacterActionError(error) => {
+                warn!("CharacterActionError: {:?}.", error);
+                self.character_list.error = Some(error);
+            },
+            ServerStateMsg::CharacterDataLoadError(error) => {
+                self.clean_state();
+                self.character_list.error = Some(error);
+            },
+        }
+    }
+
     async fn handle_message(
         &mut self,
         frontend_events: &mut Vec<Event>,
         cnt: &mut u64,
     ) -> Result<(), Error> {
         loop {
-            let msg = self.singleton_stream.recv().await?;
+            let msg = self.default_stream.recv().await?;
             *cnt += 1;
             match msg {
                 ServerMsg::TooManyPlayers => {
                     return Err(Error::ServerWentMad);
                 },
                 ServerMsg::Shutdown => return Err(Error::ServerShutdown),
-                ServerMsg::InitialSync { .. } => return Err(Error::ServerWentMad),
                 ServerMsg::PlayerListUpdate(PlayerListUpdate::Init(list)) => {
                     self.player_list = list
                 },
@@ -937,7 +959,7 @@ impl Client {
                 },
 
                 ServerMsg::Ping => {
-                    self.singleton_stream.send(ClientMsg::Pong)?;
+                    self.default_stream.send(ClientMsg::Pong)?;
                 },
                 ServerMsg::Pong => {
                     self.last_server_pong = self.state.get_time();
@@ -982,10 +1004,6 @@ impl Client {
                             .delete_entity_and_clear_from_uid_allocator(entity.0);
                     }
                 },
-                // Cleanup for when the client goes back to the `Registered` state
-                ServerMsg::ExitIngameCleanup => {
-                    self.clean_state();
-                },
                 ServerMsg::InventoryUpdate(inventory, event) => {
                     match event {
                         InventoryUpdateEvent::CollectFailed => {},
@@ -1010,33 +1028,12 @@ impl Client {
                         self.state.set_block(pos, block);
                     });
                 },
-                ServerMsg::StateAnswer(Ok(state)) => {
-                    self.client_state = state;
-                },
-                ServerMsg::StateAnswer(Err((error, state))) => {
-                    warn!(
-                        "StateAnswer: {:?}. Server thinks client is in state {:?}.",
-                        error, state
-                    );
-                },
                 ServerMsg::Disconnect => {
                     frontend_events.push(Event::Disconnect);
-                    self.singleton_stream.send(ClientMsg::Terminate)?;
-                },
-                ServerMsg::CharacterListUpdate(character_list) => {
-                    self.character_list.characters = character_list;
-                    self.character_list.loading = false;
-                },
-                ServerMsg::CharacterActionError(error) => {
-                    warn!("CharacterActionError: {:?}.", error);
-                    self.character_list.error = Some(error);
+                    self.default_stream.send(ClientMsg::Terminate)?;
                 },
                 ServerMsg::Notification(n) => {
                     frontend_events.push(Event::Notification(n));
-                },
-                ServerMsg::CharacterDataLoadError(error) => {
-                    self.clean_state();
-                    self.character_list.error = Some(error);
                 },
                 ServerMsg::SetViewDistance(vd) => {
                     self.view_distance = Some(vd);
@@ -1242,7 +1239,7 @@ impl Client {
 impl Drop for Client {
     fn drop(&mut self) {
         trace!("Dropping client");
-        if let Err(e) = self.singleton_stream.send(ClientMsg::Disconnect) {
+        if let Err(e) = self.default_stream.send(ClientMsg::Disconnect) {
             warn!(
                 ?e,
                 "Error during drop of client, couldn't send disconnect package, is the connection \

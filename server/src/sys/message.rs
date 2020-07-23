@@ -11,7 +11,8 @@ use common::{
     event::{EventBus, ServerEvent},
     msg::{
         validate_chat_msg, CharacterInfo, ChatMsgValidationError, ClientMsg, ClientState,
-        PlayerInfo, PlayerListUpdate, RequestStateError, ServerMsg, MAX_BYTES_CHAT_MSG,
+        ClientStateMsg, PlayerInfo, PlayerListUpdate, RequestStateError, ServerMsg, ServerStateMsg,
+        MAX_BYTES_CHAT_MSG,
     },
     state::{BlockChange, Time},
     sync::Uid,
@@ -30,7 +31,375 @@ impl Sys {
     ///We needed to move this to a async fn, if we would use a async closures
     /// the compiler generates to much recursion and fails to compile this
     #[allow(clippy::too_many_arguments)]
+    async fn handle_client_state_msg(
+        msg: ClientStateMsg,
+        server_emitter: &mut common::event::Emitter<'_, ServerEvent>,
+        new_chat_msgs: &mut Vec<(Option<specs::Entity>, ChatMsg)>,
+        player_list: &HashMap<Uid, PlayerInfo>,
+        new_players: &mut Vec<specs::Entity>,
+        entity: specs::Entity,
+        client: &mut Client,
+        character_loader: &ReadExpect<'_, CharacterLoader>,
+        login_provider: &mut WriteExpect<'_, LoginProvider>,
+        admin_list: &ReadExpect<'_, AdminList>,
+        admins: &mut WriteStorage<'_, Admin>,
+        players: &mut WriteStorage<'_, Player>,
+        settings: &Read<'_, ServerSettings>,
+        alias_validator: &ReadExpect<'_, AliasValidator>,
+    ) -> Result<(), crate::error::Error> {
+        match msg {
+            // Go back to registered state (char selection screen)
+            ClientStateMsg::ExitIngame => match client.client_state {
+                // Use ClientMsg::Register instead.
+                ClientState::Connected => client.error_state(RequestStateError::WrongMessage),
+                ClientState::Registered => client.error_state(RequestStateError::Already),
+                ClientState::Spectator | ClientState::Character => {
+                    server_emitter.emit(ServerEvent::ExitIngame { entity });
+                },
+                ClientState::Pending => {},
+            },
+            // Request spectator state
+            ClientStateMsg::Spectate => match client.client_state {
+                // Become Registered first.
+                ClientState::Connected => client.error_state(RequestStateError::Impossible),
+                ClientState::Spectator => client.error_state(RequestStateError::Already),
+                ClientState::Registered | ClientState::Character => {
+                    client.allow_state(ClientState::Spectator)
+                },
+                ClientState::Pending => {},
+            },
+            // Request registered state (login)
+            ClientStateMsg::Register {
+                view_distance,
+                token_or_username,
+            } => {
+                let (username, uuid) =
+                    match login_provider.try_login(&token_or_username, &settings.whitelist) {
+                        Err(err) => {
+                            client.error_state_register(RequestStateError::RegisterDenied(err));
+                            return Ok(());
+                        },
+                        Ok((username, uuid)) => (username, uuid),
+                    };
+
+                let vd = view_distance.map(|vd| vd.min(settings.max_view_distance.unwrap_or(vd)));
+                let player = Player::new(username.clone(), None, vd, uuid);
+                let is_admin = admin_list.contains(&username);
+
+                if !player.is_valid() {
+                    // Invalid player
+                    client.error_state_register(RequestStateError::Impossible);
+                    return Ok(());
+                }
+
+                match client.client_state {
+                    ClientState::Connected => {
+                        // Add Player component to this client
+                        let _ = players.insert(entity, player);
+
+                        // Give the Admin component to the player if their name exists in
+                        // admin list
+                        if is_admin {
+                            let _ = admins.insert(entity, Admin);
+                        }
+
+                        // Tell the client its request was successful.
+                        client.allow_state_register(ClientState::Registered);
+
+                        // Send initial player list
+                        client.notify(ServerMsg::PlayerListUpdate(PlayerListUpdate::Init(
+                            player_list.clone(),
+                        )));
+
+                        // Add to list to notify all clients of the new player
+                        new_players.push(entity);
+                    },
+                    // Use RequestState instead (No need to send `player` again).
+                    _ => client.error_state_register(RequestStateError::Impossible),
+                }
+                //client.allow_state(ClientState::Registered);
+
+                // Limit view distance if it's too high
+                // This comes after state registration so that the client actually hears it
+                if settings
+                    .max_view_distance
+                    .zip(view_distance)
+                    .map(|(max, vd)| vd > max)
+                    .unwrap_or(false)
+                {
+                    client.notify(ServerMsg::SetViewDistance(
+                        settings.max_view_distance.unwrap_or(0),
+                    ));
+                };
+            },
+            ClientStateMsg::Character(character_id) => match client.client_state {
+                // Become Registered first.
+                ClientState::Connected => client.error_state(RequestStateError::Impossible),
+                ClientState::Registered | ClientState::Spectator => {
+                    // Only send login message if it wasn't already
+                    // sent previously
+                    if let Some(player) = players.get(entity) {
+                        // Send a request to load the character's component data from the
+                        // DB. Once loaded, persisted components such as stats and inventory
+                        // will be inserted for the entity
+                        character_loader.load_character_data(
+                            entity,
+                            player.uuid().to_string(),
+                            character_id,
+                        );
+
+                        // Start inserting non-persisted/default components for the entity
+                        // while we load the DB data
+                        server_emitter.emit(ServerEvent::InitCharacterData {
+                            entity,
+                            character_id,
+                        });
+
+                        // Give the player a welcome message
+                        if settings.server_description.len() > 0 {
+                            client.notify(
+                                ChatType::CommandInfo
+                                    .server_msg(settings.server_description.clone()),
+                            );
+                        }
+
+                        // Only send login message if it wasn't already
+                        // sent previously
+                        if !client.login_msg_sent {
+                            new_chat_msgs.push((None, ChatMsg {
+                                chat_type: ChatType::Online,
+                                message: format!("[{}] is now online.", &player.alias), // TODO: Localize this
+                            }));
+
+                            client.login_msg_sent = true;
+                        }
+                    } else {
+                        client.notify_state(ServerStateMsg::CharacterDataLoadError(String::from(
+                            "Failed to fetch player entity",
+                        )))
+                    }
+                },
+                ClientState::Character => client.error_state(RequestStateError::Already),
+                ClientState::Pending => {},
+            },
+            ClientStateMsg::RequestCharacterList => {
+                if let Some(player) = players.get(entity) {
+                    character_loader.load_character_list(entity, player.uuid().to_string())
+                }
+            },
+            ClientStateMsg::CreateCharacter { alias, tool, body } => {
+                if let Err(error) = alias_validator.validate(&alias) {
+                    tracing::debug!(?error, ?alias, "denied alias as it contained a banned word");
+                    client.notify_state(ServerStateMsg::CharacterActionError(error.to_string()));
+                } else if let Some(player) = players.get(entity) {
+                    character_loader.create_character(
+                        entity,
+                        player.uuid().to_string(),
+                        alias,
+                        tool,
+                        body,
+                    );
+                }
+            },
+            ClientStateMsg::DeleteCharacter(character_id) => {
+                if let Some(player) = players.get(entity) {
+                    character_loader.delete_character(
+                        entity,
+                        player.uuid().to_string(),
+                        character_id,
+                    );
+                }
+            },
+        }
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
     async fn handle_client_msg(
+        msg: ClientMsg,
+        server_emitter: &mut common::event::Emitter<'_, ServerEvent>,
+        new_chat_msgs: &mut Vec<(Option<specs::Entity>, ChatMsg)>,
+        entity: specs::Entity,
+        client: &mut Client,
+        terrain: &ReadExpect<'_, TerrainGrid>,
+        uids: &ReadStorage<'_, Uid>,
+        can_build: &ReadStorage<'_, CanBuild>,
+        force_updates: &ReadStorage<'_, ForceUpdate>,
+        stats: &mut WriteStorage<'_, Stats>,
+        chat_modes: &ReadStorage<'_, ChatMode>,
+        block_changes: &mut Write<'_, BlockChange>,
+        positions: &mut WriteStorage<'_, Pos>,
+        velocities: &mut WriteStorage<'_, Vel>,
+        orientations: &mut WriteStorage<'_, Ori>,
+        players: &mut WriteStorage<'_, Player>,
+        controllers: &mut WriteStorage<'_, Controller>,
+        settings: &Read<'_, ServerSettings>,
+    ) -> Result<(), crate::error::Error> {
+        match msg {
+            ClientMsg::SetViewDistance(view_distance) => {
+                if let ClientState::Character { .. } = client.client_state {
+                    players.get_mut(entity).map(|player| {
+                        player.view_distance = Some(
+                            settings
+                                .max_view_distance
+                                .map(|max| view_distance.min(max))
+                                .unwrap_or(view_distance),
+                        )
+                    });
+
+                    if settings
+                        .max_view_distance
+                        .map(|max| view_distance > max)
+                        .unwrap_or(false)
+                    {
+                        client.notify(ServerMsg::SetViewDistance(
+                            settings.max_view_distance.unwrap_or(0),
+                        ));
+                    }
+                }
+            },
+            ClientMsg::ControllerInputs(inputs) => match client.client_state {
+                ClientState::Connected | ClientState::Registered | ClientState::Spectator => {
+                    client.error_state(RequestStateError::Impossible)
+                },
+                ClientState::Character => {
+                    if let Some(controller) = controllers.get_mut(entity) {
+                        controller.inputs.update_with_new(inputs);
+                    }
+                },
+                ClientState::Pending => {},
+            },
+            ClientMsg::ControlEvent(event) => match client.client_state {
+                ClientState::Connected | ClientState::Registered | ClientState::Spectator => {
+                    client.error_state(RequestStateError::Impossible)
+                },
+                ClientState::Character => {
+                    // Skip respawn if client entity is alive
+                    if let ControlEvent::Respawn = event {
+                        if stats.get(entity).map_or(true, |s| !s.is_dead) {
+                            return Ok(());
+                        }
+                    }
+                    if let Some(controller) = controllers.get_mut(entity) {
+                        controller.events.push(event);
+                    }
+                },
+                ClientState::Pending => {},
+            },
+            ClientMsg::ControlAction(event) => match client.client_state {
+                ClientState::Connected | ClientState::Registered | ClientState::Spectator => {
+                    client.error_state(RequestStateError::Impossible)
+                },
+                ClientState::Character => {
+                    if let Some(controller) = controllers.get_mut(entity) {
+                        controller.actions.push(event);
+                    }
+                },
+                ClientState::Pending => {},
+            },
+            ClientMsg::ChatMsg(message) => match client.client_state {
+                ClientState::Connected => client.error_state(RequestStateError::Impossible),
+                ClientState::Registered | ClientState::Spectator | ClientState::Character => {
+                    match validate_chat_msg(&message) {
+                        Ok(()) => {
+                            if let Some(from) = uids.get(entity) {
+                                let mode = chat_modes.get(entity).cloned().unwrap_or_default();
+                                let msg = mode.new_message(*from, message);
+                                new_chat_msgs.push((Some(entity), msg));
+                            } else {
+                                tracing::error!("Could not send message. Missing player uid");
+                            }
+                        },
+                        Err(ChatMsgValidationError::TooLong) => {
+                            let max = MAX_BYTES_CHAT_MSG;
+                            let len = message.len();
+                            tracing::warn!(?len, ?max, "Recieved a chat message that's too long")
+                        },
+                    }
+                },
+                ClientState::Pending => {},
+            },
+            ClientMsg::PlayerPhysics { pos, vel, ori } => match client.client_state {
+                ClientState::Character => {
+                    if force_updates.get(entity).is_none()
+                        && stats.get(entity).map_or(true, |s| !s.is_dead)
+                    {
+                        let _ = positions.insert(entity, pos);
+                        let _ = velocities.insert(entity, vel);
+                        let _ = orientations.insert(entity, ori);
+                    }
+                },
+                // Only characters can send positions.
+                _ => client.error_state(RequestStateError::Impossible),
+            },
+            ClientMsg::BreakBlock(pos) => {
+                if can_build.get(entity).is_some() {
+                    block_changes.set(pos, Block::empty());
+                }
+            },
+            ClientMsg::PlaceBlock(pos, block) => {
+                if can_build.get(entity).is_some() {
+                    block_changes.try_set(pos, block);
+                }
+            },
+            ClientMsg::TerrainChunkRequest { key } => match client.client_state {
+                ClientState::Connected | ClientState::Registered => {
+                    client.error_state(RequestStateError::Impossible);
+                },
+                ClientState::Spectator | ClientState::Character => {
+                    let in_vd = if let (Some(view_distance), Some(pos)) = (
+                        players.get(entity).and_then(|p| p.view_distance),
+                        positions.get(entity),
+                    ) {
+                        pos.0.xy().map(|e| e as f64).distance(
+                            key.map(|e| e as f64 + 0.5)
+                                * TerrainChunkSize::RECT_SIZE.map(|e| e as f64),
+                        ) < (view_distance as f64 - 1.0 + 2.5 * 2.0_f64.sqrt())
+                            * TerrainChunkSize::RECT_SIZE.x as f64
+                    } else {
+                        true
+                    };
+                    if in_vd {
+                        match terrain.get_key(key) {
+                            Some(chunk) => client.notify(ServerMsg::TerrainChunkUpdate {
+                                key,
+                                chunk: Ok(Box::new(chunk.clone())),
+                            }),
+                            None => server_emitter.emit(ServerEvent::ChunkRequest(entity, key)),
+                        }
+                    }
+                },
+                ClientState::Pending => {},
+            },
+            // Always possible.
+            ClientMsg::Ping => client.notify(ServerMsg::Pong),
+            ClientMsg::Pong => {},
+            ClientMsg::Disconnect => {
+                client.notify(ServerMsg::Disconnect);
+            },
+            ClientMsg::Terminate => {
+                server_emitter.emit(ServerEvent::ClientDisconnect(entity));
+            },
+            ClientMsg::UnlockSkill(skill) => {
+                stats
+                    .get_mut(entity)
+                    .map(|s| s.skill_set.unlock_skill(skill));
+            },
+            ClientMsg::RefundSkill(skill) => {
+                stats
+                    .get_mut(entity)
+                    .map(|s| s.skill_set.refund_skill(skill));
+            },
+            ClientMsg::UnlockSkillGroup(skill_group_type) => {
+                stats
+                    .get_mut(entity)
+                    .map(|s| s.skill_set.unlock_skill_group(skill_group_type));
+            },
+        }
+        Ok(())
+    }
+
+    async fn handle_all_msg(
         server_emitter: &mut common::event::Emitter<'_, ServerEvent>,
         new_chat_msgs: &mut Vec<(Option<specs::Entity>, ChatMsg)>,
         player_list: &HashMap<Uid, PlayerInfo>,
@@ -58,339 +427,52 @@ impl Sys {
         alias_validator: &ReadExpect<'_, AliasValidator>,
     ) -> Result<(), crate::error::Error> {
         loop {
-            let msg = client.recv().await?;
+            let res = client.recv().await?;
             *cnt += 1;
-            match msg {
-                // Go back to registered state (char selection screen)
-                ClientMsg::ExitIngame => match client.client_state {
-                    // Use ClientMsg::Register instead.
-                    ClientState::Connected => client.error_state(RequestStateError::WrongMessage),
-                    ClientState::Registered => client.error_state(RequestStateError::Already),
-                    ClientState::Spectator | ClientState::Character => {
-                        server_emitter.emit(ServerEvent::ExitIngame { entity });
-                    },
-                    ClientState::Pending => {},
+            match res {
+                (Some(msg), None) => {
+                    Self::handle_client_msg(
+                        msg,
+                        server_emitter,
+                        new_chat_msgs,
+                        entity,
+                        client,
+                        terrain,
+                        uids,
+                        can_build,
+                        force_updates,
+                        stats,
+                        chat_modes,
+                        block_changes,
+                        positions,
+                        velocities,
+                        orientations,
+                        players,
+                        controllers,
+                        settings,
+                    )
+                    .await?
                 },
-                // Request spectator state
-                ClientMsg::Spectate => match client.client_state {
-                    // Become Registered first.
-                    ClientState::Connected => client.error_state(RequestStateError::Impossible),
-                    ClientState::Spectator => client.error_state(RequestStateError::Already),
-                    ClientState::Registered | ClientState::Character => {
-                        client.allow_state(ClientState::Spectator)
-                    },
-                    ClientState::Pending => {},
+                (None, Some(msg)) => {
+                    Self::handle_client_state_msg(
+                        msg,
+                        server_emitter,
+                        new_chat_msgs,
+                        player_list,
+                        new_players,
+                        entity,
+                        client,
+                        character_loader,
+                        login_provider,
+                        admin_list,
+                        admins,
+                        players,
+                        settings,
+                        alias_validator,
+                    )
+                    .await?
                 },
-                // Request registered state (login)
-                ClientMsg::Register {
-                    view_distance,
-                    token_or_username,
-                } => {
-                    let (username, uuid) =
-                        match login_provider.try_login(&token_or_username, &settings.whitelist) {
-                            Err(err) => {
-                                client.error_state(RequestStateError::RegisterDenied(err));
-                                break Ok(());
-                            },
-                            Ok((username, uuid)) => (username, uuid),
-                        };
-
-                    let vd =
-                        view_distance.map(|vd| vd.min(settings.max_view_distance.unwrap_or(vd)));
-                    let player = Player::new(username.clone(), None, vd, uuid);
-                    let is_admin = admin_list.contains(&username);
-
-                    if !player.is_valid() {
-                        // Invalid player
-                        client.error_state(RequestStateError::Impossible);
-                        break Ok(());
-                    }
-
-                    match client.client_state {
-                        ClientState::Connected => {
-                            // Add Player component to this client
-                            let _ = players.insert(entity, player);
-
-                            // Give the Admin component to the player if their name exists in
-                            // admin list
-                            if is_admin {
-                                let _ = admins.insert(entity, Admin);
-                            }
-
-                            // Tell the client its request was successful.
-                            client.allow_state(ClientState::Registered);
-
-                            // Send initial player list
-                            client.notify(ServerMsg::PlayerListUpdate(PlayerListUpdate::Init(
-                                player_list.clone(),
-                            )));
-
-                            // Add to list to notify all clients of the new player
-                            new_players.push(entity);
-                        },
-                        // Use RequestState instead (No need to send `player` again).
-                        _ => client.error_state(RequestStateError::Impossible),
-                    }
-                    //client.allow_state(ClientState::Registered);
-
-                    // Limit view distance if it's too high
-                    // This comes after state registration so that the client actually hears it
-                    if settings
-                        .max_view_distance
-                        .zip(view_distance)
-                        .map(|(max, vd)| vd > max)
-                        .unwrap_or(false)
-                    {
-                        client.notify(ServerMsg::SetViewDistance(
-                            settings.max_view_distance.unwrap_or(0),
-                        ));
-                    };
-                },
-                ClientMsg::SetViewDistance(view_distance) => {
-                    if let ClientState::Character { .. } = client.client_state {
-                        players.get_mut(entity).map(|player| {
-                            player.view_distance = Some(
-                                settings
-                                    .max_view_distance
-                                    .map(|max| view_distance.min(max))
-                                    .unwrap_or(view_distance),
-                            )
-                        });
-
-                        if settings
-                            .max_view_distance
-                            .map(|max| view_distance > max)
-                            .unwrap_or(false)
-                        {
-                            client.notify(ServerMsg::SetViewDistance(
-                                settings.max_view_distance.unwrap_or(0),
-                            ));
-                        }
-                    }
-                },
-                ClientMsg::Character(character_id) => match client.client_state {
-                    // Become Registered first.
-                    ClientState::Connected => client.error_state(RequestStateError::Impossible),
-                    ClientState::Registered | ClientState::Spectator => {
-                        // Only send login message if it wasn't already
-                        // sent previously
-                        if let Some(player) = players.get(entity) {
-                            // Send a request to load the character's component data from the
-                            // DB. Once loaded, persisted components such as stats and inventory
-                            // will be inserted for the entity
-                            character_loader.load_character_data(
-                                entity,
-                                player.uuid().to_string(),
-                                character_id,
-                            );
-
-                            // Start inserting non-persisted/default components for the entity
-                            // while we load the DB data
-                            server_emitter.emit(ServerEvent::InitCharacterData {
-                                entity,
-                                character_id,
-                            });
-
-                            // Give the player a welcome message
-                            if settings.server_description.len() > 0 {
-                                client.notify(
-                                    ChatType::CommandInfo
-                                        .server_msg(settings.server_description.clone()),
-                                );
-                            }
-
-                            // Only send login message if it wasn't already
-                            // sent previously
-                            if !client.login_msg_sent {
-                                new_chat_msgs.push((None, ChatMsg {
-                                    chat_type: ChatType::Online,
-                                    message: format!("[{}] is now online.", &player.alias), // TODO: Localize this
-                                }));
-
-                                client.login_msg_sent = true;
-                            }
-                        } else {
-                            client.notify(ServerMsg::CharacterDataLoadError(String::from(
-                                "Failed to fetch player entity",
-                            )))
-                        }
-                    },
-                    ClientState::Character => client.error_state(RequestStateError::Already),
-                    ClientState::Pending => {},
-                },
-                ClientMsg::ControllerInputs(inputs) => match client.client_state {
-                    ClientState::Connected | ClientState::Registered | ClientState::Spectator => {
-                        client.error_state(RequestStateError::Impossible)
-                    },
-                    ClientState::Character => {
-                        if let Some(controller) = controllers.get_mut(entity) {
-                            controller.inputs.update_with_new(inputs);
-                        }
-                    },
-                    ClientState::Pending => {},
-                },
-                ClientMsg::ControlEvent(event) => match client.client_state {
-                    ClientState::Connected | ClientState::Registered | ClientState::Spectator => {
-                        client.error_state(RequestStateError::Impossible)
-                    },
-                    ClientState::Character => {
-                        // Skip respawn if client entity is alive
-                        if let ControlEvent::Respawn = event {
-                            if stats.get(entity).map_or(true, |s| !s.is_dead) {
-                                continue;
-                            }
-                        }
-                        if let Some(controller) = controllers.get_mut(entity) {
-                            controller.events.push(event);
-                        }
-                    },
-                    ClientState::Pending => {},
-                },
-                ClientMsg::ControlAction(event) => match client.client_state {
-                    ClientState::Connected | ClientState::Registered | ClientState::Spectator => {
-                        client.error_state(RequestStateError::Impossible)
-                    },
-                    ClientState::Character => {
-                        if let Some(controller) = controllers.get_mut(entity) {
-                            controller.actions.push(event);
-                        }
-                    },
-                    ClientState::Pending => {},
-                },
-                ClientMsg::ChatMsg(message) => match client.client_state {
-                    ClientState::Connected => client.error_state(RequestStateError::Impossible),
-                    ClientState::Registered | ClientState::Spectator | ClientState::Character => {
-                        match validate_chat_msg(&message) {
-                            Ok(()) => {
-                                if let Some(from) = uids.get(entity) {
-                                    let mode = chat_modes.get(entity).cloned().unwrap_or_default();
-                                    let msg = mode.new_message(*from, message);
-                                    new_chat_msgs.push((Some(entity), msg));
-                                } else {
-                                    tracing::error!("Could not send message. Missing player uid");
-                                }
-                            },
-                            Err(ChatMsgValidationError::TooLong) => {
-                                let max = MAX_BYTES_CHAT_MSG;
-                                let len = message.len();
-                                tracing::warn!(
-                                    ?len,
-                                    ?max,
-                                    "Recieved a chat message that's too long"
-                                )
-                            },
-                        }
-                    },
-                    ClientState::Pending => {},
-                },
-                ClientMsg::PlayerPhysics { pos, vel, ori } => match client.client_state {
-                    ClientState::Character => {
-                        if force_updates.get(entity).is_none()
-                            && stats.get(entity).map_or(true, |s| !s.is_dead)
-                        {
-                            let _ = positions.insert(entity, pos);
-                            let _ = velocities.insert(entity, vel);
-                            let _ = orientations.insert(entity, ori);
-                        }
-                    },
-                    // Only characters can send positions.
-                    _ => client.error_state(RequestStateError::Impossible),
-                },
-                ClientMsg::BreakBlock(pos) => {
-                    if can_build.get(entity).is_some() {
-                        block_changes.set(pos, Block::empty());
-                    }
-                },
-                ClientMsg::PlaceBlock(pos, block) => {
-                    if can_build.get(entity).is_some() {
-                        block_changes.try_set(pos, block);
-                    }
-                },
-                ClientMsg::TerrainChunkRequest { key } => match client.client_state {
-                    ClientState::Connected | ClientState::Registered => {
-                        client.error_state(RequestStateError::Impossible);
-                    },
-                    ClientState::Spectator | ClientState::Character => {
-                        let in_vd = if let (Some(view_distance), Some(pos)) = (
-                            players.get(entity).and_then(|p| p.view_distance),
-                            positions.get(entity),
-                        ) {
-                            pos.0.xy().map(|e| e as f64).distance(
-                                key.map(|e| e as f64 + 0.5)
-                                    * TerrainChunkSize::RECT_SIZE.map(|e| e as f64),
-                            ) < (view_distance as f64 - 1.0 + 2.5 * 2.0_f64.sqrt())
-                                * TerrainChunkSize::RECT_SIZE.x as f64
-                        } else {
-                            true
-                        };
-                        if in_vd {
-                            match terrain.get_key(key) {
-                                Some(chunk) => client.notify(ServerMsg::TerrainChunkUpdate {
-                                    key,
-                                    chunk: Ok(Box::new(chunk.clone())),
-                                }),
-                                None => server_emitter.emit(ServerEvent::ChunkRequest(entity, key)),
-                            }
-                        }
-                    },
-                    ClientState::Pending => {},
-                },
-                // Always possible.
-                ClientMsg::Ping => client.notify(ServerMsg::Pong),
-                ClientMsg::Pong => {},
-                ClientMsg::Disconnect => {
-                    client.notify(ServerMsg::Disconnect);
-                },
-                ClientMsg::Terminate => {
-                    server_emitter.emit(ServerEvent::ClientDisconnect(entity));
-                },
-                ClientMsg::RequestCharacterList => {
-                    if let Some(player) = players.get(entity) {
-                        character_loader.load_character_list(entity, player.uuid().to_string())
-                    }
-                },
-                ClientMsg::CreateCharacter { alias, tool, body } => {
-                    if let Err(error) = alias_validator.validate(&alias) {
-                        tracing::debug!(
-                            ?error,
-                            ?alias,
-                            "denied alias as it contained a banned word"
-                        );
-                        client.notify(ServerMsg::CharacterActionError(error.to_string()));
-                    } else if let Some(player) = players.get(entity) {
-                        character_loader.create_character(
-                            entity,
-                            player.uuid().to_string(),
-                            alias,
-                            tool,
-                            body,
-                        );
-                    }
-                },
-                ClientMsg::DeleteCharacter(character_id) => {
-                    if let Some(player) = players.get(entity) {
-                        character_loader.delete_character(
-                            entity,
-                            player.uuid().to_string(),
-                            character_id,
-                        );
-                    }
-                },
-                ClientMsg::UnlockSkill(skill) => {
-                    stats
-                        .get_mut(entity)
-                        .map(|s| s.skill_set.unlock_skill(skill));
-                },
-                ClientMsg::RefundSkill(skill) => {
-                    stats
-                        .get_mut(entity)
-                        .map(|s| s.skill_set.refund_skill(skill));
-                },
-                ClientMsg::UnlockSkillGroup(skill_group_type) => {
-                    stats
-                        .get_mut(entity)
-                        .map(|s| s.skill_set.unlock_skill_group(skill_group_type));
-                },
+                _ => unreachable!("Cannot return None,None"),
             }
         }
     }
@@ -443,7 +525,7 @@ impl<'a> System<'a> for Sys {
             force_updates,
             mut stats,
             chat_modes,
-            mut accounts,
+            mut login_provider,
             mut block_changes,
             admin_list,
             mut admins,
@@ -488,7 +570,7 @@ impl<'a> System<'a> for Sys {
                 //TIMEOUT 0.02 ms for msg handling
                 select!(
                     _ = Delay::new(std::time::Duration::from_micros(20)).fuse() => Ok(()),
-                    err = Self::handle_client_msg(
+                    err = Self::handle_all_msg(
                     &mut server_emitter,
                     &mut new_chat_msgs,
                     &player_list,
@@ -504,7 +586,7 @@ impl<'a> System<'a> for Sys {
                     &force_updates,
                     &mut stats,
                     &chat_modes,
-                    &mut accounts,
+                    &mut login_provider,
                     &mut block_changes,
                     &admin_list,
                     &mut admins,

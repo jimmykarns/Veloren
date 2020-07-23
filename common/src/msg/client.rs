@@ -1,3 +1,5 @@
+//! Messages sent from the client to the server
+
 use crate::{
     comp,
     comp::{Skill, SkillGroupType},
@@ -6,25 +8,8 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use vek::*;
 
-/// Messages sent from the client to the server
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClientMsg {
-    Register {
-        view_distance: Option<u32>,
-        token_or_username: String,
-    },
-    RequestCharacterList,
-    CreateCharacter {
-        alias: String,
-        tool: Option<String>,
-        body: comp::Body,
-    },
-    DeleteCharacter(i32),
-    Character(i32),
-    /// Request `ClientState::Registered` from an ingame state
-    ExitIngame,
-    /// Request `ClientState::Spectator` from a registered or ingame state
-    Spectate,
     ControllerInputs(comp::ControllerInputs),
     ControlEvent(comp::ControlEvent),
     ControlAction(comp::ControlAction),
@@ -48,4 +33,24 @@ pub enum ClientMsg {
     UnlockSkill(Skill),
     RefundSkill(Skill),
     UnlockSkillGroup(SkillGroupType),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ClientStateMsg {
+    Register {
+        view_distance: Option<u32>,
+        token_or_username: String,
+    },
+    RequestCharacterList,
+    CreateCharacter {
+        alias: String,
+        tool: Option<String>,
+        body: comp::Body,
+    },
+    DeleteCharacter(i32),
+    /// Request `ClientState::Registered` from an ingame state
+    Character(i32),
+    ExitIngame,
+    /// Request `ClientState::Spectator` from a registered or ingame state
+    Spectate,
 }

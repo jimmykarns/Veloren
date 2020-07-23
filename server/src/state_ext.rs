@@ -202,7 +202,7 @@ impl StateExt for State {
 
         // Tell the client its request was successful.
         if let Some(client) = self.ecs().write_storage::<Client>().get_mut(entity) {
-            client.allow_state(ClientState::Character);
+            client.allow_state_register(ClientState::Character);
         }
     }
 

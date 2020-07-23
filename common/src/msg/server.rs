@@ -55,24 +55,7 @@ pub enum Notification {
 /// Messages sent from the server to the client
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMsg {
-    InitialSync {
-        entity_package: sync::EntityPackage<EcsCompPacket>,
-        server_info: ServerInfo,
-        time_of_day: state::TimeOfDay,
-        world_map: (Vec2<u32>, Vec<u32>),
-        recipe_book: RecipeBook,
-    },
-    /// An error occurred while loading character data
-    CharacterDataLoadError(String),
-    /// A list of characters belonging to the a authenticated player was sent
-    CharacterListUpdate(Vec<CharacterItem>),
-    /// An error occured while creating or deleting a character
-    CharacterActionError(String),
     PlayerListUpdate(PlayerListUpdate),
-    StateAnswer(Result<ClientState, (RequestStateError, ClientState)>),
-    /// Trigger cleanup for when the client goes back to the `Registered` state
-    /// from an ingame state
-    ExitIngameCleanup,
     Ping,
     Pong,
     /// A message to go into the client chat box. The client is responsible for
@@ -96,6 +79,32 @@ pub enum ServerMsg {
     /// Send a popup notification such as "Waypoint Saved"
     Notification(Notification),
     SetViewDistance(u32),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ServerLoginMsg {
+    InitialSync {
+        entity_package: sync::EntityPackage<EcsCompPacket>,
+        server_info: ServerInfo,
+        time_of_day: state::TimeOfDay,
+        world_map: (Vec2<u32>, Vec<u32>),
+        recipe_book: RecipeBook,
+    },
+    TooManyPlayers,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ServerStateMsg {
+    /// An error occurred while loading character data
+    CharacterDataLoadError(String),
+    /// A list of characters belonging to the a authenticated player was sent
+    CharacterListUpdate(Vec<CharacterItem>),
+    /// An error occured while creating or deleting a character
+    CharacterActionError(String),
+    StateAnswer(Result<ClientState, (RequestStateError, ClientState)>),
+    /// Trigger cleanup for when the client goes back to the `Registered` state
+    /// from an ingame state
+    ExitIngameCleanup,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

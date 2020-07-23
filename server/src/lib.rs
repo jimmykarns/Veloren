@@ -33,7 +33,7 @@ use common::{
     cmd::ChatCommand,
     comp::{self, ChatType},
     event::{EventBus, ServerEvent},
-    msg::{ClientState, ServerInfo, ServerMsg},
+    msg::{ClientState, ServerInfo, ServerLoginMsg, ServerMsg, ServerStateMsg},
     recipe::default_recipe_book,
     state::{State, TimeOfDay},
     sync::WorldSyncExt,
@@ -42,7 +42,7 @@ use common::{
 };
 use futures_executor::block_on;
 use futures_timer::Delay;
-use futures_util::{select, FutureExt};
+use futures_util::{join, select, FutureExt};
 use metrics::{ServerMetrics, TickMetrics};
 use network::{Network, Pid, ProtocolAddr};
 use persistence::character::{CharacterLoader, CharacterLoaderResponseType, CharacterUpdater};
@@ -447,13 +447,13 @@ impl Server {
             .messages()
             .for_each(|query_result| match query_result.result {
                 CharacterLoaderResponseType::CharacterList(result) => match result {
-                    Ok(character_list_data) => self.notify_client(
+                    Ok(character_list_data) => self.notify_client_state(
                         query_result.entity,
-                        ServerMsg::CharacterListUpdate(character_list_data),
+                        ServerStateMsg::CharacterListUpdate(character_list_data),
                     ),
-                    Err(error) => self.notify_client(
+                    Err(error) => self.notify_client_state(
                         query_result.entity,
-                        ServerMsg::CharacterActionError(error.to_string()),
+                        ServerStateMsg::CharacterActionError(error.to_string()),
                     ),
                 },
                 CharacterLoaderResponseType::CharacterData(result) => {
@@ -466,9 +466,9 @@ impl Server {
                             // We failed to load data for the character from the DB. Notify the
                             // client to push the state back to character selection, with the error
                             // to display
-                            self.notify_client(
+                            self.notify_client_state(
                                 query_result.entity,
-                                ServerMsg::CharacterDataLoadError(error.to_string()),
+                                ServerStateMsg::CharacterDataLoadError(error.to_string()),
                             );
 
                             // Clean up the entity data on the server
@@ -634,17 +634,25 @@ impl Server {
             };
             debug!("New Participant connected to the server");
 
-            let singleton_stream = match select!(
+            let (registration_stream, default_stream, chunks_stream) = match select!(
                 _ = Delay::new(TIMEOUT*100).fuse() => None,
-                sr = participant.opened().fuse() => Some(sr),
+                streams = async {join!(participant.opened(), participant.opened(), participant.opened())}.fuse() => Some(streams),
             ) {
                 None => {
                     warn!("Either Slowloris attack or very slow client, dropping");
                     return Ok(()); //return rather then continue to give removes a tick more to send data.
                 },
-                Some(Ok(s)) => s,
-                Some(Err(e)) => {
-                    warn!(?e, "Failed to open a Stream from remote client. dropping");
+                Some((Ok(s1), Ok(s2), Ok(s3))) => (s1, s2, s3),
+                Some((e1, e2, e3)) => {
+                    if let Err(e) = e1 {
+                        warn!(?e, "Failed to open a Stream1 from remote client. dropping");
+                    }
+                    if let Err(e) = e2 {
+                        warn!(?e, "Failed to open a Stream2 from remote client. dropping");
+                    }
+                    if let Err(e) = e3 {
+                        warn!(?e, "Failed to open a Stream3 from remote client. dropping");
+                    }
                     continue;
                 },
             };
@@ -652,7 +660,9 @@ impl Server {
             let mut client = Client {
                 client_state: ClientState::Connected,
                 participant: std::sync::Mutex::new(Some(participant)),
-                singleton_stream,
+                registration_stream,
+                default_stream,
+                chunks_stream,
                 network_error: std::sync::atomic::AtomicBool::new(false),
                 last_ping: self.state.get_time(),
                 login_msg_sent: false,
@@ -662,7 +672,7 @@ impl Server {
                 <= self.state.ecs().read_storage::<Client>().join().count()
             {
                 // Note: in this case the client is dropped
-                client.notify(ServerMsg::TooManyPlayers);
+                client.notify_register(ServerLoginMsg::TooManyPlayers);
             } else {
                 let entity = self
                     .state
@@ -678,7 +688,7 @@ impl Server {
                     .write_storage::<Client>()
                     .get_mut(entity)
                     .unwrap()
-                    .notify(ServerMsg::InitialSync {
+                    .notify_register(ServerLoginMsg::InitialSync {
                         // Send client their entity
                         entity_package: TrackedComps::fetch(&self.state.ecs())
                             .create_entity_package(entity, None, None, None),
@@ -694,12 +704,15 @@ impl Server {
         }
     }
 
-    pub fn notify_client<S>(&self, entity: EcsEntity, msg: S)
-    where
-        S: Into<ServerMsg>,
-    {
+    pub fn notify_client(&self, entity: EcsEntity, msg: ServerMsg) {
         if let Some(client) = self.state.ecs().write_storage::<Client>().get_mut(entity) {
-            client.notify(msg.into())
+            client.notify(msg)
+        }
+    }
+
+    pub fn notify_client_state(&self, entity: EcsEntity, msg: ServerStateMsg) {
+        if let Some(client) = self.state.ecs().write_storage::<Client>().get_mut(entity) {
+            client.notify_state(msg)
         }
     }
 
