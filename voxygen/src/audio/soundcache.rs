@@ -16,7 +16,7 @@ impl AsRef<[u8]> for Sound {
 /// Wrapper for decoded audio data
 impl Sound {
     pub fn load(filename: &str) -> Result<Sound, assets::Error> {
-        let mut file = assets::load_file(filename, &["wav"])?;
+        let mut file = assets::load_file(filename, &["wav", "ogg"])?;
         let mut buf = Vec::new();
         file.read_to_end(&mut buf)?;
         Ok(Sound(Arc::new(buf)))

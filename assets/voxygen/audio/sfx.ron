@@ -14,42 +14,45 @@
             ],
             threshold: 0.25,
         ),
-        ExperienceGained: (
-            files: [
-                "voxygen.audio.sfx.glider_close",
-            ],
-            threshold: 0.5,
-        ),
+        // not recommended, because it plays on mob death, or other such event.
+        //ExperienceGained: (
+        //    files: [
+        //        "voxygen.audio.sfx.glider_close",
+        //    ],
+        //    threshold: 0.5,
+        //),
         LevelUp:(
             files: [
-                "voxygen.audio.sfx.glider_open",
+                "voxygen.audio.sfx.character.level_sound",
             ],
             threshold: 0.5,
         ),
-        Jump: ( // Event Missing or not implemented?
-            files: [
-                "voxygen.audio.sfx.glider_close",
-            ],
-            threshold: 0.25,
-        ),
-        Fall: ( // Event Missing or not implemented?
-            files: [
-                "voxygen.audio.sfx.sword_out",
-            ],
-            threshold: 0.25,
-        ),
-        Roll: (
-            files: [
-                "voxygen.audio.sfx.glider_close",
-            ],
-            threshold: 0.25,
-        ),
-        Climb: (
-            files: [
-                "voxygen.audio.sfx.glider_close",
-            ],
-            threshold: 0.25,
-        ),
+        //Jump: ( // Event Missing or not implemented?
+        //    files: [
+        //        "voxygen.audio.sfx.glider_close",
+        //    ],
+        //    threshold: 0.25,
+        //),
+        //Fall: ( // Event Missing or not implemented?
+        //    files: [
+        //        "voxygen.audio.sfx.sword_out",
+        //    ],
+        //    threshold: 0.25,
+        //),
+        //Roll: (
+        //    files: [
+        //        // TODO: break apart into short sound variations
+        //        "voxygen.audio.sfx.character.rolling_sfx",
+        //    ],
+        //    threshold: 0.25,
+        //),
+        //Climb: (
+        //    files: [
+        //        // TODO: break apart into short sound variations
+        //        "voxygen.audio.sfx.character.climbing_sound",
+        //    ],
+        //    threshold: 0.25,
+        //),
         GliderOpen: (
             files: [
                 "voxygen.audio.sfx.glider_open",
@@ -86,25 +89,29 @@
         ),
         Attack(TripleStrike(First), Sword): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.7,
         ),
         Attack(TripleStrike(Second), Sword): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.7,
         ),
         Attack(TripleStrike(Third), Sword): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.7,
         ),
         Attack(DashMelee, Sword): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.8,
         ),
@@ -132,13 +139,15 @@
         ),
         Attack(BasicMelee, Hammer): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.7,
         ),
         Attack(LeapMelee, Hammer): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.8,
         ),
@@ -166,25 +175,29 @@
         ),
         Attack(TripleStrike(First), Axe): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.7,
         ),
         Attack(TripleStrike(Second), Axe): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.7,
         ),
         Attack(TripleStrike(Third), Axe): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.7,
         ),
-        Attack(BasicMelee, Axe): (
+        Attack(SpinMelee, Axe): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.8,
         ),
@@ -212,7 +225,8 @@
         ),
         Attack(BasicMelee, Staff): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.8,
         ),
@@ -246,7 +260,8 @@
         ),
         Attack(BasicRanged, Bow): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.8,
         ),
@@ -274,13 +289,15 @@
         ),
         Attack(BasicMelee, Dagger): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.8,
         ),
         Attack(DashMelee, Dagger): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.8,
         ),
@@ -308,7 +325,8 @@
         ),
         Attack(BasicMelee, Shield): (
             files: [
-                "voxygen.audio.sfx.inventory.pickup_sword",
+                "voxygen.audio.sfx.abilities.swing_sword",
+                "voxygen.audio.sfx.abilities.swing",
             ],
             threshold: 0.8,
         ),
