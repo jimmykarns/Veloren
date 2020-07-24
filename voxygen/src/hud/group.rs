@@ -1,7 +1,13 @@
-use super::{img_ids::Imgs, Show, TEXT_COLOR, TEXT_COLOR_3, TEXT_COLOR_GREY, UI_MAIN};
+use super::{
+    img_ids::{Imgs, ImgsRot},
+    Show, TEXT_COLOR, TEXT_COLOR_3, TEXT_COLOR_GREY, UI_MAIN,
+};
 
 use crate::{
-    i18n::VoxygenLocalization, settings::Settings, ui::fonts::ConrodVoxygenFonts, window::GameInput,
+    i18n::VoxygenLocalization,
+    settings::Settings,
+    ui::{fonts::ConrodVoxygenFonts, ImageFrame, Tooltip, TooltipManager, Tooltipable},
+    window::GameInput,
 };
 use client::{self, Client};
 use common::{
@@ -12,13 +18,13 @@ use conrod_core::{
     color,
     position::{Place, Relative},
     widget::{self, Button, Image, Rectangle, Scrollbar, Text},
-    widget_ids, Colorable, Labelable, Positionable, Sizeable, Widget, WidgetCommon,
+    widget_ids, Color, Colorable, Labelable, Positionable, Sizeable, Widget, WidgetCommon,
 };
 use specs::WorldExt;
-use std::time::Instant;
 
 widget_ids! {
     pub struct Ids {
+        group_button,
         bg,
         title,
         close,
@@ -44,6 +50,7 @@ pub struct State {
     selected_member: Option<Uid>,
 }
 
+const TOOLTIP_UPSHIFT: f64 = 40.0;
 #[derive(WidgetCommon)]
 pub struct Group<'a> {
     show: &'a mut Show,
@@ -52,6 +59,8 @@ pub struct Group<'a> {
     imgs: &'a Imgs,
     fonts: &'a ConrodVoxygenFonts,
     localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
+    tooltip_manager: &'a mut TooltipManager,
+    rot_imgs: &'a ImgsRot,
 
     #[conrod(common_builder)]
     common: widget::CommonBuilder,
@@ -65,12 +74,16 @@ impl<'a> Group<'a> {
         imgs: &'a Imgs,
         fonts: &'a ConrodVoxygenFonts,
         localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
+        tooltip_manager: &'a mut TooltipManager,
+        rot_imgs: &'a ImgsRot,
     ) -> Self {
         Self {
             show,
             client,
             settings,
             imgs,
+            rot_imgs,
+            tooltip_manager,
             fonts,
             localized_strings,
             common: widget::CommonBuilder::default(),
@@ -106,6 +119,26 @@ impl<'a> Widget for Group<'a> {
         let widget::UpdateArgs { state, ui, .. } = args;
 
         let mut events = Vec::new();
+        let localized_strings = self.localized_strings;
+
+        let button_tooltip = Tooltip::new({
+            // Edge images [t, b, r, l]
+            // Corner images [tr, tl, br, bl]
+            let edge = &self.rot_imgs.tt_side;
+            let corner = &self.rot_imgs.tt_corner;
+            ImageFrame::new(
+                [edge.cw180, edge.none, edge.cw270, edge.cw90],
+                [corner.none, corner.cw270, corner.cw90, corner.cw180],
+                Color::Rgba(0.08, 0.07, 0.04, 1.0),
+                5.0,
+            )
+        })
+        .title_font_size(self.fonts.cyri.scale(15))
+        .parent(ui.window)
+        .desc_font_size(self.fonts.cyri.scale(12))
+        .title_text_color(TEXT_COLOR)
+        .font_id(self.fonts.cyri.conrod_id)
+        .desc_text_color(TEXT_COLOR);
 
         // Don't show pets
         let group_members = self
@@ -117,7 +150,6 @@ impl<'a> Widget for Group<'a> {
                 Role::Pet => None,
             })
             .collect::<Vec<_>>();
-
         // Not considered in group for ui purposes if it is just pets
         let in_group = !group_members.is_empty();
 
@@ -149,27 +181,51 @@ impl<'a> Widget for Group<'a> {
         // TODO show something to the player when they click on the group button while
         // they are not in a group so that it doesn't look like the button is
         // broken
-
-        if in_group || open_invite.is_some() {
+        if self.show.group_menu || open_invite.is_some() {
             // Frame
             Rectangle::fill_with([220.0, 230.0], color::Color::Rgba(0.0, 0.0, 0.0, 0.8))
                 .bottom_left_with_margins_on(ui.window, 220.0, 10.0)
                 .set(state.ids.bg, ui);
-            if open_invite.is_some() {
-                // yellow animated border
-            }
         }
-
+        if open_invite.is_some() {
+            // Group Menu button
+            Button::image(self.imgs.group_icon)
+                .w_h(49.0, 26.0)
+                .bottom_left_with_margins_on(ui.window, 190.0, 10.0)
+                .set(state.ids.group_button, ui);
+        }
         // Buttons
         if let Some((group_name, leader)) = self.client.group_info().filter(|_| in_group) {
-            let selected = state.selected_member;
-            Text::new(&group_name)
-                .mid_top_with_margin_on(state.ids.bg, 2.0)
-                .font_size(20)
-                .font_id(self.fonts.cyri.conrod_id)
-                .color(TEXT_COLOR)
-                .set(state.ids.title, ui);
-            if Button::image(self.imgs.button)
+            if Button::image(if self.show.group_menu {
+                self.imgs.group_icon_press
+            } else {
+                self.imgs.group_icon
+            })
+            .w_h(49.0, 26.0)
+            .bottom_left_with_margins_on(ui.window, 190.0, 10.0)
+            .hover_image(self.imgs.group_icon_hover)
+            .press_image(self.imgs.group_icon_press)
+            .with_tooltip(
+                self.tooltip_manager,
+                &localized_strings.get("hud.group"),
+                "",
+                &button_tooltip,
+            )
+            .bottom_offset(TOOLTIP_UPSHIFT)
+            .set(state.ids.group_button, ui)
+            .was_clicked()
+            {
+                self.show.group_menu = !self.show.group_menu;
+            };
+            if self.show.group_menu {
+                let selected = state.selected_member;
+                Text::new(&group_name)
+                    .mid_top_with_margin_on(state.ids.bg, 2.0)
+                    .font_size(20)
+                    .font_id(self.fonts.cyri.conrod_id)
+                    .color(TEXT_COLOR)
+                    .set(state.ids.title, ui);
+                if Button::image(self.imgs.button)
                 .w_h(90.0, 22.0)
                 .top_right_with_margins_on(state.ids.bg, 30.0, 5.0)
                 .hover_image(self.imgs.button)
@@ -180,47 +236,47 @@ impl<'a> Widget for Group<'a> {
                 .label_font_size(self.fonts.cyri.scale(10))
                 .set(state.ids.btn_friend, ui)
                 .was_clicked()
-            {};
-            if Button::image(self.imgs.button)
-                .w_h(90.0, 22.0)
-                .bottom_right_with_margins_on(state.ids.bg, 5.0, 5.0)
-                .hover_image(self.imgs.button_hover)
-                .press_image(self.imgs.button_press)
-                .label(&self.localized_strings.get("hud.group.leave"))
-                .label_color(TEXT_COLOR)
-                .label_font_id(self.fonts.cyri.conrod_id)
-                .label_font_size(self.fonts.cyri.scale(10))
-                .set(state.ids.btn_leave, ui)
-                .was_clicked()
-            {
-                events.push(Event::LeaveGroup);
-            };
-            // Group leader functions
-            if my_uid == Some(leader) {
+                {};
                 if Button::image(self.imgs.button)
                     .w_h(90.0, 22.0)
-                    .mid_bottom_with_margin_on(state.ids.btn_friend, -27.0)
+                    .bottom_right_with_margins_on(state.ids.bg, 5.0, 5.0)
                     .hover_image(self.imgs.button_hover)
                     .press_image(self.imgs.button_press)
-                    .label(&self.localized_strings.get("hud.group.assign_leader"))
-                    .label_color(if state.selected_member.is_some() {
-                        TEXT_COLOR
-                    } else {
-                        TEXT_COLOR_GREY
-                    })
+                    .label(&self.localized_strings.get("hud.group.leave"))
+                    .label_color(TEXT_COLOR)
                     .label_font_id(self.fonts.cyri.conrod_id)
                     .label_font_size(self.fonts.cyri.scale(10))
-                    .set(state.ids.btn_leader, ui)
+                    .set(state.ids.btn_leave, ui)
                     .was_clicked()
                 {
-                    if let Some(uid) = selected {
-                        events.push(Event::AssignLeader(uid));
-                        state.update(|s| {
-                            s.selected_member = None;
-                        });
-                    }
+                    events.push(Event::LeaveGroup);
                 };
-                if Button::image(self.imgs.button)
+                // Group leader functions
+                if my_uid == Some(leader) {
+                    if Button::image(self.imgs.button)
+                        .w_h(90.0, 22.0)
+                        .mid_bottom_with_margin_on(state.ids.btn_friend, -27.0)
+                        .hover_image(self.imgs.button_hover)
+                        .press_image(self.imgs.button_press)
+                        .label(&self.localized_strings.get("hud.group.assign_leader"))
+                        .label_color(if state.selected_member.is_some() {
+                            TEXT_COLOR
+                        } else {
+                            TEXT_COLOR_GREY
+                        })
+                        .label_font_id(self.fonts.cyri.conrod_id)
+                        .label_font_size(self.fonts.cyri.scale(10))
+                        .set(state.ids.btn_leader, ui)
+                        .was_clicked()
+                    {
+                        if let Some(uid) = selected {
+                            events.push(Event::AssignLeader(uid));
+                            state.update(|s| {
+                                s.selected_member = None;
+                            });
+                        }
+                    };
+                    if Button::image(self.imgs.button)
                     .w_h(90.0, 22.0)
                     .mid_bottom_with_margin_on(state.ids.btn_leader, -27.0)
                     .hover_image(self.imgs.button)
@@ -231,105 +287,107 @@ impl<'a> Widget for Group<'a> {
                     .label_font_size(self.fonts.cyri.scale(10))
                     .set(state.ids.btn_link, ui)
                     .was_clicked()
-                {};
-                if Button::image(self.imgs.button)
-                    .w_h(90.0, 22.0)
-                    .mid_bottom_with_margin_on(state.ids.btn_link, -27.0)
-                    .down_from(state.ids.btn_link, 5.0)
-                    .hover_image(self.imgs.button_hover)
-                    .press_image(self.imgs.button_press)
-                    .label(&self.localized_strings.get("hud.group.kick"))
-                    .label_color(if state.selected_member.is_some() {
-                        TEXT_COLOR
-                    } else {
-                        TEXT_COLOR_GREY
+                    {};
+                    if Button::image(self.imgs.button)
+                        .w_h(90.0, 22.0)
+                        .mid_bottom_with_margin_on(state.ids.btn_link, -27.0)
+                        .down_from(state.ids.btn_link, 5.0)
+                        .hover_image(self.imgs.button_hover)
+                        .press_image(self.imgs.button_press)
+                        .label(&self.localized_strings.get("hud.group.kick"))
+                        .label_color(if state.selected_member.is_some() {
+                            TEXT_COLOR
+                        } else {
+                            TEXT_COLOR_GREY
+                        })
+                        .label_font_id(self.fonts.cyri.conrod_id)
+                        .label_font_size(self.fonts.cyri.scale(10))
+                        .set(state.ids.btn_kick, ui)
+                        .was_clicked()
+                    {
+                        if let Some(uid) = selected {
+                            events.push(Event::Kick(uid));
+                            state.update(|s| {
+                                s.selected_member = None;
+                            });
+                        }
+                    };
+                }
+                // Group Members, only character names, cut long names when they exceed the
+                // button size
+                let group_size = group_members.len() + 1;
+                if state.ids.members.len() < group_size {
+                    state.update(|s| {
+                        s.ids
+                            .members
+                            .resize(group_size, &mut ui.widget_id_generator())
                     })
-                    .label_font_id(self.fonts.cyri.conrod_id)
-                    .label_font_size(self.fonts.cyri.scale(10))
-                    .set(state.ids.btn_kick, ui)
-                    .was_clicked()
+                }
+                // Scrollable area for group member names
+                Rectangle::fill_with([110.0, 192.0], color::TRANSPARENT)
+                    .top_left_with_margins_on(state.ids.bg, 30.0, 5.0)
+                    .scroll_kids()
+                    .scroll_kids_vertically()
+                    .set(state.ids.scroll_area, ui);
+                Scrollbar::y_axis(state.ids.scroll_area)
+                    .thickness(5.0)
+                    .rgba(0.33, 0.33, 0.33, 1.0)
+                    .set(state.ids.scrollbar, ui);
+                // List member names
+                for (i, &uid) in self
+                    .client
+                    .uid()
+                    .iter()
+                    .chain(group_members.iter().copied())
+                    .enumerate()
                 {
-                    if let Some(uid) = selected {
-                        events.push(Event::Kick(uid));
-                        state.update(|s| {
-                            s.selected_member = None;
-                        });
-                    }
-                };
-            }
-            // Group Members, only character names, cut long names when they exceed the
-            // button size
-            let group_size = group_members.len() + 1;
-            if state.ids.members.len() < group_size {
-                state.update(|s| {
-                    s.ids
-                        .members
-                        .resize(group_size, &mut ui.widget_id_generator())
-                })
-            }
-            // Scrollable area for group member names
-            Rectangle::fill_with([110.0, 192.0], color::TRANSPARENT)
-                .top_left_with_margins_on(state.ids.bg, 30.0, 5.0)
-                .scroll_kids()
-                .scroll_kids_vertically()
-                .set(state.ids.scroll_area, ui);
-            Scrollbar::y_axis(state.ids.scroll_area)
-                .thickness(5.0)
-                .rgba(0.33, 0.33, 0.33, 1.0)
-                .set(state.ids.scrollbar, ui);
-            // List member names
-            for (i, &uid) in self
-                .client
-                .uid()
-                .iter()
-                .chain(group_members.iter().copied())
-                .enumerate()
-            {
-                let selected = state.selected_member.map_or(false, |u| u == uid);
-                let char_name = uid_to_name_text(uid, &self.client);
+                    let selected = state.selected_member.map_or(false, |u| u == uid);
+                    let char_name = uid_to_name_text(uid, &self.client);
 
-                // TODO: Do something special visually if uid == leader
-                if Button::image(if selected {
-                    self.imgs.selection
-                } else {
-                    self.imgs.nothing
-                })
-                .w_h(100.0, 22.0)
-                .and(|w| {
-                    if i == 0 {
-                        w.top_left_with_margins_on(state.ids.scroll_area, 5.0, 0.0)
+                    // TODO: Do something special visually if uid == leader
+                    if Button::image(if selected {
+                        self.imgs.selection
                     } else {
-                        w.down_from(state.ids.members[i - 1], 10.0)
-                    }
-                })
-                .hover_image(self.imgs.selection_hover)
-                .press_image(self.imgs.selection_press)
-                .crop_kids()
-                .label_x(Relative::Place(Place::Start(Some(4.0))))
-                .label(&char_name)
-                .label_color(TEXT_COLOR)
-                .label_font_id(self.fonts.cyri.conrod_id)
-                .label_font_size(self.fonts.cyri.scale(12))
-                .set(state.ids.members[i], ui)
-                .was_clicked()
-                {
-                    // Do nothing when clicking yourself
-                    if Some(uid) != my_uid {
-                        // Select the group member
-                        state.update(|s| {
-                            s.selected_member = if selected { None } else { Some(uid) }
-                        });
-                    }
-                };
+                        self.imgs.nothing
+                    })
+                    .w_h(100.0, 22.0)
+                    .and(|w| {
+                        if i == 0 {
+                            w.top_left_with_margins_on(state.ids.scroll_area, 5.0, 0.0)
+                        } else {
+                            w.down_from(state.ids.members[i - 1], 10.0)
+                        }
+                    })
+                    .hover_image(self.imgs.selection_hover)
+                    .press_image(self.imgs.selection_press)
+                    .crop_kids()
+                    .label_x(Relative::Place(Place::Start(Some(4.0))))
+                    .label(&char_name)
+                    .label_color(TEXT_COLOR)
+                    .label_font_id(self.fonts.cyri.conrod_id)
+                    .label_font_size(self.fonts.cyri.scale(12))
+                    .set(state.ids.members[i], ui)
+                    .was_clicked()
+                    {
+                        // Do nothing when clicking yourself
+                        if Some(uid) != my_uid {
+                            // Select the group member
+                            state.update(|s| {
+                                s.selected_member = if selected { None } else { Some(uid) }
+                            });
+                        }
+                    };
+                }
+                // Maximum of 6 Players/Npcs per Group
+                // Player pets count as group members, too. They are not counted
+                // into the maximum group size.
             }
-            // Maximum of 6 Players/Npcs per Group
-            // Player pets count as group members, too. They are not counted
-            // into the maximum group size.
         }
         if let Some(invite_uid) = open_invite {
             self.show.group = true; // Auto open group menu
             // TODO: add group name here too
             // Invite text
+
             let name = uid_to_name_text(invite_uid, &self.client);
             let invite_text = self
                 .localized_strings
@@ -337,7 +395,7 @@ impl<'a> Widget for Group<'a> {
                 .replace("{name}", &name);
             Text::new(&invite_text)
                 .mid_top_with_margin_on(state.ids.bg, 20.0)
-                .font_size(20)
+                .font_size(12)
                 .font_id(self.fonts.cyri.conrod_id)
                 .color(TEXT_COLOR)
                 .set(state.ids.title, ui);
@@ -364,6 +422,7 @@ impl<'a> Widget for Group<'a> {
                 .was_clicked()
             {
                 events.push(Event::Accept);
+                self.show.group_menu = true;
             };
             // Decline button
             let decline_key = self
@@ -390,6 +449,7 @@ impl<'a> Widget for Group<'a> {
                 events.push(Event::Decline);
             };
         }
+
         events
     }
 }

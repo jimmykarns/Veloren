@@ -405,25 +405,6 @@ impl<'a> Widget for Buttons<'a> {
                 .set(state.ids.crafting_text, ui);
         }
 
-        // Group
-        if Button::image(self.imgs.group_icon)
-            .w_h(49.0, 26.0)
-            .bottom_left_with_margins_on(ui.window, 190.0, 10.0)
-            .hover_image(self.imgs.group_icon_hover)
-            .press_image(self.imgs.group_icon_press)
-            .with_tooltip(
-                self.tooltip_manager,
-                &localized_strings.get("hud.group"),
-                "",
-                &button_tooltip,
-            )
-            .bottom_offset(TOOLTIP_UPSHIFT)
-            .set(state.ids.group_button, ui)
-            .was_clicked()
-        {
-            return Some(Event::ToggleGroup);
-        }
-
         None
     }
 }

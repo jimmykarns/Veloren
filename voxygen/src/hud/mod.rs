@@ -368,6 +368,8 @@ pub struct Show {
     social: bool,
     spell: bool,
     group: bool,
+    group_menu: bool,
+    group_invite: bool,
     esc_menu: bool,
     open_windows: Windows,
     map: bool,
@@ -622,6 +624,8 @@ impl Hud {
                 social: false,
                 spell: false,
                 group: false,
+                group_menu: false,
+                group_invite: false,
                 mini_map: true,
                 settings_tab: SettingsTab::Interface,
                 social_tab: SocialTab::Online,
@@ -1921,25 +1925,26 @@ impl Hud {
             }
         }
         // Group Window
-        if self.show.group {
-            for event in Group::new(
-                &mut self.show,
-                client,
-                &global_state.settings,
-                &self.imgs,
-                &self.fonts,
-                &self.voxygen_i18n,
-            )
-            .set(self.ids.group_window, ui_widgets)
-            {
-                match event {
-                    group::Event::Close => self.show.social(false),
-                    group::Event::Accept => events.push(Event::AcceptInvite),
-                    group::Event::Decline => events.push(Event::DeclineInvite),
-                    group::Event::Kick(uid) => events.push(Event::KickMember(uid)),
-                    group::Event::LeaveGroup => events.push(Event::LeaveGroup),
-                    group::Event::AssignLeader(uid) => events.push(Event::AssignLeader(uid)),
-                }
+
+        for event in Group::new(
+            &mut self.show,
+            client,
+            &global_state.settings,
+            &self.imgs,
+            &self.fonts,
+            &self.voxygen_i18n,
+            tooltip_manager,
+            &self.rot_imgs,
+        )
+        .set(self.ids.group_window, ui_widgets)
+        {
+            match event {
+                group::Event::Close => {},
+                group::Event::Accept => events.push(Event::AcceptInvite),
+                group::Event::Decline => events.push(Event::DeclineInvite),
+                group::Event::Kick(uid) => events.push(Event::KickMember(uid)),
+                group::Event::LeaveGroup => events.push(Event::LeaveGroup),
+                group::Event::AssignLeader(uid) => events.push(Event::AssignLeader(uid)),
             }
         }
 
