@@ -44,6 +44,9 @@ image_ids_ice! {
         button_hover: "voxygen.element.buttons.button_hover",
         button_press: "voxygen.element.buttons.button_press",
         input_bg: "voxygen.element.misc_bg.textbox",
+        selection: "voxygen.element.frames.selection",
+        selection_hover: "voxygen.element.frames.selection_hover",
+        selection_press: "voxygen.element.frames.selection_press",
     }
 }
 
@@ -156,7 +159,7 @@ enum Message {
     #[cfg(feature = "singleplayer")]
     Singleplayer,
     Multiplayer,
-    LangaugeChanged(usize),
+    LanguageChanged(usize),
     OpenLanguageMenu,
     Username(String),
     Password(String),
@@ -285,6 +288,7 @@ impl Controls {
             ),
             Screen::Servers { screen } => screen.view(
                 &self.fonts,
+                &self.imgs,
                 &settings.networking.servers,
                 self.selected_server_index,
                 &self.i18n,
@@ -360,7 +364,7 @@ impl Controls {
                 });
             },
             Message::Username(new_value) => self.login_info.username = new_value,
-            Message::LangaugeChanged(new_value) => {
+            Message::LanguageChanged(new_value) => {
                 self.selected_language_index = Some(new_value);
                 events.push(Event::ChangeLanguage(language_metadatas.remove(new_value)));
             },
