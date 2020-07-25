@@ -1,16 +1,14 @@
 use crate::{client::Client, Server, SpawnPoint, StateExt};
 use common::{
     assets,
-    comp::{
-        self, item::lottery::Lottery, object, Body, Damage, DamageSource, HealthChange,
-        HealthSource, Player, Stats,
-    },
+    comp::{self, object, Body, Damage, DamageSource, HealthChange, HealthSource, Player, Stats},
     msg::{PlayerListUpdate, ServerMsg},
     state::BlockChange,
     sync::{Uid, WorldSyncExt},
     sys::combat::BLOCK_ANGLE,
     terrain::{Block, TerrainGrid},
     vol::{ReadVol, Vox},
+    lottery::Lottery,
 };
 use specs::{join::Join, Entity as EcsEntity, WorldExt};
 use tracing::error;
@@ -121,7 +119,7 @@ pub fn handle_destroy(server: &mut Server, entity: EcsEntity, cause: HealthSourc
             item_drops.remove(entity);
             item_drop.0
         } else {
-            let chosen = assets::load_expect::<Lottery<_>>("common.loot_table");
+            let chosen = assets::load_expect::<Lottery<String>>("common.loot_table");
             let chosen = chosen.choose();
 
             assets::load_expect_cloned(chosen)
