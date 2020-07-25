@@ -12,6 +12,9 @@ use serde_derive::{Deserialize, Serialize};
 use std::fmt;
 use tracing::{error, info, warn};
 use vek::*;
+use imgui_winit_support::{WinitPlatform, HiDpiMode};
+use imgui::{Context, FontSource, FontConfig, FontGlyphRanges};
+use imgui_gfx_renderer::Shaders;
 
 /// Represents a key that the game recognises after input mapping.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
@@ -490,7 +493,7 @@ pub struct Window {
     message_receiver: channel::Receiver<String>,
     // Used for screenshots & fullscreen toggle to deduplicate/postpone to after event handler
     take_screenshot: bool,
-    toggle_fullscreen: bool,
+    toggle_fullscreen: bool
 }
 
 impl Window {
@@ -512,7 +515,7 @@ impl Window {
             false,
         );
 
-        let (window, device, factory, win_color_view, win_depth_view) =
+        let (window, device, mut factory, win_color_view, win_depth_view) =
             glutin::ContextBuilder::new()
                 .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGl, (3, 2)))
                 .with_vsync(false)
@@ -520,6 +523,35 @@ impl Window {
                 .build_windowed(win_builder, &event_loop)
                 .map_err(|err| Error::BackendError(Box::new(err)))?
                 .init_gfx::<WinColorFmt, WinDepthFmt>();
+
+        let mut imgui = Context::create();
+
+        imgui.set_ini_filename(None);
+        let mut imgui_winit_platform = WinitPlatform::init(&mut imgui);
+        imgui_winit_platform.attach_window(imgui.io_mut(), window.window(), HiDpiMode::Rounded);
+        let hidpi_factor = imgui_winit_platform.hidpi_factor();
+        let font_size = (13.0 * hidpi_factor) as f32;
+        imgui.fonts().add_font(&[
+            FontSource::DefaultFontData {
+                config: Some(FontConfig {
+                    size_pixels: font_size,
+                    ..FontConfig::default()
+                }),
+            },
+            FontSource::TtfData {
+                data: include_bytes!("resources/mplus-1p-regular.ttf"),
+                size_pixels: font_size,
+                config: Some(FontConfig {
+                    rasterizer_multiply: 1.75,
+                    glyph_ranges: FontGlyphRanges::japanese(),
+                    ..FontConfig::default()
+                }),
+            },
+        ]);
+
+        imgui.io_mut().font_global_scale = (1.0 / hidpi_factor) as f32;
+        let imgui_renderer = imgui_gfx_renderer::Renderer::init(&mut imgui, &mut factory, Shaders::GlSl150)
+            .expect("Failed to initialize renderer");
 
         let vendor = device.get_info().platform_name.vendor;
         let renderer = device.get_info().platform_name.renderer;
@@ -573,6 +605,9 @@ impl Window {
                 settings.graphics.aa_mode,
                 settings.graphics.cloud_mode,
                 settings.graphics.fluid_mode,
+                imgui,
+                imgui_winit_platform,
+                imgui_renderer
             )?,
             window,
             cursor_grabbed: false,
@@ -612,6 +647,10 @@ impl Window {
     pub fn renderer(&self) -> &Renderer { &self.renderer }
 
     pub fn renderer_mut(&mut self) -> &mut Renderer { &mut self.renderer }
+
+    pub fn render_imgui(&mut self) {
+        self.renderer.render_imgui(&self.window.window());
+    }
 
     pub fn resolve_deduplicated_events(&mut self, settings: &mut Settings) {
         // Handle screenshots and toggling fullscreen
@@ -1093,6 +1132,10 @@ impl Window {
     }
 
     pub fn send_event(&mut self, event: Event) { self.events.push(event) }
+
+    pub fn handle_imgui_events(&mut self, event: &winit::event::Event<()>) {
+        self.renderer.handle_imgui_events(self.window.window(), event);
+    }
 
     pub fn take_screenshot(&mut self, settings: &Settings) {
         match self.renderer.create_screenshot() {

@@ -18,7 +18,10 @@ fn main() {
                 .add_directive(LevelFilter::INFO.into());
             for s in env.split(',').into_iter() {
                 match s.parse() {
-                    Ok(d) => filter = filter.add_directive(d),
+                    Ok(d) => {
+                        println!("Adding filter directive: {}", d);
+                        filter = filter.add_directive(d);
+                    },
                     Err(err) => println!("WARN ignoring log directive: `{}`: {}", s, err),
                 };
             }

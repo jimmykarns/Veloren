@@ -26,6 +26,8 @@ pub fn run(mut global_state: GlobalState, event_loop: EventLoop) {
         // Continously run loop since we handle sleeping
         *control_flow = winit::event_loop::ControlFlow::Poll;
 
+        global_state.window.handle_imgui_events(&event);
+
         // Get events for the ui.
         if let Some(event) = ui::Event::try_from(&event, global_state.window.window()) {
             global_state.window.send_event(Event::Ui(event));
@@ -138,8 +140,13 @@ fn handle_main_events_cleared(
 
     if let Some(last) = states.last_mut() {
         global_state.window.renderer_mut().clear();
+
+        // Render the game
         last.render(global_state.window.renderer_mut(), &global_state.settings);
-        // Finish the frame.
+
+        // Render imgui on top
+        global_state.window.render_imgui();
+
         global_state.window.renderer_mut().flush();
         global_state
             .window

@@ -71,9 +71,9 @@ checksum = "b8052e2d8aabbb8d556d6abbcce2a22b9590996c5f849b9c7ce4544a2e3b984e"
 
 [[package]]
 name = "ansi_term"
-version = "0.11.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee49baf6cb617b853aa8d93bf420db2383fab46d314482ca2803b40d5fde979b"
+checksum = "d52a9bb7ec0cf484c551830a7ce27bd20d67eac647e1befb56b0be4ee39a55d2"
 dependencies = [
  "winapi 0.3.8",
 ]
@@ -2051,6 +2051,49 @@ dependencies = [
  "num-rational",
  "num-traits",
  "png",
+]
+
+[[package]]
+name = "imgui"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fdb2bcc7e498e78137ce28705ae836d69e36ee2eac89d0d926cfabfcf550570"
+dependencies = [
+ "bitflags",
+ "gfx",
+ "imgui-sys",
+ "lazy_static",
+ "parking_lot 0.10.2",
+]
+
+[[package]]
+name = "imgui-gfx-renderer"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1865f465732ee450bcc8d1c45576b3099955caec163cee82318da763eb22df94"
+dependencies = [
+ "gfx",
+ "imgui",
+ "winapi 0.3.8",
+]
+
+[[package]]
+name = "imgui-sys"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72be9671d64dd0ed26bb708cd10060a431262ac90ae70cf7c5912feefe6849da"
+dependencies = [
+ "cc",
+]
+
+[[package]]
+name = "imgui-winit-support"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f98171c35263e3eb0dfb66cb876e3efdb788d777c1b613c7d2592303d1276bb5"
+dependencies = [
+ "imgui",
+ "winit",
 ]
 
 [[package]]
@@ -4319,9 +4362,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-subscriber"
-version = "0.2.6"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04a11b459109e38ff6e1b580bafef4142a11d44889f5d07424cbce2fd2a2a119"
+checksum = "e4f5dd7095c2481b7b3cbed71c8de53085fb3542bc3c2b4c73cba43e8f11c7ba"
 dependencies = [
  "ansi_term",
  "chrono",
@@ -4636,6 +4679,9 @@ dependencies = [
  "guillotiere",
  "hashbrown",
  "image",
+ "imgui",
+ "imgui-gfx-renderer",
+ "imgui-winit-support",
  "msgbox",
  "num 0.2.1",
  "old_school_gfx_glutin_ext",
