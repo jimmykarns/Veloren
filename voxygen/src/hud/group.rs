@@ -1,7 +1,7 @@
 use super::{
     img_ids::{Imgs, ImgsRot},
-    Show, GROUP_COLOR, HP_COLOR, KILL_COLOR, LOW_HP_COLOR, MANA_COLOR, TEXT_COLOR, TEXT_COLOR_GREY,
-    UI_HIGHLIGHT_0,
+    Show, BLACK, GROUP_COLOR, HP_COLOR, KILL_COLOR, LOW_HP_COLOR, MANA_COLOR, TEXT_COLOR,
+    TEXT_COLOR_GREY, UI_HIGHLIGHT_0,
 };
 
 use crate::{
@@ -45,6 +45,7 @@ widget_ids! {
         btn_decline,
         member_panels_bg[],
         member_panels_frame[],
+        member_panels_txt_bg[],
         member_panels_txt[],
         member_health[],
         member_stam[],
@@ -129,6 +130,10 @@ impl<'a> Widget for Group<'a> {
 
     #[allow(clippy::unused_unit)] // TODO: Pending review in #587
     fn style(&self) -> Self::Style { () }
+
+    //TODO: Disband groups when there's only one member in them
+    //TODO: Always send health, energy, level and position of group members to the client
+
 
     fn update(self, args: widget::UpdateArgs<Self>) -> Self::Event {
         let widget::UpdateArgs { state, ui, .. } = args;
@@ -284,6 +289,14 @@ impl<'a> Widget for Group<'a> {
                         .resize(group_size, &mut ui.widget_id_generator())
                 })
             };
+            if state.ids.member_panels_txt_bg.len() < group_size {
+                state.update(|s| {
+                    s.ids
+                        .member_panels_txt_bg
+                        .resize(group_size, &mut ui.widget_id_generator())
+                })
+            };
+
             let client_state = self.client.state();
             let stats = client_state.ecs().read_storage::<common::comp::Stats>();
             let energy = client_state.ecs().read_storage::<common::comp::Energy>();
@@ -349,9 +362,22 @@ impl<'a> Widget for Group<'a> {
                             stats.health.current() as u32,
                             stats.health.maximum() as u32,
                         );
+                        let font_size = match stats.health.maximum() {
+                            0..=999 => 14,
+                            1000..=9999 => 13,
+                            10000..=99999 => 12,
+                            _ => 11,
+                        };
+                        let txt_offset = match stats.health.maximum() {
+                            0..=999 => 4.0,
+                            1000..=9999 => 4.5,
+                            10000..=99999 => 5.0,
+                            _ => 5.5,
+                        };
+
                         Text::new(&txt)
-                            .mid_top_with_margin_on(state.ids.member_panels_bg[i], 4.0)
-                            .font_size(14)
+                            .mid_top_with_margin_on(state.ids.member_panels_bg[i], txt_offset)
+                            .font_size(font_size)
                             .font_id(self.fonts.cyri.conrod_id)
                             .color(Color::Rgba(1.0, 1.0, 1.0, 0.5))
                             .set(state.ids.health_txt[i], ui);
@@ -367,6 +393,12 @@ impl<'a> Widget for Group<'a> {
                         .top_left_with_margins_on(state.ids.member_panels_frame[i], -22.0, 0.0)
                         .font_size(20)
                         .font_id(self.fonts.cyri.conrod_id)
+                        .color(BLACK)
+                        .set(state.ids.member_panels_txt_bg[i], ui);
+                    Text::new(&char_name)
+                        .bottom_left_with_margins_on(state.ids.member_panels_txt_bg[i], 2.0, 2.0)
+                        .font_size(20)
+                        .font_id(self.fonts.cyri.conrod_id)
                         .color(GROUP_COLOR)
                         .set(state.ids.member_panels_txt[i], ui);
                     if let Some(energy) = energy {
@@ -377,9 +409,42 @@ impl<'a> Widget for Group<'a> {
                             .color(Some(MANA_COLOR))
                             .top_left_with_margins_on(state.ids.member_panels_bg[i], 26.0, 2.0)
                             .set(state.ids.member_stam[i], ui);
-                    } else { // Grey out
+                    }
+                } else {
+                    // Values N.A.
+                    if let Some(stats) = stats {
+                        Text::new(&stats.name.to_string())
+                            .top_left_with_margins_on(state.ids.member_panels_frame[i], -22.0, 0.0)
+                            .font_size(20)
+                            .font_id(self.fonts.cyri.conrod_id)
+                            .color(GROUP_COLOR)
+                            .set(state.ids.member_panels_txt[i], ui);
                     };
-                } else { // Grey out 
+                    let offset = if self.global_state.settings.gameplay.toggle_debug {
+                        270.0
+                    } else {
+                        170.0
+                    };
+                    let pos = if i == 0 {
+                        Image::new(self.imgs.member_bg)
+                            .top_left_with_margins_on(ui.window, offset, 20.0)
+                    } else {
+                        Image::new(self.imgs.member_bg)
+                            .down_from(state.ids.member_panels_bg[i - 1], 40.0)
+                    };
+                    // Panel Frame
+                    Image::new(self.imgs.member_frame)
+                        .w_h(152.0, 36.0)
+                        .middle_of(state.ids.member_panels_bg[i])
+                        .color(Some(UI_HIGHLIGHT_0))
+                        .set(state.ids.member_panels_frame[i], ui);
+                    // Panel Text
+                    Text::new(&self.localized_strings.get("hud.group.out_of_range"))
+                        .mid_top_with_margin_on(state.ids.member_panels_bg[i], 2.0)
+                        .font_size(18)
+                        .font_id(self.fonts.cyri.conrod_id)
+                        .color(TEXT_COLOR)
+                        .set(state.ids.dead_txt[i], ui);
                 }
             }
 
