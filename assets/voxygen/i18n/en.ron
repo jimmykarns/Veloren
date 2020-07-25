@@ -142,6 +142,8 @@ https://account.veloren.net."#,
         "main.login.client_crashed": "Client crashed",
         "main.login.not_on_whitelist": "You are not on the whitelist. Contact Server Owner if you want to join.",
 
+		"main.servers.select_server": "Select a server",
+
         /// End Main screen section
 
 
