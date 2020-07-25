@@ -1,4 +1,7 @@
-use prometheus::{Encoder, Gauge, IntGauge, IntGaugeVec, Opts, Registry, TextEncoder};
+use prometheus::{
+    core::{AtomicU64 as PrometheusAtomicU64, GenericGauge},
+    Encoder, Gauge, IntGauge, IntGaugeVec, Opts, Registry, TextEncoder,
+};
 use std::{
     convert::TryInto,
     error::Error,
@@ -12,10 +15,12 @@ use std::{
 };
 use tracing::{debug, error};
 
+type UintGauge = GenericGauge<PrometheusAtomicU64>;
+
 pub struct TickMetrics {
     pub chonks_count: IntGauge,
     pub chunks_count: IntGauge,
-    pub player_online: IntGauge,
+    pub player_online: UintGauge,
     pub entity_count: IntGauge,
     pub tick_time: IntGaugeVec,
     pub build_info: IntGauge,
@@ -34,7 +39,7 @@ pub struct ServerMetrics {
 
 impl TickMetrics {
     pub fn new(registry: &Registry, tick: Arc<AtomicU64>) -> Result<Self, Box<dyn Error>> {
-        let player_online = IntGauge::with_opts(Opts::new(
+        let player_online = GenericGauge::with_opts(Opts::new(
             "player_online",
             "shows the number of clients connected to the server",
         ))?;

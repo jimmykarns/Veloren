@@ -21,7 +21,7 @@ pub struct ServerInfo {
     pub git_date: String,
     pub auth_provider: Option<String>,
     /// The player count (this is only measured once when the client connects)
-    pub player_count: i64,
+    pub player_count: u64,
 }
 
 /// Inform the client of updates to the player list.
