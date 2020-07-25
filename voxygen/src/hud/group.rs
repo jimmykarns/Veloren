@@ -1,11 +1,10 @@
 use super::{
     img_ids::{Imgs, ImgsRot},
     Show, GROUP_COLOR, HP_COLOR, KILL_COLOR, LOW_HP_COLOR, MANA_COLOR, TEXT_COLOR, TEXT_COLOR_GREY,
-    UI_MAIN,
+    UI_HIGHLIGHT_0,
 };
 
 use crate::{
-    ecs::comp,
     i18n::VoxygenLocalization,
     settings::Settings,
     ui::{fonts::ConrodVoxygenFonts, ImageFrame, Tooltip, TooltipManager, Tooltipable},
@@ -50,6 +49,7 @@ widget_ids! {
         member_health[],
         member_stam[],
         dead_txt[],
+        health_txt[],
     }
 }
 
@@ -277,6 +277,13 @@ impl<'a> Widget for Group<'a> {
                         .resize(group_size, &mut ui.widget_id_generator())
                 })
             };
+            if state.ids.health_txt.len() < group_size {
+                state.update(|s| {
+                    s.ids
+                        .health_txt
+                        .resize(group_size, &mut ui.widget_id_generator())
+                })
+            };
             let client_state = self.client.state();
             let stats = client_state.ecs().read_storage::<common::comp::Stats>();
             let energy = client_state.ecs().read_storage::<common::comp::Energy>();
@@ -303,7 +310,7 @@ impl<'a> Widget for Group<'a> {
                     let offset = if self.global_state.settings.gameplay.toggle_debug {
                         270.0
                     } else {
-                        70.0
+                        170.0
                     };
                     let pos = if i == 0 {
                         Image::new(self.imgs.member_bg)
@@ -336,15 +343,28 @@ impl<'a> Widget for Group<'a> {
                             .font_id(self.fonts.cyri.conrod_id)
                             .color(KILL_COLOR)
                             .set(state.ids.dead_txt[i], ui);
-                    }
+                    } else {
+                        let txt = format!(
+                            "{}/{}",
+                            stats.health.current() as u32,
+                            stats.health.maximum() as u32,
+                        );
+                        Text::new(&txt)
+                            .mid_top_with_margin_on(state.ids.member_panels_bg[i], 4.0)
+                            .font_size(14)
+                            .font_id(self.fonts.cyri.conrod_id)
+                            .color(Color::Rgba(1.0, 1.0, 1.0, 0.5))
+                            .set(state.ids.health_txt[i], ui);
+                    };
                     // Panel Frame
                     Image::new(self.imgs.member_frame)
                         .w_h(152.0, 36.0)
                         .middle_of(state.ids.member_panels_bg[i])
+                        .color(Some(UI_HIGHLIGHT_0))
                         .set(state.ids.member_panels_frame[i], ui);
                     // Panel Text
                     Text::new(&char_name)
-                        .up_from(state.ids.member_panels_frame[i], 2.0)
+                        .top_left_with_margins_on(state.ids.member_panels_frame[i], -22.0, 0.0)
                         .font_size(20)
                         .font_id(self.fonts.cyri.conrod_id)
                         .color(GROUP_COLOR)
@@ -355,7 +375,7 @@ impl<'a> Widget for Group<'a> {
                         Image::new(self.imgs.bar_content)
                             .w_h(100.0 * stam_perc, 8.0)
                             .color(Some(MANA_COLOR))
-                            .top_left_with_margins_on(state.ids.member_panels_bg[i], 24.0, 2.0)
+                            .top_left_with_margins_on(state.ids.member_panels_bg[i], 26.0, 2.0)
                             .set(state.ids.member_stam[i], ui);
                     } else { // Grey out
                     };
