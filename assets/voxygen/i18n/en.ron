@@ -326,6 +326,7 @@ magically infused items?"#,
         "hud.group.kick": "Kick",
         "hud.group.assign_leader": "Assign Leader",
         "hud.group.leave": "Leave Group",
+        "hud.group.dead" : "Dead",
 
         "hud.spell": "Spells",
 

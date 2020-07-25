@@ -1,13 +1,16 @@
 use super::{
     img_ids::{Imgs, ImgsRot},
-    Show, TEXT_COLOR, TEXT_COLOR_3, TEXT_COLOR_GREY, UI_MAIN,
+    Show, GROUP_COLOR, HP_COLOR, KILL_COLOR, LOW_HP_COLOR, MANA_COLOR, TEXT_COLOR, TEXT_COLOR_GREY,
+    UI_MAIN,
 };
 
 use crate::{
+    ecs::comp,
     i18n::VoxygenLocalization,
     settings::Settings,
     ui::{fonts::ConrodVoxygenFonts, ImageFrame, Tooltip, TooltipManager, Tooltipable},
     window::GameInput,
+    GlobalState,
 };
 use client::{self, Client};
 use common::{
@@ -20,7 +23,7 @@ use conrod_core::{
     widget::{self, Button, Image, Rectangle, Scrollbar, Text},
     widget_ids, Color, Colorable, Labelable, Positionable, Sizeable, Widget, WidgetCommon,
 };
-use specs::WorldExt;
+use specs::{saveload::MarkerAllocator, WorldExt};
 
 widget_ids! {
     pub struct Ids {
@@ -41,6 +44,12 @@ widget_ids! {
         bubble_frame,
         btn_accept,
         btn_decline,
+        member_panels_bg[],
+        member_panels_frame[],
+        member_panels_txt[],
+        member_health[],
+        member_stam[],
+        dead_txt[],
     }
 }
 
@@ -61,6 +70,8 @@ pub struct Group<'a> {
     localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
     tooltip_manager: &'a mut TooltipManager,
     rot_imgs: &'a ImgsRot,
+    pulse: f32,
+    global_state: &'a GlobalState,
 
     #[conrod(common_builder)]
     common: widget::CommonBuilder,
@@ -76,6 +87,8 @@ impl<'a> Group<'a> {
         localized_strings: &'a std::sync::Arc<VoxygenLocalization>,
         tooltip_manager: &'a mut TooltipManager,
         rot_imgs: &'a ImgsRot,
+        pulse: f32,
+        global_state: &'a GlobalState,
     ) -> Self {
         Self {
             show,
@@ -86,6 +99,8 @@ impl<'a> Group<'a> {
             tooltip_manager,
             fonts,
             localized_strings,
+            pulse,
+            global_state,
             common: widget::CommonBuilder::default(),
         }
     }
@@ -196,6 +211,7 @@ impl<'a> Widget for Group<'a> {
         }
         // Buttons
         if let Some((group_name, leader)) = self.client.group_info().filter(|_| in_group) {
+            // Group Menu Button
             if Button::image(if self.show.group_menu {
                 self.imgs.group_icon_press
             } else {
@@ -217,6 +233,136 @@ impl<'a> Widget for Group<'a> {
             {
                 self.show.group_menu = !self.show.group_menu;
             };
+            // Member panels
+            let group_size = group_members.len() + 1;
+            if state.ids.member_panels_bg.len() < group_size {
+                state.update(|s| {
+                    s.ids
+                        .member_panels_bg
+                        .resize(group_size, &mut ui.widget_id_generator())
+                })
+            };
+            if state.ids.member_health.len() < group_size {
+                state.update(|s| {
+                    s.ids
+                        .member_health
+                        .resize(group_size, &mut ui.widget_id_generator())
+                })
+            };
+            if state.ids.member_stam.len() < group_size {
+                state.update(|s| {
+                    s.ids
+                        .member_stam
+                        .resize(group_size, &mut ui.widget_id_generator())
+                })
+            };
+            if state.ids.member_panels_frame.len() < group_size {
+                state.update(|s| {
+                    s.ids
+                        .member_panels_frame
+                        .resize(group_size, &mut ui.widget_id_generator())
+                })
+            };
+            if state.ids.member_panels_txt.len() < group_size {
+                state.update(|s| {
+                    s.ids
+                        .member_panels_txt
+                        .resize(group_size, &mut ui.widget_id_generator())
+                })
+            };
+            if state.ids.dead_txt.len() < group_size {
+                state.update(|s| {
+                    s.ids
+                        .dead_txt
+                        .resize(group_size, &mut ui.widget_id_generator())
+                })
+            };
+            let client_state = self.client.state();
+            let stats = client_state.ecs().read_storage::<common::comp::Stats>();
+            let energy = client_state.ecs().read_storage::<common::comp::Energy>();
+            let uid_allocator = client_state
+                .ecs()
+                .read_resource::<common::sync::UidAllocator>();
+
+            for (i, &uid) in self
+                .client
+                .uid()
+                .iter()
+                .chain(group_members.iter().copied())
+                .enumerate()
+            {
+                self.show.group = true;
+                let entity = uid_allocator.retrieve_entity_internal(uid.into());
+                let stats = entity.and_then(|entity| stats.get(entity));
+                let energy = entity.and_then(|entity| energy.get(entity));
+                if let Some(stats) = stats {
+                    let char_name = stats.name.to_string();
+                    let health_perc = stats.health.current() as f64 / stats.health.maximum() as f64;
+
+                    // change panel positions when debug info is shown
+                    let offset = if self.global_state.settings.gameplay.toggle_debug {
+                        270.0
+                    } else {
+                        70.0
+                    };
+                    let pos = if i == 0 {
+                        Image::new(self.imgs.member_bg)
+                            .top_left_with_margins_on(ui.window, offset, 20.0)
+                    } else {
+                        Image::new(self.imgs.member_bg)
+                            .down_from(state.ids.member_panels_bg[i - 1], 40.0)
+                    };
+                    let hp_ani = (self.pulse * 4.0/* speed factor */).cos() * 0.5 + 0.8; //Animation timer
+                    let crit_hp_color: Color = Color::Rgba(0.79, 0.19, 0.17, hp_ani);
+                    let health_col = match (health_perc * 100.0) as u8 {
+                        0..=20 => crit_hp_color,
+                        21..=40 => LOW_HP_COLOR,
+                        _ => HP_COLOR,
+                    };
+                    // Don't show panel for the player!
+                    // Panel BG
+                    pos.w_h(152.0, 36.0).set(state.ids.member_panels_bg[i], ui);
+                    // Health
+                    Image::new(self.imgs.bar_content)
+                        .w_h(148.0 * health_perc, 22.0)
+                        .color(Some(health_col))
+                        .top_left_with_margins_on(state.ids.member_panels_bg[i], 2.0, 2.0)
+                        .set(state.ids.member_health[i], ui);
+                    // Death Text
+                    if stats.is_dead {
+                        Text::new(&self.localized_strings.get("hud.group.dead"))
+                            .mid_top_with_margin_on(state.ids.member_panels_bg[i], 1.0)
+                            .font_size(20)
+                            .font_id(self.fonts.cyri.conrod_id)
+                            .color(KILL_COLOR)
+                            .set(state.ids.dead_txt[i], ui);
+                    }
+                    // Panel Frame
+                    Image::new(self.imgs.member_frame)
+                        .w_h(152.0, 36.0)
+                        .middle_of(state.ids.member_panels_bg[i])
+                        .set(state.ids.member_panels_frame[i], ui);
+                    // Panel Text
+                    Text::new(&char_name)
+                        .up_from(state.ids.member_panels_frame[i], 2.0)
+                        .font_size(20)
+                        .font_id(self.fonts.cyri.conrod_id)
+                        .color(GROUP_COLOR)
+                        .set(state.ids.member_panels_txt[i], ui);
+                    if let Some(energy) = energy {
+                        let stam_perc = energy.current() as f64 / energy.maximum() as f64;
+                        // Stamina
+                        Image::new(self.imgs.bar_content)
+                            .w_h(100.0 * stam_perc, 8.0)
+                            .color(Some(MANA_COLOR))
+                            .top_left_with_margins_on(state.ids.member_panels_bg[i], 24.0, 2.0)
+                            .set(state.ids.member_stam[i], ui);
+                    } else { // Grey out
+                    };
+                } else { // Grey out 
+                }
+            }
+
             if self.show.group_menu {
                 let selected = state.selected_member;
                 Text::new(&group_name)
@@ -249,6 +395,7 @@ impl<'a> Widget for Group<'a> {
                     .set(state.ids.btn_leave, ui)
                     .was_clicked()
                 {
+                    self.show.group_menu = false;
                     events.push(Event::LeaveGroup);
                 };
                 // Group leader functions
