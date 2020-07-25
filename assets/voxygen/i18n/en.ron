@@ -96,7 +96,6 @@ Is the client up to date?"#,
         /// Start Main screen section
         "main.connecting": "Connecting",
         "main.creating_world": "Creating world",
-		"main.select_language": "Select a language",
 
         // Welcome notice that appears the first time Veloren is started
         "main.notice": r#"Welcome to the alpha version of Veloren!
@@ -141,6 +140,7 @@ https://account.veloren.net."#,
         "main.login.invalid_character": "The selected character is invalid",
         "main.login.client_crashed": "Client crashed",
         "main.login.not_on_whitelist": "You are not on the whitelist. Contact Server Owner if you want to join.",
+		"main.login.select_language": "Select a language",
 
 		"main.servers.select_server": "Select a server",
 
