@@ -1,7 +1,7 @@
 use super::{
     img_ids::{Imgs, ImgsRot},
     Show, BLACK, GROUP_COLOR, HP_COLOR, KILL_COLOR, LOW_HP_COLOR, MANA_COLOR, TEXT_COLOR,
-    TEXT_COLOR_GREY, UI_HIGHLIGHT_0,
+    TEXT_COLOR_GREY, TRANSPARENT, UI_HIGHLIGHT_0,
 };
 
 use crate::{
@@ -108,7 +108,6 @@ impl<'a> Group<'a> {
 }
 
 pub enum Event {
-    Close,
     Accept,
     Decline,
     Kick(Uid),
@@ -132,8 +131,8 @@ impl<'a> Widget for Group<'a> {
     fn style(&self) -> Self::Style { () }
 
     //TODO: Disband groups when there's only one member in them
-    //TODO: Always send health, energy, level and position of group members to the client
-
+    //TODO: Always send health, energy, level and position of group members to the
+    // client
 
     fn update(self, args: widget::UpdateArgs<Self>) -> Self::Event {
         let widget::UpdateArgs { state, ui, .. } = args;
@@ -321,9 +320,9 @@ impl<'a> Widget for Group<'a> {
 
                     // change panel positions when debug info is shown
                     let offset = if self.global_state.settings.gameplay.toggle_debug {
-                        270.0
+                        210.0
                     } else {
-                        170.0
+                        110.0
                     };
                     let pos = if i == 0 {
                         Image::new(self.imgs.member_bg)
@@ -341,22 +340,33 @@ impl<'a> Widget for Group<'a> {
                     };
                     // Don't show panel for the player!
                     // Panel BG
-                    pos.w_h(152.0, 36.0).set(state.ids.member_panels_bg[i], ui);
+                    pos.w_h(152.0, 36.0)
+                        .color(if i == 0 {
+                            Some(TRANSPARENT)
+                        } else {
+                            Some(TEXT_COLOR)
+                        })
+                        .set(state.ids.member_panels_bg[i], ui);
                     // Health
                     Image::new(self.imgs.bar_content)
                         .w_h(148.0 * health_perc, 22.0)
-                        .color(Some(health_col))
+                        .color(if i == 0 {
+                            Some(TRANSPARENT)
+                        } else {
+                            Some(health_col)
+                        })
                         .top_left_with_margins_on(state.ids.member_panels_bg[i], 2.0, 2.0)
                         .set(state.ids.member_health[i], ui);
-                    // Death Text
                     if stats.is_dead {
+                        // Death Text
                         Text::new(&self.localized_strings.get("hud.group.dead"))
                             .mid_top_with_margin_on(state.ids.member_panels_bg[i], 1.0)
                             .font_size(20)
                             .font_id(self.fonts.cyri.conrod_id)
-                            .color(KILL_COLOR)
+                            .color(if i == 0 { TRANSPARENT } else { KILL_COLOR })
                             .set(state.ids.dead_txt[i], ui);
                     } else {
+                        // Health Text
                         let txt = format!(
                             "{}/{}",
                             stats.health.current() as u32,
@@ -374,39 +384,50 @@ impl<'a> Widget for Group<'a> {
                             10000..=99999 => 5.0,
                             _ => 5.5,
                         };
-
                         Text::new(&txt)
                             .mid_top_with_margin_on(state.ids.member_panels_bg[i], txt_offset)
                             .font_size(font_size)
                             .font_id(self.fonts.cyri.conrod_id)
-                            .color(Color::Rgba(1.0, 1.0, 1.0, 0.5))
+                            .color(if i == 0 {
+                                TRANSPARENT
+                            } else {
+                                Color::Rgba(1.0, 1.0, 1.0, 0.5)
+                            })
                             .set(state.ids.health_txt[i], ui);
                     };
                     // Panel Frame
                     Image::new(self.imgs.member_frame)
                         .w_h(152.0, 36.0)
                         .middle_of(state.ids.member_panels_bg[i])
-                        .color(Some(UI_HIGHLIGHT_0))
+                        .color(if i == 0 {
+                            Some(TRANSPARENT)
+                        } else {
+                            Some(UI_HIGHLIGHT_0)
+                        })
                         .set(state.ids.member_panels_frame[i], ui);
                     // Panel Text
                     Text::new(&char_name)
                         .top_left_with_margins_on(state.ids.member_panels_frame[i], -22.0, 0.0)
                         .font_size(20)
                         .font_id(self.fonts.cyri.conrod_id)
-                        .color(BLACK)
+                        .color(if i == 0 { TRANSPARENT } else { BLACK })
                         .set(state.ids.member_panels_txt_bg[i], ui);
                     Text::new(&char_name)
                         .bottom_left_with_margins_on(state.ids.member_panels_txt_bg[i], 2.0, 2.0)
                         .font_size(20)
                         .font_id(self.fonts.cyri.conrod_id)
-                        .color(GROUP_COLOR)
+                        .color(if i == 0 { TRANSPARENT } else { GROUP_COLOR })
                         .set(state.ids.member_panels_txt[i], ui);
                     if let Some(energy) = energy {
                         let stam_perc = energy.current() as f64 / energy.maximum() as f64;
                         // Stamina
                         Image::new(self.imgs.bar_content)
                             .w_h(100.0 * stam_perc, 8.0)
-                            .color(Some(MANA_COLOR))
+                            .color(if i == 0 {
+                                Some(TRANSPARENT)
+                            } else {
+                                Some(MANA_COLOR)
+                            })
                             .top_left_with_margins_on(state.ids.member_panels_bg[i], 26.0, 2.0)
                             .set(state.ids.member_stam[i], ui);
                     }
@@ -421,9 +442,9 @@ impl<'a> Widget for Group<'a> {
                             .set(state.ids.member_panels_txt[i], ui);
                     };
                     let offset = if self.global_state.settings.gameplay.toggle_debug {
-                        270.0
+                        210.0
                     } else {
-                        170.0
+                        110.0
                     };
                     let pos = if i == 0 {
                         Image::new(self.imgs.member_bg)
@@ -432,18 +453,29 @@ impl<'a> Widget for Group<'a> {
                         Image::new(self.imgs.member_bg)
                             .down_from(state.ids.member_panels_bg[i - 1], 40.0)
                     };
+                    pos.w_h(152.0, 36.0)
+                        .color(if i == 0 {
+                            Some(TRANSPARENT)
+                        } else {
+                            Some(TEXT_COLOR)
+                        })
+                        .set(state.ids.member_panels_bg[i], ui);
                     // Panel Frame
                     Image::new(self.imgs.member_frame)
                         .w_h(152.0, 36.0)
                         .middle_of(state.ids.member_panels_bg[i])
-                        .color(Some(UI_HIGHLIGHT_0))
+                        .color(if i == 0 {
+                            Some(TRANSPARENT)
+                        } else {
+                            Some(UI_HIGHLIGHT_0)
+                        })
                         .set(state.ids.member_panels_frame[i], ui);
                     // Panel Text
                     Text::new(&self.localized_strings.get("hud.group.out_of_range"))
-                        .mid_top_with_margin_on(state.ids.member_panels_bg[i], 2.0)
-                        .font_size(18)
+                        .mid_top_with_margin_on(state.ids.member_panels_bg[i], 3.0)
+                        .font_size(16)
                         .font_id(self.fonts.cyri.conrod_id)
-                        .color(TEXT_COLOR)
+                        .color(if i == 0 { TRANSPARENT } else { TEXT_COLOR })
                         .set(state.ids.dead_txt[i], ui);
                 }
             }

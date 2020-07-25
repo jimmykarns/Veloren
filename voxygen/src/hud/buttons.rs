@@ -99,7 +99,6 @@ pub enum Event {
     ToggleSocial,
     ToggleSpell,
     ToggleCrafting,
-    ToggleGroup,
 }
 
 impl<'a> Widget for Buttons<'a> {
