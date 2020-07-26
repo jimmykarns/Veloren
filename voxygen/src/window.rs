@@ -903,7 +903,7 @@ impl Window {
                 // TODO: update users of this event with the fact that it is now the physical
                 // size
                 self.events
-                    .push(Event::Resize(Vec2::new(width as u32, height as u32)));
+                    .push(dbg!(Event::Resize(Vec2::new(width as u32, height as u32))));
             },
             WindowEvent::ReceivedCharacter(c) => self.events.push(Event::Char(c)),
             WindowEvent::MouseInput { button, state, .. } => {

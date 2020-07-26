@@ -68,8 +68,9 @@ impl Scale {
 
     // Updates internal window size (and/or scale_factor).
     pub fn window_resized(&mut self, new_dims: Vec2<f64>, renderer: &Renderer) {
-        self.scale_factor = renderer.get_resolution().x as f64 / new_dims.x;
-        self.window_dims = new_dims;
+        self.scale_factor = dbg!(renderer.get_resolution().x as f64) / dbg!(new_dims.x);
+        self.window_dims = dbg!(new_dims);
+        dbg!(self.mode);
     }
 
     // Get scaled window size.

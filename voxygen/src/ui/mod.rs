@@ -416,7 +416,7 @@ impl Ui {
 
             // Functions for converting for conrod scalar coords to GL vertex coords (-1.0
             // to 1.0).
-            let (ui_win_w, ui_win_h) = (self.ui.win_w, self.ui.win_h);
+            let (ui_win_w, ui_win_h) = dbg!(self.ui.win_w, self.ui.win_h);
             let vx = |x: f64| (x / ui_win_w * 2.0) as f32;
             let vy = |y: f64| (y / ui_win_h * 2.0) as f32;
             let gl_aabr = |rect: Rect| {
@@ -443,7 +443,7 @@ impl Ui {
                         .get(&image_id)
                         .expect("Image does not exist in image map");
                     let graphic_cache = self.cache.graphic_cache_mut();
-                    let gl_aabr = gl_aabr(rect);
+                    let gl_aabr = dbg!(gl_aabr(dbg!(rect)));
                     let (source_aabr, gl_size) = {
                         // Transform the source rectangle into uv coordinate.
                         // TODO: Make sure this is right.  Especially the conversions.
@@ -511,10 +511,12 @@ impl Ui {
                         )
                     };
 
-                    let resolution = Vec2::new(
+                    dbg!(gl_size);
+                    dbg!(half_res);
+                    let resolution = dbg!(Vec2::new(
                         (gl_size.w * half_res.x).round() as u16,
                         (gl_size.h * half_res.y).round() as u16,
-                    );
+                    ));
 
                     // Don't do anything if resolution is zero
                     if resolution.map(|e| e == 0).reduce_or() {
@@ -783,16 +785,16 @@ impl Ui {
 
         // Handle window resizing.
         if let Some(new_dims) = self.window_resized.take() {
-            let (old_w, old_h) = self.scale.scaled_window_size().into_tuple();
-            self.scale.window_resized(new_dims, renderer);
-            let (w, h) = self.scale.scaled_window_size().into_tuple();
+            let (old_w, old_h) = dbg!(self.scale.scaled_window_size().into_tuple());
+            self.scale.window_resized(dbg!(new_dims), renderer);
+            let (w, h) = dbg!(self.scale.scaled_window_size().into_tuple());
             self.ui.handle_event(Input::Resize(w, h));
 
             // Avoid panic in graphic cache when minimizing.
             // Avoid resetting cache if window size didn't change
             // Somewhat inefficient for elements that won't change size after a window
             // resize
-            let res = renderer.get_resolution();
+            let res = dbg!(renderer.get_resolution());
             self.need_cache_resize = res.x > 0 && res.y > 0 && !(old_w == w && old_h == h);
         }
     }

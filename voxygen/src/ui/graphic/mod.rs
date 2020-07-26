@@ -149,6 +149,7 @@ impl GraphicCache {
         source: Aabr<f64>,
         rotation: Rotation,
     ) -> Option<(Aabr<f64>, TexId)> {
+        dbg!(dims);
         let dims = match rotation {
             Rotation::Cw90 | Rotation::Cw270 => Vec2::new(dims.y, dims.x),
             Rotation::None | Rotation::Cw180 => dims,
