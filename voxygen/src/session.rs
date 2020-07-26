@@ -856,7 +856,7 @@ impl PlayState for SessionState {
                     if is_admin {
                         Window::new(im_str!("Admin Commands"))
                             .collapsed(true, Condition::FirstUseEver)
-                            .size([600.0, 400.0], Condition::FirstUseEver)
+                            .size([556.0, 311.0], Condition::FirstUseEver)
                             .position([400.0, 20.0], Condition::FirstUseEver)
                             .build(ui, || {
                                 ui.list_box::<ImStr>(&im_str!("##"), &mut items_list_selected_item.borrow_mut(), &items.iter().map(|x| x.as_ref()).collect::<Vec<_>>(), 10);
