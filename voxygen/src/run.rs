@@ -79,7 +79,7 @@ fn handle_main_events_cleared(
     let mut exit = true;
     while let Some(state_result) = states.last_mut().map(|last| {
         let events = global_state.window.fetch_events();
-        global_state.window.begin_imgui_frame();
+        global_state.window.imgui_begin_frame();
         last.tick(global_state, events)
     }) {
         // Implement state transfer logic.
@@ -143,7 +143,7 @@ fn handle_main_events_cleared(
         global_state.window.renderer_mut().clear();
 
         last.render(global_state.window.renderer_mut(), &global_state.settings);
-        global_state.window.render_imgui();
+        global_state.window.imgui_render();
 
         global_state.window.renderer_mut().flush();
         global_state

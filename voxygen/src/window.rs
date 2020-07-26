@@ -13,7 +13,7 @@ use std::fmt;
 use tracing::{error, info, warn};
 use vek::*;
 use imgui_winit_support::{WinitPlatform, HiDpiMode};
-use imgui::{Condition, ConfigFlags, Context, FontSource, FontConfig, FontGlyphRanges, im_str};
+use imgui::{ConfigFlags, Context, FontSource, FontConfig, FontGlyphRanges};
 
 /// Represents a key that the game recognises after input mapping.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
@@ -493,8 +493,9 @@ pub struct Window {
     // Used for screenshots & fullscreen toggle to deduplicate/postpone to after event handler
     take_screenshot: bool,
     toggle_fullscreen: bool,
-    pub imgui: Context,
-    imgui_platform: WinitPlatform
+    imgui: Context,
+    imgui_platform: WinitPlatform,
+    pub imgui_run_ui: Box<dyn FnMut(&mut imgui::Ui)>
 }
 
 impl Window {
@@ -628,7 +629,8 @@ impl Window {
             take_screenshot: false,
             toggle_fullscreen: false,
             imgui,
-            imgui_platform
+            imgui_platform,
+            imgui_run_ui: Box::new(|_|{})
         };
 
         this.fullscreen(settings.graphics.fullscreen);
@@ -646,18 +648,19 @@ impl Window {
 
     pub fn renderer_mut(&mut self) -> &mut Renderer { &mut self.renderer }
 
-    pub fn begin_imgui_frame(&mut self) {
+    pub fn imgui_begin_frame(&mut self) {
         self.imgui_platform
             .prepare_frame(self.imgui.io_mut(), self.window.window())
             .expect("Failed to start frame");
         self.imgui.io_mut().config_flags |= ConfigFlags::NO_MOUSE_CURSOR_CHANGE;
     }
 
-    pub fn render_imgui(&mut self) {
-        let ui = self.imgui.frame();
+    pub fn imgui_render(&mut self) {
+        let mut ui = self.imgui.frame();
         self.imgui_platform.prepare_render(&ui, &self.window.window());
+        (self.imgui_run_ui)(&mut ui);
         let draw_data = ui.render();
-        self.renderer.render_imgui(&draw_data);
+        self.renderer.render_imgui(draw_data);
     }
 
     pub fn resolve_deduplicated_events(&mut self, settings: &mut Settings) {
