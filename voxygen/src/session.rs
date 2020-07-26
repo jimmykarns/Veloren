@@ -185,23 +185,6 @@ impl PlayState for SessionState {
         self.voxygen_i18n = load_expect::<VoxygenLocalization>(&i18n_asset_key(
             &global_state.settings.language.selected_language,
         ));
-
-        global_state.window.imgui_run_ui = Box::new(|ui| {
-            Window::new(im_str!("Veloren ImgUi Test"))
-                .size([300.0, 100.0], Condition::FirstUseEver)
-                .build( ui, || {
-                    ui.text(im_str!("Hello world!"));
-                    ui.text(im_str!("こんにちは世界！"));
-                    ui.text(im_str!("This...is...imgui-rs!"));
-                    ui.separator();
-                    let mouse_pos = ui.io().mouse_pos;
-                    ui.text(format!(
-                        "Mouse Position: ({:.1},{:.1})",
-                        mouse_pos[0], mouse_pos[1]
-                    ));
-                });
-        });
-
         // TODO: can this be a method on the session or are there borrowcheck issues?
 
         let client_state = self.client.borrow().get_client_state();
@@ -724,6 +707,24 @@ impl PlayState for SessionState {
             // Look for changes in the localization files
             if global_state.localization_watcher.reloaded() {
                 hud_events.push(HudEvent::ChangeLanguage(self.voxygen_i18n.metadata.clone()));
+            }
+
+            if global_state.settings.gameplay.toggle_debug {
+                global_state.window.imgui_run_ui = Box::new(|ui| {
+                    Window::new(im_str!("Veloren ImgUi Test"))
+                        .size([300.0, 100.0], Condition::FirstUseEver)
+                        .build(ui, || {
+                            ui.text(im_str!("Hello world!"));
+                            ui.text(im_str!("こんにちは世界！"));
+                            ui.text(im_str!("This...is...imgui-rs!"));
+                            ui.separator();
+                            let mouse_pos = ui.io().mouse_pos;
+                            ui.text(format!(
+                                "Mouse Position: ({:.1},{:.1})",
+                                mouse_pos[0], mouse_pos[1]
+                            ));
+                        });
+                });
             }
 
             // Maintain the UI.

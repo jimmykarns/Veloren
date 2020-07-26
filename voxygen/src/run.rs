@@ -143,7 +143,10 @@ fn handle_main_events_cleared(
         global_state.window.renderer_mut().clear();
 
         last.render(global_state.window.renderer_mut(), &global_state.settings);
-        global_state.window.imgui_render();
+
+        if global_state.settings.gameplay.toggle_debug {
+            global_state.window.imgui_render();
+        }
 
         global_state.window.renderer_mut().flush();
         global_state

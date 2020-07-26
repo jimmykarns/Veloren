@@ -1437,6 +1437,7 @@ impl Hud {
                 .font_size(self.fonts.cyri.scale(14))
                 .set(self.ids.debug_info, ui_widgets);
             }
+
         } else {
             // Help Window
             if let Some(help_key) = global_state.settings.controls.get_binding(GameInput::Help) {
