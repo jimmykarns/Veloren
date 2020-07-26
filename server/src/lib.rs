@@ -756,7 +756,13 @@ impl Server {
             .is_some()
     }
 
-    pub fn number_of_players(&self) -> u64 { self.tick_metrics.player_online.get() }
+    pub fn number_of_players(&self) -> u64 {
+        self.state
+            .ecs()
+            .read_storage::<comp::Player>()
+            .join()
+            .count() as u64
+    }
 }
 
 impl Drop for Server {
