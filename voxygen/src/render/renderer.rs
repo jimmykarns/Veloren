@@ -18,9 +18,8 @@ use gfx::{
 use glsl_include::Context as IncludeContext;
 use tracing::error;
 use vek::*;
-use imgui::{Context, im_str, Window, Condition, ConfigFlags};
-use imgui_winit_support::WinitPlatform;
-use winit::event::Event;
+use imgui::{Context, DrawData};
+use imgui_gfx_renderer::Shaders;
 
 /// Represents the format of the pre-processed color target.
 pub type TgtColorFmt = gfx::format::Srgba8;
@@ -84,9 +83,7 @@ pub struct Renderer {
     aa_mode: AaMode,
     cloud_mode: CloudMode,
     fluid_mode: FluidMode,
-    pub imgui: Context,
-    pub imgui_platform: WinitPlatform,
-    pub imgui_renderer: imgui_gfx_renderer::Renderer<gfx::format::Srgba8, gfx_device_gl::Resources>
+    imgui_renderer: imgui_gfx_renderer::Renderer<gfx::format::Srgba8, gfx_device_gl::Resources>
 }
 
 impl Renderer {
@@ -100,9 +97,7 @@ impl Renderer {
         aa_mode: AaMode,
         cloud_mode: CloudMode,
         fluid_mode: FluidMode,
-        imgui: Context,
-        imgui_platform: WinitPlatform,
-        imgui_renderer: imgui_gfx_renderer::Renderer<gfx::format::Srgba8, gfx_device_gl::Resources>
+        mut imgui: &mut Context,
     ) -> Result<Self, RenderError> {
         let mut shader_reload_indicator = ReloadIndicator::new();
 
@@ -136,6 +131,9 @@ impl Renderer {
             Some(gfx::texture::WrapMode::Tile),
         )?;
 
+        let imgui_renderer = imgui_gfx_renderer::Renderer::init(&mut imgui, &mut factory, Shaders::GlSl150)
+            .expect("Failed to initialize renderer");
+
         Ok(Self {
             device,
             encoder: factory.create_command_buffer().into(),
@@ -166,41 +164,13 @@ impl Renderer {
             aa_mode,
             cloud_mode,
             fluid_mode,
-            imgui,
-            imgui_platform,
             imgui_renderer
         })
     }
 
-    pub fn render_imgui(&mut self, window: &winit::window::Window) {
-        self.imgui_platform
-            .prepare_frame(self.imgui.io_mut(), window)
-            .expect("Failed to start frame");
-
-        self.imgui.io_mut().config_flags |= ConfigFlags::NO_MOUSE_CURSOR_CHANGE;
-
-        let ui = self.imgui.frame();
-        Window::new(im_str!("Test"))
-            .size([1000.0, 300.0], Condition::FirstUseEver)
-            .build(&ui, || {
-                ui.text(im_str!("Hello world!"));
-                ui.text(im_str!("こんにちは世界！"));
-                ui.text(im_str!("This...is...imgui-rs!"));
-                ui.separator();
-                let mouse_pos = ui.io().mouse_pos;
-                ui.text(format!(
-                    "Mouse Position: ({:.1},{:.1})",
-                    mouse_pos[0], mouse_pos[1]
-                ));
-            });
-        self.imgui_platform.prepare_render(&ui, &window);
-        let draw_data = ui.render();
+    pub fn render_imgui(&mut self, draw_data: &DrawData) {
         self.imgui_renderer.render(&mut self.factory, &mut self.encoder, &mut self.win_color_view, draw_data)
             .expect("imgui rendering failed");
-    }
-
-    pub fn handle_imgui_events(&mut self, window: &winit::window::Window, event: &Event<()>) {
-        self.imgui_platform.handle_event(self.imgui.io_mut(), window, event);
     }
 
     /// Get references to the internal render target views that get rendered to

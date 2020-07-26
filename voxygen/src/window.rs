@@ -13,8 +13,7 @@ use std::fmt;
 use tracing::{error, info, warn};
 use vek::*;
 use imgui_winit_support::{WinitPlatform, HiDpiMode};
-use imgui::{Context, FontSource, FontConfig, FontGlyphRanges};
-use imgui_gfx_renderer::Shaders;
+use imgui::{Condition, ConfigFlags, Context, FontSource, FontConfig, FontGlyphRanges, im_str};
 
 /// Represents a key that the game recognises after input mapping.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
@@ -493,7 +492,9 @@ pub struct Window {
     message_receiver: channel::Receiver<String>,
     // Used for screenshots & fullscreen toggle to deduplicate/postpone to after event handler
     take_screenshot: bool,
-    toggle_fullscreen: bool
+    toggle_fullscreen: bool,
+    imgui: Context,
+    imgui_platform: WinitPlatform
 }
 
 impl Window {
@@ -515,7 +516,7 @@ impl Window {
             false,
         );
 
-        let (window, device, mut factory, win_color_view, win_depth_view) =
+        let (window, device, factory, win_color_view, win_depth_view) =
             glutin::ContextBuilder::new()
                 .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGl, (3, 2)))
                 .with_vsync(false)
@@ -524,12 +525,12 @@ impl Window {
                 .map_err(|err| Error::BackendError(Box::new(err)))?
                 .init_gfx::<WinColorFmt, WinDepthFmt>();
 
+        // ImgUi Initialisation
         let mut imgui = Context::create();
-
         imgui.set_ini_filename(None);
-        let mut imgui_winit_platform = WinitPlatform::init(&mut imgui);
-        imgui_winit_platform.attach_window(imgui.io_mut(), window.window(), HiDpiMode::Rounded);
-        let hidpi_factor = imgui_winit_platform.hidpi_factor();
+        let mut imgui_platform = WinitPlatform::init(&mut imgui);
+        imgui_platform.attach_window(imgui.io_mut(), window.window(), HiDpiMode::Rounded);
+        let hidpi_factor = imgui_platform.hidpi_factor();
         let font_size = (13.0 * hidpi_factor) as f32;
         imgui.fonts().add_font(&[
             FontSource::DefaultFontData {
@@ -548,10 +549,7 @@ impl Window {
                 }),
             },
         ]);
-
         imgui.io_mut().font_global_scale = (1.0 / hidpi_factor) as f32;
-        let imgui_renderer = imgui_gfx_renderer::Renderer::init(&mut imgui, &mut factory, Shaders::GlSl150)
-            .expect("Failed to initialize renderer");
 
         let vendor = device.get_info().platform_name.vendor;
         let renderer = device.get_info().platform_name.renderer;
@@ -605,9 +603,7 @@ impl Window {
                 settings.graphics.aa_mode,
                 settings.graphics.cloud_mode,
                 settings.graphics.fluid_mode,
-                imgui,
-                imgui_winit_platform,
-                imgui_renderer
+                &mut imgui
             )?,
             window,
             cursor_grabbed: false,
@@ -631,6 +627,8 @@ impl Window {
             message_receiver,
             take_screenshot: false,
             toggle_fullscreen: false,
+            imgui,
+            imgui_platform
         };
 
         this.fullscreen(settings.graphics.fullscreen);
@@ -649,7 +647,31 @@ impl Window {
     pub fn renderer_mut(&mut self) -> &mut Renderer { &mut self.renderer }
 
     pub fn render_imgui(&mut self) {
-        self.renderer.render_imgui(&self.window.window());
+        self.imgui_platform
+            .prepare_frame(self.imgui.io_mut(), self.window.window())
+            .expect("Failed to start frame");
+
+        self.imgui.io_mut().config_flags |= ConfigFlags::NO_MOUSE_CURSOR_CHANGE;
+        let ui = self.imgui.frame();
+
+        imgui::Window::new(im_str!("Test"))
+            .size([1000.0, 300.0], Condition::FirstUseEver)
+            .build(&ui, || {
+                ui.text(im_str!("Hello world!"));
+                ui.text(im_str!("こんにちは世界！"));
+                ui.text(im_str!("This...is...imgui-rs!"));
+                ui.separator();
+                let mouse_pos = ui.io().mouse_pos;
+                ui.text(format!(
+                    "Mouse Position: ({:.1},{:.1})",
+                    mouse_pos[0], mouse_pos[1]
+                ));
+            });
+
+        self.imgui_platform.prepare_render(&ui, &self.window.window());
+        let draw_data = ui.render();
+
+        self.renderer.render_imgui(&draw_data);
     }
 
     pub fn resolve_deduplicated_events(&mut self, settings: &mut Settings) {
@@ -1134,7 +1156,7 @@ impl Window {
     pub fn send_event(&mut self, event: Event) { self.events.push(event) }
 
     pub fn handle_imgui_events(&mut self, event: &winit::event::Event<()>) {
-        self.renderer.handle_imgui_events(self.window.window(), event);
+        self.imgui_platform.handle_event(self.imgui.io_mut(), self.window.window(), event);
     }
 
     pub fn take_screenshot(&mut self, settings: &Settings) {
