@@ -150,7 +150,7 @@ lazy_static! {
     .collect();
 
     /// List of item specifiers. Useful for tab completing
-    static ref ITEM_SPECS: Vec<String> = {
+    pub static ref ITEM_SPECS: Vec<String> = {
         let path = assets::ASSETS_PATH.join("common").join("items");
         let mut items = vec![];
         fn list_items (path: &Path, base: &Path, mut items: &mut Vec<String>) -> std::io::Result<()>{

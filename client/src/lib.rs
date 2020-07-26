@@ -86,7 +86,7 @@ pub struct Client {
     last_server_ping: f64,
     last_server_pong: f64,
     last_ping_delta: f64,
-    ping_deltas: VecDeque<f64>,
+    pub ping_deltas: VecDeque<f64>,
 
     tick: u64,
     state: State,

@@ -11,6 +11,7 @@ use crate::{
     window::{AnalogGameInput, Event, GameInput},
     Direction, Error, GlobalState, PlayState, PlayStateResult,
 };
+use chrono::NaiveTime;
 use client::{self, Client};
 use common::{
     assets::{load_expect, load_watched},
@@ -21,15 +22,15 @@ use common::{
     },
     event::EventBus,
     msg::ClientState,
-    terrain::{Block, BlockKind},
+    terrain::{Block, BlockKind, TerrainChunk},
     util::Dir,
-    vol::ReadVol,
+    vol::{ReadVol, RectRasterableVol}
 };
 use specs::{Join, WorldExt};
 use std::{cell::RefCell, rc::Rc, time::Duration};
 use tracing::{error, info};
 use vek::*;
-use imgui::{Condition, im_str, Window};
+use imgui::{Condition, im_str, Window, ImString, ImStr};
 
 /// The action to perform after a tick
 enum TickAction {
@@ -53,6 +54,24 @@ pub struct SessionState {
     free_look: bool,
     auto_walk: bool,
     is_aiming: bool,
+    imgui_state: ImgUiState
+}
+
+pub struct ImgUiState {
+    give_item_quantity: Rc<RefCell<i32>>,
+    items_list_selected_item: Rc<RefCell<i32>>,
+    /// Stores pending hud events from the last frame
+    pending_hud_events: Rc<RefCell<Vec<HudEvent>>>
+}
+
+impl Default for ImgUiState  {
+    fn default() -> Self {
+        ImgUiState {
+            give_item_quantity: Rc::new(RefCell::new(1)),
+            items_list_selected_item: Rc::new(RefCell::new(0)),
+            pending_hud_events: Rc::new(RefCell::new(Vec::<HudEvent>::new()))
+        }
+    }
 }
 
 /// Represents an active game session (i.e., the one being played).
@@ -86,6 +105,7 @@ impl SessionState {
             free_look: false,
             auto_walk: false,
             is_aiming: false,
+            imgui_state: ImgUiState::default()
         }
     }
 
@@ -657,42 +677,44 @@ impl PlayState for SessionState {
                 .camera_mut()
                 .compute_dependents(&*self.client.borrow().state().terrain());
 
+            let debug_info = DebugInfo {
+                tps: global_state.clock.get_tps(),
+                ping_ms: self.client.borrow().get_ping_ms_rolling_avg(),
+                coordinates: self
+                    .client
+                    .borrow()
+                    .state()
+                    .ecs()
+                    .read_storage::<Pos>()
+                    .get(self.client.borrow().entity())
+                    .cloned(),
+                velocity: self
+                    .client
+                    .borrow()
+                    .state()
+                    .ecs()
+                    .read_storage::<Vel>()
+                    .get(self.client.borrow().entity())
+                    .cloned(),
+                ori: self
+                    .client
+                    .borrow()
+                    .state()
+                    .ecs()
+                    .read_storage::<comp::Ori>()
+                    .get(self.client.borrow().entity())
+                    .cloned(),
+                num_chunks: self.scene.terrain().chunk_count() as u32,
+                num_chunks_visible: self.scene.terrain().visible_chunk_count() as u32,
+                num_figures: self.scene.figure_mgr().figure_count() as u32,
+                num_figures_visible: self.scene.figure_mgr().figure_count_visible() as u32,
+            };
+
             // Extract HUD events ensuring the client borrow gets dropped.
             let mut hud_events = self.hud.maintain(
                 &self.client.borrow(),
                 global_state,
-                DebugInfo {
-                    tps: global_state.clock.get_tps(),
-                    ping_ms: self.client.borrow().get_ping_ms_rolling_avg(),
-                    coordinates: self
-                        .client
-                        .borrow()
-                        .state()
-                        .ecs()
-                        .read_storage::<Pos>()
-                        .get(self.client.borrow().entity())
-                        .cloned(),
-                    velocity: self
-                        .client
-                        .borrow()
-                        .state()
-                        .ecs()
-                        .read_storage::<Vel>()
-                        .get(self.client.borrow().entity())
-                        .cloned(),
-                    ori: self
-                        .client
-                        .borrow()
-                        .state()
-                        .ecs()
-                        .read_storage::<comp::Ori>()
-                        .get(self.client.borrow().entity())
-                        .cloned(),
-                    num_chunks: self.scene.terrain().chunk_count() as u32,
-                    num_visible_chunks: self.scene.terrain().visible_chunk_count() as u32,
-                    num_figures: self.scene.figure_mgr().figure_count() as u32,
-                    num_figures_visible: self.scene.figure_mgr().figure_count_visible() as u32,
-                },
+                &debug_info,
                 &self.scene.camera(),
                 global_state.clock.get_last_delta(),
                 HudInfo {
@@ -710,20 +732,157 @@ impl PlayState for SessionState {
             }
 
             if global_state.settings.gameplay.toggle_debug {
-                global_state.window.imgui_run_ui = Box::new(|ui| {
-                    Window::new(im_str!("Veloren ImgUi Test"))
-                        .size([300.0, 100.0], Condition::FirstUseEver)
+                global_state.window.imgui_begin_frame();
+                global_state.imgui_render_required = true;
+
+                // These variables are set outside of the creation of the imgui_run_ui closure below
+                // to avoid lifetime issues. They are all moved into the closure due to the use of `move` in
+                // the closure definition.
+                let loaded_distance = self.client.borrow().loaded_distance();
+                let is_admin = self.client.borrow().is_admin();
+
+                //let ping_deltas = self.client.borrow().ping_deltas.iter().map(|x| *x as f32).collect::<Vec<f32>>();
+
+                let version = format!(
+                    "{}-{}",
+                    env!("CARGO_PKG_VERSION"),
+                    common::util::GIT_VERSION.to_string()
+                );
+                let time_in_seconds = self.client.borrow().state().get_time_of_day();
+                let current_time = NaiveTime::from_num_seconds_from_midnight(
+                    // Wraps around back to 0s if it exceeds 24 hours (24 hours = 86400s)
+                    (time_in_seconds as u64 % 86400) as u32,
+                    0,
+                );
+                let entity_count = self.client.borrow().state().ecs().entities().join().count();
+
+                // Push the hud events generated by the last imgui frame (button clicks etc)
+                for event in self.imgui_state.pending_hud_events.borrow_mut().drain(..) {
+                    hud_events.push(event);
+                }
+
+                // TODO: Only do this once
+                let items: Vec<ImString> = common::cmd::ITEM_SPECS.iter().map(|x| ImString::new(x)).collect();
+
+                // ImgUi state is handled with Rc<RefCell<T>> because the ImgUi window requires mutable
+                // access to the values that represent the state of UI controls.
+                let hud_events = Rc::clone(&self.imgui_state.pending_hud_events);
+                let items_list_selected_item = Rc::clone(&self.imgui_state.items_list_selected_item);
+                let give_item_quantity = Rc::clone(&self.imgui_state.give_item_quantity);
+
+                global_state.window.imgui_run_ui = Box::new(move |ui| {
+                    ui.show_demo_window(&mut true);
+
+                    Window::new(im_str!("Debug Info"))
+                        .size([356.0, 322.0], Condition::FirstUseEver)
+                        .position([10.0, 90.0], Condition::FirstUseEver)
                         .build(ui, || {
-                            ui.text(im_str!("Hello world!"));
-                            ui.text(im_str!("こんにちは世界！"));
-                            ui.text(im_str!("This...is...imgui-rs!"));
+                            ui.label_text(im_str!("Version"), &im_str!("{}", version));
+
                             ui.separator();
+
+                            ui.label_text(im_str!("FPS"), &im_str!("{:.0}", debug_info.tps));
+                            ui.label_text(im_str!("Ping"), &im_str!("{:.0}", debug_info.ping_ms));
+
+                            // TODO: Ping graph works but looks crap with the current 10 historical values stored
+                            // ui.plot_lines(im_str!("Ping"), &ping_deltas.clone())
+                            //     .graph_size([300.0, 75.0])
+                            //     .build();
+                            ui.separator();
+
+                            // Time
+                            ui.label_text(im_str!("Time"), &im_str!("{}", current_time.format("%H:%M").to_string()));
+
+                            // Player Coords
+                            let coords_text = match debug_info.coordinates {
+                                Some(coordinates) => format!(
+                                    "({:.0}, {:.0}, {:.0})",
+                                    coordinates.0.x, coordinates.0.y, coordinates.0.z,
+                                ),
+                                None => "Player has no Pos component".to_owned(),
+                            };
+                            ui.label_text(im_str!("Coords"), &im_str!("{}", coords_text));
+
+                            // Player Velocity
+                            let velocity_text = match debug_info.velocity {
+                                Some(velocity) => format!(
+                                    "({:.1}, {:.1}, {:.1}) [{:.1} u/s]",
+                                    velocity.0.x,
+                                    velocity.0.y,
+                                    velocity.0.z,
+                                    velocity.0.magnitude()
+                                ),
+                                None => "Player has no Vel component".to_owned(),
+                            };
+                            ui.label_text(im_str!("Velocity"), &im_str!("{}", velocity_text));
+
+                            // Player Orientation
+                            let orientation_text = match debug_info.ori {
+                                Some(ori) => format!(
+                                    "({:.1}, {:.1}, {:.1})",
+                                    ori.0.x, ori.0.y, ori.0.z,
+                                ),
+                                None => "Player has no Ori component".to_owned(),
+                            };
+                            ui.label_text(im_str!("Orientation"), &im_str!("{}", orientation_text));
+
+                            ui.separator();
+
+                            // View Distance
+                            ui.label_text(im_str!("View Distance"), &im_str!("{:.2} blocks ({:.2} chunks)",
+                            loaded_distance,
+                            loaded_distance / TerrainChunk::RECT_SIZE.x as f32));
+
+                            // Entities
+
+                            ui.label_text(im_str!("Entities"), &im_str!("{}", entity_count));
+
+                            // Chunks
+                            ui.label_text(im_str!("Chunks"), &im_str!("{} ({} visible)", debug_info.num_chunks, debug_info.num_chunks_visible));
+
+                            // Figures
+                            ui.label_text(im_str!("Figures"), &im_str!("{} ({} visible)", debug_info.num_figures, debug_info.num_figures_visible));
+                            ui.separator();
+
+                            // Mouse Position
                             let mouse_pos = ui.io().mouse_pos;
                             ui.text(format!(
                                 "Mouse Position: ({:.1},{:.1})",
                                 mouse_pos[0], mouse_pos[1]
                             ));
+
                         });
+
+                    if is_admin {
+                        Window::new(im_str!("Admin Commands"))
+                            .collapsed(true, Condition::FirstUseEver)
+                            .size([600.0, 400.0], Condition::FirstUseEver)
+                            .position([400.0, 20.0], Condition::FirstUseEver)
+                            .build(ui, || {
+                                ui.list_box::<ImStr>(&im_str!("##"), &mut items_list_selected_item.borrow_mut(), &items.iter().map(|x| x.as_ref()).collect::<Vec<_>>(), 10);
+
+                                ui.set_next_item_width(75.0);
+                                ui.input_int(im_str!("Quantity"), &mut give_item_quantity.borrow_mut()).build();
+
+                                ui.same_line(155.0);
+                                if ui.button(im_str!("Give item"), [70.0, 20.0]) {
+                                    if let Some(selected_item) = items.iter().nth(*items_list_selected_item.borrow() as usize) {
+                                        let item_name = selected_item.to_str();
+                                        hud_events.borrow_mut().push(HudEvent::SendMessage(format!("/give_item {} {}", item_name, give_item_quantity.borrow())));
+                                    }
+                                }
+
+                                if ui.button(im_str!("Explosion!"), [100.0, 20.0]) {
+                                    hud_events.borrow_mut().push(HudEvent::SendMessage(format!("/explosion")));
+                                }
+                                if ui.button(im_str!("Set Waypoint"), [100.0, 20.0]) {
+                                    hud_events.borrow_mut().push(HudEvent::SendMessage(format!("/waypoint")));
+                                }
+                                if ui.button(im_str!("Spawn Dummy"), [100.0, 20.0]) {
+                                    hud_events.borrow_mut().push(HudEvent::SendMessage(format!("/dummy")));
+                                }
+                            });
+                    }
                 });
             }
 

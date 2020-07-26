@@ -232,7 +232,7 @@ pub struct DebugInfo {
     pub velocity: Option<comp::Vel>,
     pub ori: Option<comp::Ori>,
     pub num_chunks: u32,
-    pub num_visible_chunks: u32,
+    pub num_chunks_visible: u32,
     pub num_figures: u32,
     pub num_figures_visible: u32,
 }
@@ -633,7 +633,7 @@ impl Hud {
         &mut self,
         client: &Client,
         global_state: &GlobalState,
-        debug_info: DebugInfo,
+        debug_info: &DebugInfo,
         dt: Duration,
         info: HudInfo,
         camera: &Camera,
@@ -1279,7 +1279,8 @@ impl Hud {
         }
 
         // Display debug window.
-        if global_state.settings.gameplay.toggle_debug {
+        // Temporarily disabled while testing ImgUi
+        if false { //global_state.settings.gameplay.toggle_debug {
             // Alpha Version
             Text::new(&version)
                 .top_left_with_margins_on(ui_widgets.window, 5.0, 5.0)
@@ -1386,7 +1387,7 @@ impl Hud {
             // Number of chunks
             Text::new(&format!(
                 "Chunks: {} ({} visible)",
-                debug_info.num_chunks, debug_info.num_visible_chunks,
+                debug_info.num_chunks, debug_info.num_chunks_visible,
             ))
             .color(TEXT_COLOR)
             .down_from(self.ids.entity_count, 5.0)
@@ -2293,7 +2294,7 @@ impl Hud {
         &mut self,
         client: &Client,
         global_state: &mut GlobalState,
-        debug_info: DebugInfo,
+        debug_info: &DebugInfo,
         camera: &Camera,
         dt: Duration,
         info: HudInfo,

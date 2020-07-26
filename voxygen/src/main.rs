@@ -165,6 +165,7 @@ fn main() {
         #[cfg(feature = "singleplayer")]
         singleplayer: None,
         localization_watcher,
+        imgui_render_required: false
     };
 
     run::run(global_state, event_loop);

@@ -79,7 +79,6 @@ fn handle_main_events_cleared(
     let mut exit = true;
     while let Some(state_result) = states.last_mut().map(|last| {
         let events = global_state.window.fetch_events();
-        global_state.window.imgui_begin_frame();
         last.tick(global_state, events)
     }) {
         // Implement state transfer logic.
@@ -144,8 +143,9 @@ fn handle_main_events_cleared(
 
         last.render(global_state.window.renderer_mut(), &global_state.settings);
 
-        if global_state.settings.gameplay.toggle_debug {
+        if global_state.imgui_render_required && global_state.settings.gameplay.toggle_debug {
             global_state.window.imgui_render();
+            global_state.imgui_render_required = false;
         }
 
         global_state.window.renderer_mut().flush();

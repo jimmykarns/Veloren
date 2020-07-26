@@ -678,8 +678,10 @@ impl Window {
     pub fn fetch_events(&mut self) -> Vec<Event> {
         // Refresh ui size (used when changing playstates)
         if self.needs_refresh_resize {
+            let logical_size = self.logical_size();
             self.events
-                .push(Event::Ui(ui::Event::new_resize(self.logical_size())));
+                .push(Event::Ui(ui::Event::new_resize(logical_size)));
+            self.imgui.io_mut().display_size = [logical_size.x as f32, logical_size.y as f32];
             self.needs_refresh_resize = false;
         }
 
