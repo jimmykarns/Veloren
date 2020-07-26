@@ -141,10 +141,7 @@ fn handle_main_events_cleared(
     if let Some(last) = states.last_mut() {
         global_state.window.renderer_mut().clear();
 
-        // Render the game
         last.render(global_state.window.renderer_mut(), &global_state.settings);
-
-        // Render imgui on top
         global_state.window.render_imgui();
 
         global_state.window.renderer_mut().flush();

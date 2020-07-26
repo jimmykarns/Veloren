@@ -3,9 +3,6 @@
 #![feature(bool_to_option)]
 #![recursion_limit = "2048"]
 
-#[macro_use]
-extern crate imgui;
-
 use veloren_voxygen::{
     audio::{self, AudioFrontend},
     i18n::{self, i18n_asset_key, VoxygenLocalization},

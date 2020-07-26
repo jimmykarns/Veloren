@@ -18,10 +18,9 @@ use gfx::{
 use glsl_include::Context as IncludeContext;
 use tracing::error;
 use vek::*;
-use imgui::{DrawData, Context, im_str, Window, Condition, ConfigFlags};
+use imgui::{Context, im_str, Window, Condition, ConfigFlags};
 use imgui_winit_support::WinitPlatform;
 use winit::event::Event;
-use imgui::sys::ImGuiConfigFlags_NoMouseCursorChange;
 
 /// Represents the format of the pre-processed color target.
 pub type TgtColorFmt = gfx::format::Srgba8;
