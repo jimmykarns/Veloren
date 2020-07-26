@@ -493,7 +493,7 @@ pub struct Window {
     // Used for screenshots & fullscreen toggle to deduplicate/postpone to after event handler
     take_screenshot: bool,
     toggle_fullscreen: bool,
-    imgui: Context,
+    pub imgui: Context,
     imgui_platform: WinitPlatform
 }
 
@@ -646,31 +646,17 @@ impl Window {
 
     pub fn renderer_mut(&mut self) -> &mut Renderer { &mut self.renderer }
 
-    pub fn render_imgui(&mut self) {
+    pub fn begin_imgui_frame(&mut self) {
         self.imgui_platform
             .prepare_frame(self.imgui.io_mut(), self.window.window())
             .expect("Failed to start frame");
-
         self.imgui.io_mut().config_flags |= ConfigFlags::NO_MOUSE_CURSOR_CHANGE;
+    }
+
+    pub fn render_imgui(&mut self) {
         let ui = self.imgui.frame();
-
-        imgui::Window::new(im_str!("Test"))
-            .size([1000.0, 300.0], Condition::FirstUseEver)
-            .build(&ui, || {
-                ui.text(im_str!("Hello world!"));
-                ui.text(im_str!("こんにちは世界！"));
-                ui.text(im_str!("This...is...imgui-rs!"));
-                ui.separator();
-                let mouse_pos = ui.io().mouse_pos;
-                ui.text(format!(
-                    "Mouse Position: ({:.1},{:.1})",
-                    mouse_pos[0], mouse_pos[1]
-                ));
-            });
-
         self.imgui_platform.prepare_render(&ui, &self.window.window());
         let draw_data = ui.render();
-
         self.renderer.render_imgui(&draw_data);
     }
 

@@ -79,6 +79,7 @@ fn handle_main_events_cleared(
     let mut exit = true;
     while let Some(state_result) = states.last_mut().map(|last| {
         let events = global_state.window.fetch_events();
+        global_state.window.begin_imgui_frame();
         last.tick(global_state, events)
     }) {
         // Implement state transfer logic.
