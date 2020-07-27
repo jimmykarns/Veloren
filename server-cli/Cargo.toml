@@ -11,6 +11,14 @@ default = ["worldgen"]
 [dependencies]
 server = { package = "veloren-server", path = "../server", default-features = false }
 common = { package = "veloren-common", path = "../common" }
-
 tracing = { version = "0.1", default-features = false }
-tracing-subscriber = { version = "0.2.3", default-features = false, features = ["env-filter", "fmt", "chrono", "ansi", "smallvec"] }
+tracing-subscriber = { version = "0.2.3", default-features = false, features = [
+    "env-filter",
+    "fmt",
+    "chrono",
+    "ansi",
+    "smallvec"
+] }
+crossterm = "0.17"
+tui = { version = "0.10", default-features = false, features = ['crossterm'] }
+lazy_static = "1"
