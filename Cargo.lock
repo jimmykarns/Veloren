@@ -542,9 +542,13 @@ version = "2.33.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bdfa80d47f954d53a35a64987ca1422f495b8d6483c0fe9f7117b36c2a792129"
 dependencies = [
+ "ansi_term",
+ "atty",
  "bitflags",
+ "strsim 0.8.0",
  "textwrap",
  "unicode-width",
+ "vec_map",
 ]
 
 [[package]]
@@ -1053,7 +1057,7 @@ dependencies = [
  "ident_case",
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "strsim",
+ "strsim 0.9.3",
  "syn 1.0.33",
 ]
 
@@ -4056,6 +4060,12 @@ dependencies = [
 
 [[package]]
 name = "strsim"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
+
+[[package]]
+name = "strsim"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6446ced80d6c486436db5c078dde11a9f73d42b57fb273121e160b84f63d894c"
@@ -4733,6 +4743,7 @@ name = "veloren-server-cli"
 version = "0.6.0"
 dependencies = [
  "ansi-parser",
+ "clap",
  "crossterm",
  "lazy_static",
  "tracing",
