@@ -580,9 +580,10 @@ impl Floor {
 
         let empty = BlockMask::new(Block::empty(), 1);
 
-        let make_staircase = move |pos: Vec3<i32>, radius: f32, inner_radius: f32, stretch: f32| {
-            let stone = BlockMask::new(Block::new(BlockKind::Normal, Rgb::new(150, 150, 175)), 5);
+        let stone = BlockMask::new(Block::new(BlockKind::Normal, Rgb::new(150, 150, 175)), 5);
+        let water = BlockMask::new(Block::new(BlockKind::Water, Rgb::new(150, 150, 175)), 5);
 
+        let make_staircase = move |pos: Vec3<i32>, radius: f32, inner_radius: f32, stretch: f32| {
             if (pos.xy().magnitude_squared() as f32) < inner_radius.powf(2.0) {
                 stone
             } else if (pos.xy().magnitude_squared() as f32) < radius.powf(2.0) {
@@ -597,6 +598,18 @@ impl Floor {
                 }
             } else {
                 BlockMask::nothing()
+            }
+        };
+
+        let make_water_pit = move |pos: Vec3<i32>, radius: f32, inner_radius: f32, stretch: f32| {
+            if pos.z < -4 {
+                if (pos.xy().magnitude_squared() as f32) < inner_radius.powf(2.0) {
+                    water
+                } else {
+                    stone
+                }
+            } else {
+                empty
             }
         };
 
@@ -670,14 +683,14 @@ impl Floor {
                 }
             },
             Some(Tile::DownStair(_)) => {
-                make_staircase(Vec3::new(rtile_pos.x, rtile_pos.y, z), 0.0, 0.5, 9.0)
+                make_water_pit(Vec3::new(rtile_pos.x, rtile_pos.y, z - 11), 0.0, 4.5, 9.0)
                     .resolve_with(empty)
             },
             Some(Tile::UpStair(room)) => {
-                let mut block = make_staircase(
-                    Vec3::new(rtile_pos.x, rtile_pos.y, z),
+                let mut block = make_water_pit(
+                    Vec3::new(rtile_pos.x, rtile_pos.y, z - 11),
                     TILE_SIZE as f32 / 2.0,
-                    0.5,
+                    4.5,
                     9.0,
                 );
                 if z < self.rooms[*room].height {
