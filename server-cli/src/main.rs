@@ -20,7 +20,6 @@ use std::{
 };
 use tui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout},
     text::Text,
     widgets::{Block, Borders, Paragraph, Wrap},
     Terminal,
