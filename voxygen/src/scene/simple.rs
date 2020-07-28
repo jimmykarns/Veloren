@@ -217,7 +217,7 @@ impl Scene {
         };
 
         if let Some(body) = scene_data.body {
-            let tgt_skeleton = IdleAnimation::update_skeleton(
+            let (tgt_skeleton, _) = IdleAnimation::update_skeleton(
                 self.figure_state.skeleton_mut(),
                 (active_tool_kind, second_tool_kind, scene_data.time),
                 scene_data.time,

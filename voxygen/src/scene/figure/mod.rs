@@ -35,6 +35,7 @@ use specs::{Entity as EcsEntity, Join, WorldExt};
 use tracing::trace;
 use treeculler::{BVol, BoundingSphere};
 use vek::*;
+use std::collections::VecDeque;
 
 const DAMAGE_FADE_COEFFICIENT: f64 = 5.0;
 const MOVING_THRESHOLD: f32 = 0.7;
@@ -571,7 +572,7 @@ impl FigureMgr {
                         state.state_time = 0.0;
                     }
 
-                    let target_base = match (
+                    let (target_base, animation_events) = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
                         physics.in_fluid,                                 // In water
@@ -630,7 +631,7 @@ impl FigureMgr {
                             skeleton_attr,
                         ),
                     };
-                    let target_bones = match &character {
+                    let (target_bones, animation_events) = match &character {
                         CharacterState::Roll { .. } => {
                             anim::character::RollAnimation::update_skeleton(
                                 &target_base,
@@ -868,7 +869,7 @@ impl FigureMgr {
                                 skeleton_attr,
                             )
                         },
-                        _ => target_base,
+                        _ => (target_base, animation_events),
                     };
 
                     state.skeleton.interpolate(&target_bones, dt);
@@ -914,7 +915,7 @@ impl FigureMgr {
                         state.state_time = 0.0;
                     }
 
-                    let target_base = match (
+                    let (target_base, animation_events) = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
                         physics.in_fluid,                                 // In water
@@ -948,7 +949,7 @@ impl FigureMgr {
                             skeleton_attr,
                         ),
                         // TODO!
-                        _ => state.skeleton_mut().clone(),
+                        _ => (state.skeleton_mut().clone(), VecDeque::new()),
                     };
 
                     state.skeleton.interpolate(&target_base, dt);
@@ -994,7 +995,7 @@ impl FigureMgr {
                         state.state_time = 0.0;
                     }
 
-                    let target_base = match (
+                    let (target_base, animation_events) = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
                         physics.in_fluid,                                 // In water
@@ -1035,7 +1036,7 @@ impl FigureMgr {
                             skeleton_attr,
                         ),
                     };
-                    let target_bones = match &character {
+                    let (target_bones, animation_events) = match &character {
                         CharacterState::BasicMelee(_) => {
                             anim::quadruped_medium::AlphaAnimation::update_skeleton(
                                 &target_base,
@@ -1046,7 +1047,7 @@ impl FigureMgr {
                             )
                         },
                         // TODO!
-                        _ => target_base,
+                        _ => (target_base, animation_events),
                     };
 
                     state.skeleton.interpolate(&target_bones, dt);
@@ -1090,7 +1091,7 @@ impl FigureMgr {
                         state.state_time = 0.0;
                     }
 
-                    let target_base = match (
+                    let (target_base, animation_events) = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
                         physics.in_fluid,                                 // In water
@@ -1129,7 +1130,7 @@ impl FigureMgr {
                             skeleton_attr,
                         ),
                     };
-                    let target_bones = match &character {
+                    let (target_bones, animation_events) = match &character {
                         CharacterState::BasicMelee(_) => {
                             anim::quadruped_low::AlphaAnimation::update_skeleton(
                                 &target_base,
@@ -1140,7 +1141,7 @@ impl FigureMgr {
                             )
                         },
                         // TODO!
-                        _ => target_base,
+                        _ => (target_base, animation_events),
                     };
 
                     state.skeleton.interpolate(&target_bones, dt);
@@ -1184,7 +1185,7 @@ impl FigureMgr {
                         state.state_time = 0.0;
                     }
 
-                    let target_base = match (
+                    let (target_base, animation_events) = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
                         physics.in_fluid,                                 // In water
@@ -1215,7 +1216,7 @@ impl FigureMgr {
                         ),
 
                         // TODO!
-                        _ => state.skeleton_mut().clone(),
+                        _ => (state.skeleton_mut().clone(), VecDeque::new()),
                     };
 
                     state.skeleton.interpolate(&target_base, dt);
@@ -1259,7 +1260,7 @@ impl FigureMgr {
                         state.state_time = 0.0;
                     }
 
-                    let target_base = match (
+                    let (target_base, animation_events) = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
                         physics.in_fluid,                                 // In water
@@ -1290,7 +1291,7 @@ impl FigureMgr {
                         ),
 
                         // TODO!
-                        _ => state.skeleton_mut().clone(),
+                        _ => (state.skeleton_mut().clone(), VecDeque::new()),
                     };
 
                     state.skeleton.interpolate(&target_base, dt);
@@ -1334,7 +1335,7 @@ impl FigureMgr {
                         state.state_time = 0.0;
                     }
 
-                    let target_base = match (
+                    let (target_base, animation_events) = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
                         physics.in_fluid,                                 // In water
@@ -1365,7 +1366,7 @@ impl FigureMgr {
                         ),
 
                         // TODO!
-                        _ => state.skeleton_mut().clone(),
+                        _ => (state.skeleton_mut().clone(), VecDeque::new()),
                     };
 
                     state.skeleton.interpolate(&target_base, dt);
@@ -1409,7 +1410,7 @@ impl FigureMgr {
                         state.state_time = 0.0;
                     }
 
-                    let target_base = match (
+                    let (target_base, animation_events) = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
                         physics.in_fluid,                                 // In water
@@ -1440,7 +1441,7 @@ impl FigureMgr {
                         ),
 
                         // TODO!
-                        _ => state.skeleton_mut().clone(),
+                        _ => (state.skeleton_mut().clone(), VecDeque::new()),
                     };
 
                     state.skeleton.interpolate(&target_base, dt);
@@ -1484,7 +1485,7 @@ impl FigureMgr {
                         state.state_time = 0.0;
                     }
 
-                    let target_base = match (
+                    let (target_base, animation_events) = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
                         physics.in_fluid,                                 // In water
@@ -1515,7 +1516,7 @@ impl FigureMgr {
                         ),
 
                         // TODO!
-                        _ => state.skeleton_mut().clone(),
+                        _ => (state.skeleton_mut().clone(), VecDeque::new()),
                     };
 
                     state.skeleton.interpolate(&target_base, dt);
@@ -1559,7 +1560,7 @@ impl FigureMgr {
                         state.state_time = 0.0;
                     }
 
-                    let target_base = match (
+                    let (target_base, animation_events) = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
                         physics.in_fluid,                                 // In water
@@ -1590,7 +1591,7 @@ impl FigureMgr {
                         ),
 
                         // TODO!
-                        _ => state.skeleton_mut().clone(),
+                        _ => (state.skeleton_mut().clone(), VecDeque::new()),
                     };
 
                     state.skeleton.interpolate(&target_base, dt);
@@ -1634,7 +1635,7 @@ impl FigureMgr {
                         state.state_time = 0.0;
                     }
 
-                    let target_base = match (
+                    let (target_base, animation_events) = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
                         physics.in_fluid,                                 // In water
@@ -1665,7 +1666,7 @@ impl FigureMgr {
                         ),
 
                         // TODO!
-                        _ => state.skeleton_mut().clone(),
+                        _ => (state.skeleton_mut().clone(), VecDeque::new()),
                     };
 
                     state.skeleton.interpolate(&target_base, dt);
@@ -1709,7 +1710,7 @@ impl FigureMgr {
                         state.state_time = 0.0;
                     }
 
-                    let target_base = match (
+                    let (target_base, animation_events) = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
                         physics.in_fluid,                                 // In water
@@ -1740,7 +1741,7 @@ impl FigureMgr {
                         ),
 
                         // TODO!
-                        _ => state.skeleton_mut().clone(),
+                        _ => (state.skeleton_mut().clone(), VecDeque::new()),
                     };
 
                     state.skeleton.interpolate(&target_base, dt);
