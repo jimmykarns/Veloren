@@ -1,6 +1,7 @@
-use super::{super::Animation, GolemSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, GolemSkeleton, SkeletonAttr};
 //use std::f32::consts::PI;
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct JumpAnimation;
 
@@ -19,7 +20,7 @@ impl Animation for JumpAnimation {
         _anim_time: f64,
         _rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         next.head.offset = Vec3::new(0.0, skeleton_attr.head.0, skeleton_attr.head.1) * 1.02;
@@ -101,6 +102,6 @@ impl Animation for JumpAnimation {
         next.torso.offset = Vec3::new(0.0, 0.0, 0.0);
         next.torso.ori = Quaternion::rotation_z(0.0) * Quaternion::rotation_x(0.0);
         next.torso.scale = Vec3::one();
-        next
+        (next, VecDeque::new())
     }
 }

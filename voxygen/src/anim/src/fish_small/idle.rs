@@ -1,6 +1,7 @@
-use super::{super::Animation, FishSmallSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, FishSmallSkeleton, SkeletonAttr};
 //use std::{f32::consts::PI, ops::Mul};
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct IdleAnimation;
 
@@ -18,7 +19,7 @@ impl Animation for IdleAnimation {
         _anim_time: f64,
         _rate: &mut f32,
         _skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         next.torso.offset = Vec3::new(0.0, 7.5, 15.0) / 11.0;
@@ -29,6 +30,6 @@ impl Animation for IdleAnimation {
         next.tail.ori = Quaternion::rotation_x(0.0);
         next.tail.scale = Vec3::one() * 1.01;
 
-        next
+        (next, VecDeque::new())
     }
 }

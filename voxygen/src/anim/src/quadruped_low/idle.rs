@@ -1,6 +1,7 @@
-use super::{super::Animation, QuadrupedLowSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, QuadrupedLowSkeleton, SkeletonAttr};
 use std::{f32::consts::PI, ops::Mul};
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct IdleAnimation;
 
@@ -18,7 +19,7 @@ impl Animation for IdleAnimation {
         anim_time: f64,
         _rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         let slower = (anim_time as f32 * 1.25).sin();
@@ -108,6 +109,6 @@ impl Animation for IdleAnimation {
         next.foot_br.ori = Quaternion::rotation_y(slow * -0.05);
         next.foot_br.scale = Vec3::one();
 
-        next
+        (next, VecDeque::new())
     }
 }

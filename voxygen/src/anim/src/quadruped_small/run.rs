@@ -1,6 +1,7 @@
-use super::{super::Animation, QuadrupedSmallSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, QuadrupedSmallSkeleton, SkeletonAttr};
 use std::f32::consts::PI;
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct RunAnimation;
 
@@ -18,7 +19,7 @@ impl Animation for RunAnimation {
         anim_time: f64,
         _rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         let slow = (anim_time as f32 * 14.0).sin();
@@ -76,6 +77,6 @@ impl Animation for RunAnimation {
         next.tail.offset = Vec3::new(0.0, skeleton_attr.tail.0, skeleton_attr.tail.1);
         next.tail.ori = Quaternion::rotation_z(0.0);
         next.tail.scale = Vec3::one();
-        next
+        (next, VecDeque::new())
     }
 }

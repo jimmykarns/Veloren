@@ -1,7 +1,8 @@
-use super::{super::Animation, CharacterSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, CharacterSkeleton, SkeletonAttr};
 use common::comp::item::{Hands, ToolKind};
 use std::{f32::consts::PI, ops::Mul};
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct Input {
     pub attack: bool,
@@ -22,7 +23,7 @@ impl Animation for BlockIdleAnimation {
         anim_time: f64,
         _rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         let wave_ultra_slow = (anim_time as f32 * 3.0 + PI).sin();
@@ -347,6 +348,6 @@ impl Animation for BlockIdleAnimation {
             (_, _) => Vec3::zero(),
         };
 
-        next
+        (next, VecDeque::new())
     }
 }

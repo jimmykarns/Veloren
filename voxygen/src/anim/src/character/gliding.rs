@@ -1,7 +1,8 @@
-use super::{super::Animation, CharacterSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, CharacterSkeleton, SkeletonAttr};
 use common::comp::item::{Hands, ToolKind};
 use std::{f32::consts::PI, ops::Mul};
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct GlidingAnimation;
 
@@ -29,7 +30,7 @@ impl Animation for GlidingAnimation {
         anim_time: f64,
         _rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         let speed = Vec2::<f32>::from(velocity).magnitude();
@@ -178,6 +179,6 @@ impl Animation for GlidingAnimation {
             (_, _) => Vec3::zero(),
         };
 
-        next
+        (next, VecDeque::new())
     }
 }

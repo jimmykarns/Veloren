@@ -1,6 +1,7 @@
-use super::{super::Animation, CharacterSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, CharacterSkeleton, SkeletonAttr};
 use common::comp::item::{Hands, ToolKind};
 use std::{f32::consts::PI, ops::Mul};
+use std::collections::VecDeque;
 
 use vek::*;
 
@@ -21,7 +22,7 @@ impl Animation for EquipAnimation {
         anim_time: f64,
         rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         *rate = 1.0;
         let mut next = (*skeleton).clone();
         let lab = 1.0;
@@ -238,6 +239,6 @@ impl Animation for EquipAnimation {
             (_, _) => Vec3::zero(),
         };
 
-        next
+        (next, VecDeque::new())
     }
 }

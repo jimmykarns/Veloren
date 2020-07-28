@@ -1,5 +1,6 @@
-use super::{super::Animation, QuadrupedSmallSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, QuadrupedSmallSkeleton, SkeletonAttr};
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct JumpAnimation;
 
@@ -17,7 +18,7 @@ impl Animation for JumpAnimation {
         _anim_time: f64,
         _rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         next.head.offset = Vec3::new(0.0, skeleton_attr.head.0, skeleton_attr.head.1) / 11.0;
@@ -63,6 +64,6 @@ impl Animation for JumpAnimation {
         next.tail.offset = Vec3::new(0.0, skeleton_attr.tail.0, skeleton_attr.tail.1);
         next.tail.ori = Quaternion::rotation_x(-0.3);
         next.tail.scale = Vec3::one();
-        next
+        (next, VecDeque::new())
     }
 }

@@ -1,6 +1,7 @@
-use super::{super::Animation, BirdSmallSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, BirdSmallSkeleton, SkeletonAttr};
 //use std::{f32::consts::PI, ops::Mul};
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct IdleAnimation;
 
@@ -18,7 +19,7 @@ impl Animation for IdleAnimation {
         _anim_time: f64,
         _rate: &mut f32,
         _skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         next.head.offset = Vec3::new(0.0, 7.5, 15.0) / 11.0;
@@ -37,6 +38,6 @@ impl Animation for IdleAnimation {
         next.wing_r.ori = Quaternion::rotation_z(0.0) * Quaternion::rotation_x(0.0);
         next.wing_r.scale = Vec3::one() / 10.88;
 
-        next
+        (next, VecDeque::new())
     }
 }

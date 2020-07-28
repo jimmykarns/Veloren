@@ -1,6 +1,7 @@
-use super::{super::Animation, FishMediumSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, FishMediumSkeleton, SkeletonAttr};
 //use std::f32::consts::PI;
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct RunAnimation;
 
@@ -18,7 +19,7 @@ impl Animation for RunAnimation {
         _anim_time: f64,
         _rate: &mut f32,
         _skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         next.head.offset = Vec3::new(0.0, 7.5, 15.0) / 11.0;
@@ -44,6 +45,6 @@ impl Animation for RunAnimation {
         next.fin_r.offset = Vec3::new(0.0, 0.0, 12.0) / 11.0;
         next.fin_r.ori = Quaternion::rotation_y(0.0);
         next.fin_r.scale = Vec3::one() / 10.5;
-        next
+        (next, VecDeque::new())
     }
 }

@@ -1,6 +1,7 @@
-use super::{super::Animation, BipedLargeSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, BipedLargeSkeleton, SkeletonAttr};
 use std::f32::consts::PI;
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct RunAnimation;
 
@@ -18,7 +19,7 @@ impl Animation for RunAnimation {
         anim_time: f64,
         _rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         let lab = 10.0;
@@ -138,6 +139,6 @@ impl Animation for RunAnimation {
         next.torso.offset = Vec3::new(0.0, 0.0, beltsnap * 0.25);
         next.torso.ori = Quaternion::rotation_z(0.0) * Quaternion::rotation_x(-0.13);
         next.torso.scale = Vec3::one();
-        next
+        (next, VecDeque::new())
     }
 }

@@ -1,7 +1,8 @@
-use super::{super::Animation, CharacterSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, CharacterSkeleton, SkeletonAttr};
 use common::comp::item::{Hands, ToolKind};
 use std::{f32::consts::PI, ops::Mul};
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct SitAnimation;
 
@@ -19,7 +20,7 @@ impl Animation for SitAnimation {
         anim_time: f64,
         _rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         let slow = (anim_time as f32 * 1.0).sin();
@@ -182,6 +183,6 @@ impl Animation for SitAnimation {
             (_, _) => Vec3::zero(),
         };
 
-        next
+        (next, VecDeque::new())
     }
 }

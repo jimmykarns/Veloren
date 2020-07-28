@@ -7,6 +7,7 @@ pub mod bird_small;
 pub mod character;
 pub mod critter;
 pub mod dragon;
+
 #[cfg(feature = "use-dyn-lib")] pub mod dyn_lib;
 pub mod fish_medium;
 pub mod fish_small;
@@ -23,6 +24,7 @@ pub use dyn_lib::init;
 #[cfg(feature = "use-dyn-lib")]
 use std::ffi::CStr;
 use vek::*;
+use std::collections::VecDeque;
 
 // TODO: replace with inner type everywhere
 pub struct FigureBoneData(pub Mat4<f32>);
@@ -106,6 +108,21 @@ pub trait Skeleton: Send + Sync + 'static {
     fn interpolate(&mut self, target: &Self, dt: f32);
 }
 
+pub enum AnimationEvent {
+    Step,
+}
+
+pub struct AnimationEventItem {
+    pub event: AnimationEvent,
+    pub pos: Vec3<f32>,
+}
+
+impl AnimationEventItem {
+    pub fn new(event: AnimationEvent, pos: Vec3<f32>) -> Self {
+        Self { event, pos }
+    }
+}
+
 pub trait Animation {
     type Skeleton: Skeleton;
     type Dependency;
@@ -120,7 +137,7 @@ pub trait Animation {
         _anim_time: f64,
         _rate: &mut f32,
         _skeleton_attr: &<<Self as Animation>::Skeleton as Skeleton>::Attr,
-    ) -> Self::Skeleton;
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>);
 
     /// Calls `update_skeleton_inner` either directly or via `libloading` to
     /// generate the new skeleton.
@@ -130,7 +147,7 @@ pub trait Animation {
         anim_time: f64,
         rate: &mut f32,
         skeleton_attr: &<<Self as Animation>::Skeleton as Skeleton>::Attr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         #[cfg(not(feature = "use-dyn-lib"))]
         {
             Self::update_skeleton_inner(skeleton, dependency, anim_time, rate, skeleton_attr)

@@ -1,7 +1,8 @@
-use super::{super::Animation, CharacterSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, CharacterSkeleton, SkeletonAttr};
 use common::comp::item::{Hands, ToolKind};
 use std::f32::consts::PI;
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct ClimbAnimation;
 
@@ -25,7 +26,7 @@ impl Animation for ClimbAnimation {
         anim_time: f64,
         rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         let speed = velocity.magnitude();
@@ -195,6 +196,6 @@ impl Animation for ClimbAnimation {
             (_, _) => Vec3::zero(),
         };
 
-        next
+        (next, VecDeque::new())
     }
 }

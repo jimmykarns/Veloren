@@ -1,7 +1,8 @@
-use super::{super::Animation, CharacterSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, CharacterSkeleton, SkeletonAttr};
 use common::comp::item::{Hands, ToolKind};
 /* use std::f32::consts::PI; */
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct LeapAnimation;
 
@@ -20,7 +21,7 @@ impl Animation for LeapAnimation {
         anim_time: f64,
         rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         *rate = 1.0;
         let mut next = (*skeleton).clone();
 
@@ -113,6 +114,6 @@ impl Animation for LeapAnimation {
         next.torso.offset = Vec3::new(0.0, 0.0, 0.0) * skeleton_attr.scaler;
         next.torso.ori = Quaternion::rotation_z(0.0);
         next.torso.scale = Vec3::one() / 11.0 * skeleton_attr.scaler;
-        next
+        (next, VecDeque::new())
     }
 }

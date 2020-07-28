@@ -1,7 +1,8 @@
-use super::{super::Animation, CritterAttr, CritterSkeleton};
+use super::{super::{Animation, AnimationEventItem}, CritterAttr, CritterSkeleton};
 //use std::{f32::consts::PI, ops::Mul};
 use std::{f32::consts::PI, ops::Mul};
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct IdleAnimation;
 
@@ -19,7 +20,7 @@ impl Animation for IdleAnimation {
         anim_time: f64,
         _rate: &mut f32,
         skeleton_attr: &CritterAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         let wave = (anim_time as f32 * 10.0).sin();
@@ -63,6 +64,6 @@ impl Animation for IdleAnimation {
         next.tail.ori = Quaternion::rotation_y(wave_slow * 0.05);
         next.tail.scale = Vec3::one() / 18.0;
 
-        next
+        (next, VecDeque::new())
     }
 }

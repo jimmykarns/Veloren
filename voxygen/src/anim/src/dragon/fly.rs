@@ -1,6 +1,7 @@
-use super::{super::Animation, DragonSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, DragonSkeleton, SkeletonAttr};
 use std::f32::consts::PI;
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct FlyAnimation;
 
@@ -18,7 +19,7 @@ impl Animation for FlyAnimation {
         anim_time: f64,
         _rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         let lab = 12.0;
@@ -155,6 +156,6 @@ impl Animation for FlyAnimation {
         next.wing_out_r.ori = Quaternion::rotation_y((-0.35 + wingr * 0.6).min(-0.2));
         next.wing_out_r.scale = Vec3::one();
 
-        next
+        (next, VecDeque::new())
     }
 }

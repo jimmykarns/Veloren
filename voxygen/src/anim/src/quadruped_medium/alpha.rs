@@ -1,6 +1,7 @@
-use super::{super::Animation, QuadrupedMediumSkeleton, SkeletonAttr};
+use super::{super::{Animation, AnimationEventItem}, QuadrupedMediumSkeleton, SkeletonAttr};
 use std::f32::consts::PI;
 use vek::*;
+use std::collections::VecDeque;
 
 pub struct AlphaAnimation;
 
@@ -18,7 +19,7 @@ impl Animation for AlphaAnimation {
         anim_time: f64,
         _rate: &mut f32,
         skeleton_attr: &SkeletonAttr,
-    ) -> Self::Skeleton {
+    ) -> (Self::Skeleton, VecDeque<AnimationEventItem>) {
         let mut next = (*skeleton).clone();
 
         let short = (((1.0)
@@ -140,6 +141,6 @@ impl Animation for AlphaAnimation {
         next.foot_br.ori =
             Quaternion::rotation_x(-0.2 + short * 0.2) * Quaternion::rotation_y(short * 0.15);
         next.foot_br.scale = Vec3::one();
-        next
+        (next, VecDeque::new())
     }
 }
