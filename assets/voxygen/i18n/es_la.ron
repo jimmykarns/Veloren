@@ -77,12 +77,12 @@ Se reinicio el servidor?
 El cliente esta actualizado?"#,
 
 
-        "common.races.orc": "Orco",
-        "common.races.human": "Humano",
-        "common.races.dwarf": "Enano",
-        "common.races.elf": "Elfo",
-        "common.races.undead": "No-Muerto",
-        "common.races.danari": "Danari",
+        "common.species.orc": "Orco",
+        "common.species.human": "Humano",
+        "common.species.dwarf": "Enano",
+        "common.species.elf": "Elfo",
+        "common.species.undead": "No-Muerto",
+        "common.species.danari": "Danari",
 
         "common.weapons.axe": "Hacha",
         "common.weapons.sword": "Espada",
@@ -95,6 +95,7 @@ El cliente esta actualizado?"#,
         /// Start Main screen section
         "main.connecting": "Conectando",
         "main.creating_world": "Creando Mundo",
+        "main.tip": "Consejo:",
 
         // Welcome notice that appears the first time Veloren is started
         "main.notice": r#"Bienvenido a la version alfa de Veloren!
@@ -117,8 +118,6 @@ Gracias por tomarte el tiempo de leer este mensaje, esperamos que disfrutes el j
 
         /// Login process description
         "main.login_process": r#"Información sobre el proceso para Iniciar Sesión:
-
-Si estas teniendo problemas iniciando sesión:
                                        
 Por favor ten en cuenta que ahora necesitas una cuenta
 para jugar en servidores con autenticación activada.
@@ -273,6 +272,7 @@ objetos infundidos con magia?"#,
         "hud.settings.chat": "Chat",
         "hud.settings.background_transparency": "Transparencia del Fondo",
         "hud.settings.chat_character_name": "Nombres de Personajes en el chat",
+        "hud.settings.loading_tips": "Consejos de la Pantalla de Carga",
 
         "hud.settings.pan_sensitivity": "Sensibilidad de Desplazamiento de la Cámara",
         "hud.settings.zoom_sensitivity": "Sensibilidad del Zoom",
@@ -281,7 +281,7 @@ objetos infundidos con magia?"#,
         "hud.settings.enable_mouse_smoothing": "Suavizado de la Cámara",
         "hud.settings.free_look_behavior": "Comportamiento de vista libre",
 		"hud.settings.auto_walk_behavior": "Comportamiento al caminar automaticamente",
-        "hud.settings.stop_auto_walk_on_input": "Frenar caminata automática",
+        "hud.settings.stop_auto_walk_on_input": "Frenar caminata automática al moverte",
 
         "hud.settings.view_distance": "Distancia de Visión",
         "hud.settings.sprites_view_distance": "Distancia de Visión de Sprites",
@@ -312,6 +312,12 @@ objetos infundidos con magia?"#,
         "hud.social.not_yet_available": "Aún no esta disponible",
         "hud.social.faction": "Facción",
         "hud.social.play_online_fmt": "{nb_player} jugador(es) en linea",
+		
+        "hud.crafting": "Crafting",
+        "hud.crafting.recipes": "Recipes",
+        "hud.crafting.ingredients": "Ingredients:",
+        "hud.crafting.craft": "Craft",
+        "hud.crafting.tool_cata": "Requires:",
 
         "hud.spell": "Hechizos",
 
@@ -371,6 +377,7 @@ objetos infundidos con magia?"#,
         "gameinput.freelook": "Vista Libre",
 		"gameinput.autowalk": "Caminata Automática",
         "gameinput.dance": "Bailar",
+		"gameinput.swim": "Nadar",
         
         /// End GameInput section
 
@@ -393,11 +400,11 @@ objetos infundidos con magia?"#,
         "char_selection.beard": "Barba",
         "char_selection.hair_style": "Estilo de Pelo",
         "char_selection.hair_color": "Color de Pelo",
-        "char_selection.chest_color": "Color del Torso",
         "char_selection.eye_color": "Color de Ojos",
         "char_selection.skin": "Piel",
-        "char_selection.eyebrows": "Cejas",
+        "char_selection.eyeshape": "Detalles del Ojo",,
         "char_selection.accessories": "Accesorios",
+		"char_selection.create_info_name": "¿Tu personaje necesita un nombre!",
 
         /// End chracter selection section
 
@@ -406,10 +413,12 @@ objetos infundidos con magia?"#,
         "character_window.character_name": "Nombre de Personaje",
         // Charater stats
         "character_window.character_stats": r#"Resistencia
-
+		
 Estado Físico
 
 Fuerza de Voluntad
+
+Protección
 "#,
         /// End character window section
 
@@ -418,17 +427,37 @@ Fuerza de Voluntad
         "esc_menu.logout": "Cerrar Sesión",
         "esc_menu.quit_game": "Salir del Juego",
         /// End Escape Menu Section
-    }
+
+    },
+
 	
 	vector_map: {
+		"loading.tips": [
+            "Presiona 'G' para encender tu linterna.",
+            "Persiona 'F1' para ver todos los controles por defecto del teclado.",
+            "Puedes escribir /say o /s para solo hablar con los jugadores a tu alrededor.",
+            "Puedes escribir /region o /r para solo hablar con los jugadores que estan a un par de cientos de bloques de distancia de ti.",
+            "Para enviar mensajes privados escribe /tell seguido por el nombre del jugador y tu mensaje.",
+            "Los NPCs con el mismo nivel pueden tener una dificultad diferente.",
+            "¡Mira al suelo para conseguir comida, cofres y otros tipos de botin!",
+            "¿Se te lleno el inventario de comida? ¡Intenta crear mejor comida con ella!",
+            "¿Preguntandote que podrias hacer? ¡Los Calabozos estan marcados con puntos marrones en el mapa!",    
+            "No te olvides de ajustar los graficos para tu sistema. Presiona 'N' para abrir los ajustes.",
+            "¡Jugar con otros es divertido! Presiona 'O' para ver quien esta en linea.", 
+            "Un NPC con una calavera bajo su barra de vida es bastante poderoso comparado contigo.",
+            "Presiona 'J' para bailar. ¡Fiesta!",
+            "Presiona 'L-Shift' para abrir tu Planeador y conquista los cielos.",
+            "Veloren aun esta en Pre-Alpha. ¡Hacemos lo mejor que podemos para mejorarlo cada dia!",
+            "Si te quieres unir al Equipo de Desarrollo o simplemente quieres charlar con nosotros, unete a nuestro Servidor de Discord.",            
+        ],         
         "npc.speech.villager_under_attack": [
             "Ayuda, ¡Me están atacando!",
             "¡Ayuda! ¡Me están atacando!",
-            "¡Auch! ¡Me están atacando!",
-            "¡Auch! ¡Me están atacando! ¡Ayuda!",
-            "¡Ayudenme! ¡Me están atacando!",
+            "¡Ouch! ¡Me están atacando!",
+            "¡Ouch! ¡Me están atacando! ¡Ayuda!",
+            "¡Ayúdenme! ¡Me están atacando!",
             "¡Me están atacando! ¡Ayuda!",
-            "¡Me están atacando! ¡Ayudenme!",
+            "¡Me están atacando! ¡Ayúdenme!",
             "¡Ayuda!",
             "¡Ayuda! ¡Ayuda!",
             "¡Ayuda! ¡Ayuda! ¡Ayuda!",
@@ -443,21 +472,64 @@ Fuerza de Voluntad
             "¡Guardias! ¡Me están atacando!",
             "¡Me están atacando! ¡Guardias!",
             "¡Ayuda! ¡Guardias! ¡Me están atacando!",
-            "¡Guardias! ¡Vengan rapido!",
+            "¡Guardias! ¡Vengan rápido!",
             "¡Guardias, Guardias!",
             "¡Guardias! ¡Me esta atacando un villano!",
             "¡Guardias, eliminen a este desagradable villano!",
-            "¡Guardias! ¡Ahi esta el asesino!",
+            "¡Guardias! ¡Ahí esta el asesino!",
             "¡Guardias! ¡Ayúdenme!",
             "No te saldrás con la tuya, ¡Guardias!",
             "¡Serás despreciable!",
             "¡Ayúdenme!",
-            "¡Ayuda! ¡Porfavor!",
-            "¡Auch! ¡Guardias! ¡Ayuda!",
+            "¡Ayuda! ¡Por favor!",
+            "¡Ouch! ¡Guardias! ¡Ayuda!",
             "¡Vienen por mi!",
             "¡Ayuda! ¡Ayuda! Estoy siendo oprimido",
             "Ah, se nota que la violencia es parte del sistema.",
-            "¡Esto no es más que un rasguño!"
+            "¡Esto no es más que un rasguño!",
+			"¡Para!",
+            "¡¿Te hice algo alguna vez?!",
+            "¡Por favor para de atacarme!",
+            "¡Hey! ¡Fijate a donde apuntas con eso!",
+            "¡Desgraciado, criatura atroz, fuera contigo!",
+            "¡Para! ¡Vete!",
+            "¡Ahora me estas haciendo enojar!",
+            "!Eh! ¡¿Quien te crees que eres?!",
+            "¡Tendré tu cabeza por eso!",
+            "¡Para, por favor! ¡No llevo nada de valor!",
+            "¡Hare que mi hermano venga por ti, el es mas grande que yo!",
+            "¡Nooo, le diré a mi madre!",
+            "¡Maldito seas!",
+            "Por favor no hagas eso.",
+            "¡Eso no fue muy amable!",
+            "¡Tu arma funciona, ahora puedes guardarla!",
+            "¡Dejame vivir!",
+            "¡Por favor, tengo una familia!",
+            "¡Soy demasiado joven para morir!",
+            "¿Podemos hablar sobre esto?",
+            "¡La violencia nunca es la respuesta!",
+            "Resulta que hoy es un muy mal día...",
+            "¡Hey, eso duele!",
+            "Ayy!",
+            "¡Que grosero!",
+            "¡Para, te lo ruego!",
+            "¡Deseo la viruela sobre ti!",
+            "Esto no es divertido.",
+            "¡¿Como te atrevés?!",
+            "¡Vas a pagar por eso!",
+            "¡Sigue con eso y lo vas a lamentar!",
+            "¡No me hagas lastimarte!",
+            "¡Tiene que haber algún malentendido!",
+            "¡No tienes que hacer esto!",
+            "¡Fuera contigo, demonio!",
+            "¡Eso si que dolió!",
+            "¿Porque harías eso?",
+            "¡Por los espíritus, detente!",
+            "¡Tienes que haberme confundido con otra persona!",
+            "¡No merezco esto!",
+            "Por favor no hagas eso de nuevo.",
+            "¡Guardias, tiren a este monstruo al lago!",
+            "¡Te voy a largar mi Terrasque!",
         ],
     }
 )
