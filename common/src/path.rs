@@ -4,6 +4,7 @@ use crate::{
     vol::{BaseVol, ReadVol},
 };
 use hashbrown::hash_map::DefaultHashBuilder;
+use rand::prelude::*;
 use std::iter::FromIterator;
 use vek::*;
 
@@ -349,9 +350,7 @@ impl Chaser {
             // theory this shouldn't happen, but in practice the world is full
             // of unpredictable obstacles that are more than willing to mess up
             // our day. TODO: Come up with a better heuristic for this
-            if end_to_tgt > pos_to_tgt * 0.3 + 5.0
-            /* || thread_rng().gen::<f32>() < 0.005 */
-            {
+            if end_to_tgt > pos_to_tgt * 0.3 + 5.0 || thread_rng().gen::<f32>() < 0.001 {
                 None
             } else {
                 self.route
@@ -393,7 +392,7 @@ impl Chaser {
                 });
             }
 
-            if walkable(vol, (pos + Vec3::<f32>::from(tgt_dir) * 3.0).map(|e| e as i32)) {
+            if (-3..2).any(|z| walkable(vol, (pos + Vec3::<f32>::from(tgt_dir) * 2.5).map(|e| e as i32) + Vec3::unit_z() * z)) {
                 Some(((tgt - pos) * Vec3::new(1.0, 1.0, 0.0), 0.75))
             } else {
                 None
