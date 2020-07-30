@@ -159,7 +159,7 @@ impl<'a> System<'a> for Sys {
             // and so can afford to be less precise when trying to move around
             // the world (especially since they would otherwise get stuck on
             // obstacles that smaller entities would not).
-            let node_tolerance = scale + vel.0.xy().magnitude() * 0.2;
+            let node_tolerance = scale * 1.5 + vel.0.xy().magnitude() * 0.3;
             let slow_factor = body.map(|b| b.base_accel() / 250.0).unwrap_or(0.0).min(1.0);
 
             let mut do_idle = false;
