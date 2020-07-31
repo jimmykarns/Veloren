@@ -186,7 +186,7 @@ impl<'a> Widget for Crafting<'a> {
         Text::new(&self.localized_strings.get("hud.crafting"))
             .mid_top_with_margin_on(ids.window_frame, 9.0)
             .font_id(self.fonts.cyri.conrod_id)
-            .font_size(self.fonts.cyri.scale(22))
+            .font_size(self.fonts.cyri.scale(20))
             .color(TEXT_COLOR)
             .set(ids.title_main, ui);
 

@@ -14,6 +14,7 @@ widget_ids! {
     pub struct Ids {
         frame,
         close,
+        title_align,
         title,
         bg,
         icon,
@@ -160,10 +161,13 @@ impl<'a> Widget for Social<'a> {
         }
 
         // Title
+        Rectangle::fill_with([212.0, 42.0], color::TRANSPARENT)
+            .top_left_with_margins_on(state.ids.frame, 2.0, 44.0)
+            .set(state.ids.title_align, ui);
         Text::new(&self.localized_strings.get("hud.social"))
-            .mid_top_with_margin_on(state.ids.frame, 9.0)
+            .middle_of(state.ids.title_align)
             .font_id(self.fonts.cyri.conrod_id)
-            .font_size(self.fonts.cyri.scale(22))
+            .font_size(self.fonts.cyri.scale(20))
             .color(TEXT_COLOR)
             .set(state.ids.title, ui);
 
@@ -322,7 +326,7 @@ impl<'a> Widget for Social<'a> {
                 .font_size(self.fonts.cyri.scale(14))
                 .color(TEXT_COLOR)
                 .set(state.ids.online_txt, ui);
-            Text::new(&count.to_string())
+            Text::new(&(count-1).to_string())
                 .right_from(state.ids.online_txt, 5.0)
                 .font_id(self.fonts.cyri.conrod_id)
                 .font_size(self.fonts.cyri.scale(14))
