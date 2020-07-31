@@ -312,7 +312,6 @@ impl<'a> Widget for Group<'a> {
                 let stats = entity.and_then(|entity| stats.get(entity));
                 let energy = entity.and_then(|entity| energy.get(entity));
                 if let Some(stats) = stats {
-                    dbg!(i);
                     let char_name = stats.name.to_string();
                     let health_perc = stats.health.current() as f64 / stats.health.maximum() as f64;
 
