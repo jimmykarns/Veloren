@@ -5,7 +5,7 @@ ARG PROJECTNAME=server-cli
 # librust-backtrace+libbacktrace-dev = backtrace functionality
 RUN apt-get update; export DEBIAN_FRONTEND=noninteractive; \
     apt-get install -y --no-install-recommends --assume-yes \
-    librust-backtrace+libbacktrace-dev; \
+        librust-backtrace+libbacktrace-dev; \
     rm -rf /var/lib/apt/lists/*;
 
 COPY ./veloren-server-cli /opt/veloren-server-cli
