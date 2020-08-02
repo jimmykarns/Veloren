@@ -24,6 +24,7 @@ pub enum CharacterAbilityType {
     TripleStrike(Stage),
     LeapMelee,
     SpinMelee,
+    SpawnEntity,
 }
 
 impl From<&CharacterState> for CharacterAbilityType {
@@ -37,6 +38,7 @@ impl From<&CharacterState> for CharacterAbilityType {
             CharacterState::LeapMelee(_) => Self::LeapMelee,
             CharacterState::TripleStrike(data) => Self::TripleStrike(data.stage),
             CharacterState::SpinMelee(_) => Self::SpinMelee,
+            CharacterState::SpawnEntity(_) => Self::SpawnEntity,
             CharacterState::ChargedRanged(_) => Self::ChargedRanged,
             _ => Self::BasicMelee,
         }
@@ -105,6 +107,12 @@ pub enum CharacterAbility {
         projectile_body: Body,
         projectile_light: Option<LightEmitter>,
     },
+    SpawnEntity {
+        energy_cost: u32,
+        holdable: bool,
+        prepare_duration: Duration,
+        recover_duration: Duration,
+    },
 }
 
 impl CharacterAbility {
@@ -146,7 +154,8 @@ impl CharacterAbility {
                 .energy
                 .try_change_by(-(*energy_cost as i32), EnergySource::Ability)
                 .is_ok(),
-            CharacterAbility::ChargedRanged { energy_cost, .. } => update
+            CharacterAbility::SpawnEntity { energy_cost, .. }
+            | CharacterAbility::ChargedRanged { energy_cost, .. } => update
                 .energy
                 .try_change_by(-(*energy_cost as i32), EnergySource::Ability)
                 .is_ok(),
@@ -355,6 +364,18 @@ impl From<&CharacterAbility> for CharacterState {
                 recover_duration: *recover_duration,
                 projectile_body: *projectile_body,
                 projectile_light: *projectile_light,
+            }),
+            CharacterAbility::SpawnEntity {
+                energy_cost: _,
+                holdable,
+                prepare_duration,
+                recover_duration,
+            } => CharacterState::SpawnEntity(spawn_entity::Data {
+                holdable: *holdable,
+                exhausted: false,
+                prepare_timer: Duration::default(),
+                prepare_duration: *prepare_duration,
+                recover_duration: *recover_duration,
             }),
         }
     }

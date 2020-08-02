@@ -502,6 +502,11 @@
         "voxel.weapon.staff.wood-nature",
         (1.0, -1.0, 0.0), (-310., 90.0, 0.0), 1.2,
     ),
+    // Spawning Staff
+    Tool(Staff("Spawn")): VoxTrans(
+        "voxel.weapon.staff.wood-nature",
+        (1.0, -1.0, 0.0), (-310., 90.0, 0.0), 1.2,
+    ),
     // Shields
     Tool(Shield("BasicShield")): VoxTrans(
         "voxel.weapon.shield.wood-0",

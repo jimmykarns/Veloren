@@ -3,7 +3,7 @@ Item(
     description: "Spawns something",      
     kind: Tool(
         (
-            kind: Staff("Sceptre"),    
+            kind: Staff("Spawn"),    
             stats: (
                 equip_time_millis: 400,
                 power: 1.00,

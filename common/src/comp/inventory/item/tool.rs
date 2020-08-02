@@ -231,6 +231,23 @@ impl Tool {
                             max_angle: 45.0,
                         },
                     ]
+                } else if kind == "Spawn" {
+                    vec![
+                        SpawnEntity {
+                            holdable: false,
+                            energy_cost: 0,
+                            prepare_duration: Duration::from_millis(0),
+                            recover_duration: Duration::from_millis(300),
+                        },
+                        BasicMelee {
+                            energy_cost: 350,
+                            buildup_duration: Duration::from_millis(0),
+                            recover_duration: Duration::from_millis(1000),
+                            base_healthchange: (150.0 * self.base_power()) as i32,
+                            range: 10.0,
+                            max_angle: 45.0,
+                        },
+                    ]
                 } else {
                     vec![
                         BasicMelee {
