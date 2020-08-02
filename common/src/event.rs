@@ -35,6 +35,7 @@ pub enum ServerEvent {
         cause: comp::HealthSource,
     },
     InventoryManip(EcsEntity, comp::InventoryManip),
+    GroupManip(EcsEntity, comp::GroupManip),
     Respawn(EcsEntity),
     Shoot {
         entity: EcsEntity,
@@ -80,7 +81,7 @@ pub enum ServerEvent {
     ChunkRequest(EcsEntity, Vec2<i32>),
     ChatCmd(EcsEntity, String),
     /// Send a chat message to the player from an npc or other player
-    Chat(comp::ChatMsg),
+    Chat(comp::UnresolvedChatMsg),
 }
 
 pub struct EventBus<E> {

@@ -41,7 +41,7 @@ widget_ids! {
         crafting_button_bg,
         crafting_text,
         crafting_text_bg,
-
+        group_button,
     }
 }
 const TOOLTIP_UPSHIFT: f64 = 40.0;
@@ -366,6 +366,7 @@ impl<'a> Widget for Buttons<'a> {
                 .color(TEXT_COLOR)
                 .set(state.ids.spellbook_text, ui);
         }
+
         // Crafting
         if Button::image(self.imgs.crafting_icon)
             .w_h(25.0, 25.0)
@@ -378,7 +379,6 @@ impl<'a> Widget for Buttons<'a> {
                 "",
                 &button_tooltip,
             )
-            .bottom_offset(TOOLTIP_UPSHIFT)
             .set(state.ids.crafting_button, ui)
             .was_clicked()
         {
@@ -403,6 +403,7 @@ impl<'a> Widget for Buttons<'a> {
                 .color(TEXT_COLOR)
                 .set(state.ids.crafting_text, ui);
         }
+
         None
     }
 }

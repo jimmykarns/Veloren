@@ -65,6 +65,7 @@ VoxygenLocalization(
         "common.create": "Create",
         "common.okay": "Okay",
         "common.accept": "Accept",
+        "common.decline": "Decline",
         "common.disclaimer": "Disclaimer",
         "common.cancel": "Cancel",
         "common.none": "None",
@@ -318,12 +319,16 @@ magically infused items?"#,
         "hud.settings.unbound": "None",
         "hud.settings.reset_keybinds": "Reset to Defaults",
 
-        "hud.social": "Social",
-        "hud.social.online": "Online",
+        "hud.social": "Other Players",
+        "hud.social.online": "Online:",
         "hud.social.friends": "Friends",
         "hud.social.not_yet_available": "Not yet available",
         "hud.social.faction": "Faction",
         "hud.social.play_online_fmt": "{nb_player} player(s) online",
+        "hud.social.name": "Name",
+        "hud.social.level": "Level",
+        "hud.social.zone": "Zone",
+
 
         "hud.crafting": "Crafting",
         "hud.crafting.recipes": "Recipes",
@@ -331,7 +336,18 @@ magically infused items?"#,
         "hud.crafting.craft": "Craft",
         "hud.crafting.tool_cata": "Requires:",
 
-        "hud.spell": "Spells",        
+        "hud.group": "Group",
+        "hud.group.invite_to_join": "{name} invited you to their group!",
+        "hud.group.invite": "Invite",
+        "hud.group.kick": "Kick",
+        "hud.group.assign_leader": "Assign Leader",
+        "hud.group.leave": "Leave Group",
+        "hud.group.dead" : "Dead",
+        "hud.group.out_of_range": "Out of range",
+        "hud.group.add_friend": "Add to Friends",
+        "hud.group.link_group": "Link Groups",
+
+        "hud.spell": "Spells",
 
         "hud.free_look_indicator": "Free look active",
         "hud.auto_walk_indicator": "Auto walk active",
@@ -389,7 +405,10 @@ magically infused items?"#,
         "gameinput.freelook": "Free Look",
         "gameinput.autowalk": "Auto Walk",
         "gameinput.dance": "Dance",
-
+        "gameinput.select": "Select Entity",
+        "gameinput.acceptgroupinvite": "Accept Group Invite",
+        "gameinput.declinegroupinvite": "Decline Group Invite",
+        
         /// End GameInput section
 
 

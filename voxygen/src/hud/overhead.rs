@@ -1,6 +1,6 @@
 use super::{
-    img_ids::Imgs, FACTION_COLOR, GROUP_COLOR, HP_COLOR, LOW_HP_COLOR, MANA_COLOR, REGION_COLOR,
-    SAY_COLOR, TELL_COLOR, TEXT_BG, TEXT_COLOR,
+    img_ids::Imgs, DEFAULT_NPC, FACTION_COLOR, GROUP_COLOR, GROUP_MEMBER, HP_COLOR, LOW_HP_COLOR,
+    MANA_COLOR, REGION_COLOR, SAY_COLOR, TELL_COLOR, TEXT_BG, TEXT_COLOR,
 };
 use crate::{
     i18n::VoxygenLocalization,
@@ -56,6 +56,7 @@ pub struct Overhead<'a> {
     stats: &'a Stats,
     energy: Option<&'a Energy>,
     own_level: u32,
+    in_group: bool,
     settings: &'a GameplaySettings,
     pulse: f32,
     voxygen_i18n: &'a std::sync::Arc<VoxygenLocalization>,
@@ -73,6 +74,7 @@ impl<'a> Overhead<'a> {
         stats: &'a Stats,
         energy: Option<&'a Energy>,
         own_level: u32,
+        in_group: bool,
         settings: &'a GameplaySettings,
         pulse: f32,
         voxygen_i18n: &'a std::sync::Arc<VoxygenLocalization>,
@@ -85,6 +87,7 @@ impl<'a> Overhead<'a> {
             stats,
             energy,
             own_level,
+            in_group,
             settings,
             pulse,
             voxygen_i18n,
@@ -145,7 +148,11 @@ impl<'a> Widget for Overhead<'a> {
         Text::new(&self.name)
             .font_id(self.fonts.cyri.conrod_id)
             .font_size(30)
-            .color(Color::Rgba(0.61, 0.61, 0.89, 1.0))
+            .color(if self.in_group {
+                GROUP_MEMBER
+            } else {
+                DEFAULT_NPC
+            })
             .x_y(0.0, MANA_BAR_Y + 50.0)
             .set(state.ids.name, ui);
 

@@ -17,8 +17,8 @@ use byteorder::{ByteOrder, LittleEndian};
 use common::{
     character::CharacterItem,
     comp::{
-        self, ControlAction, ControlEvent, Controller, ControllerInputs, InventoryManip,
-        InventoryUpdateEvent,
+        self, group, ControlAction, ControlEvent, Controller, ControllerInputs, GroupManip,
+        InventoryManip, InventoryUpdateEvent,
     },
     msg::{
         validate_chat_msg, ChatMsgValidationError, ClientMsg, ClientState, Notification,
@@ -101,6 +101,10 @@ pub struct Client {
     pub active_character_id: Option<i32>,
     recipe_book: RecipeBook,
     available_recipes: HashSet<String>,
+
+    group_invite: Option<Uid>,
+    group_leader: Option<Uid>,
+    group_members: HashMap<Uid, group::Role>,
 
     _network: Network,
     participant: Option<Participant>,
@@ -371,10 +375,14 @@ impl Client {
             lod_alt,
             lod_horizon,
             player_list: HashMap::new(),
+            group_members: HashMap::new(),
             character_list: CharacterList::default(),
             active_character_id: None,
             recipe_book,
             available_recipes: HashSet::default(),
+
+            group_invite: None,
+            group_leader: None,
 
             _network: network,
             participant: Some(participant),
@@ -538,7 +546,7 @@ impl Client {
     }
 
     pub fn pick_up(&mut self, entity: EcsEntity) {
-        if let Some(uid) = self.state.ecs().read_storage::<Uid>().get(entity).copied() {
+        if let Some(uid) = self.state.read_component_copied(entity) {
             self.singleton_stream
                 .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
                     InventoryManip::Pickup(uid),
@@ -587,6 +595,66 @@ impl Client {
             .unwrap();
     }
 
+    pub fn group_invite(&self) -> Option<Uid> { self.group_invite }
+
+    pub fn group_info(&self) -> Option<(String, Uid)> {
+        self.group_leader.map(|l| ("Group".into(), l)) // TODO
+    }
+
+    pub fn group_members(&self) -> &HashMap<Uid, group::Role> { &self.group_members }
+
+    pub fn send_group_invite(&mut self, invitee: Uid) {
+        self.singleton_stream
+            .send(ClientMsg::ControlEvent(ControlEvent::GroupManip(
+                GroupManip::Invite(invitee),
+            )))
+            .unwrap()
+    }
+
+    pub fn accept_group_invite(&mut self) {
+        // Clear invite
+        self.group_invite.take();
+        self.singleton_stream
+            .send(ClientMsg::ControlEvent(ControlEvent::GroupManip(
+                GroupManip::Accept,
+            )))
+            .unwrap();
+    }
+
+    pub fn decline_group_invite(&mut self) {
+        // Clear invite
+        self.group_invite.take();
+        self.singleton_stream
+            .send(ClientMsg::ControlEvent(ControlEvent::GroupManip(
+                GroupManip::Decline,
+            )))
+            .unwrap();
+    }
+
+    pub fn leave_group(&mut self) {
+        self.singleton_stream
+            .send(ClientMsg::ControlEvent(ControlEvent::GroupManip(
+                GroupManip::Leave,
+            )))
+            .unwrap();
+    }
+
+    pub fn kick_from_group(&mut self, uid: Uid) {
+        self.singleton_stream
+            .send(ClientMsg::ControlEvent(ControlEvent::GroupManip(
+                GroupManip::Kick(uid),
+            )))
+            .unwrap();
+    }
+
+    pub fn assign_group_leader(&mut self, uid: Uid) {
+        self.singleton_stream
+            .send(ClientMsg::ControlEvent(ControlEvent::GroupManip(
+                GroupManip::AssignLeader(uid),
+            )))
+            .unwrap();
+    }
+
     pub fn is_mounted(&self) -> bool {
         self.state
             .ecs()
@@ -596,7 +664,7 @@ impl Client {
     }
 
     pub fn mount(&mut self, entity: EcsEntity) {
-        if let Some(uid) = self.state.ecs().read_storage::<Uid>().get(entity).copied() {
+        if let Some(uid) = self.state.read_component_copied(entity) {
             self.singleton_stream
                 .send(ClientMsg::ControlEvent(ControlEvent::Mount(uid)))
                 .unwrap();
@@ -1098,7 +1166,52 @@ impl Client {
                         );
                     }
                 },
-
+                ServerMsg::GroupUpdate(change_notification) => {
+                    use comp::group::ChangeNotification::*;
+                    // Note: we use a hashmap since this would not work with entities outside
+                    // the view distance
+                    match change_notification {
+                        Added(uid, role) => {
+                            if self.group_members.insert(uid, role) == Some(role) {
+                                warn!(
+                                    "Received msg to add uid {} to the group members but they \
+                                     were already there",
+                                    uid
+                                );
+                            }
+                        },
+                        Removed(uid) => {
+                            if self.group_members.remove(&uid).is_none() {
+                                warn!(
+                                    "Received msg to remove uid {} from group members but by they \
+                                     weren't in there!",
+                                    uid
+                                );
+                            }
+                        },
+                        NewLeader(leader) => {
+                            self.group_leader = Some(leader);
+                        },
+                        NewGroup { leader, members } => {
+                            self.group_leader = Some(leader);
+                            self.group_members = members.into_iter().collect();
+                            // Currently add/remove messages treat client as an implicit member
+                            // of the group whereas this message explicitly included them so to
+                            // be consistent for now we will remove the client from the
+                            // received hashset
+                            if let Some(uid) = self.uid() {
+                                self.group_members.remove(&uid);
+                            }
+                        },
+                        NoGroup => {
+                            self.group_leader = None;
+                            self.group_members = HashMap::new();
+                        },
+                    }
+                },
+                ServerMsg::GroupInvite(uid) => {
+                    self.group_invite = Some(uid);
+                },
                 ServerMsg::Ping => {
                     self.singleton_stream.send(ClientMsg::Pong)?;
                 },
@@ -1139,7 +1252,7 @@ impl Client {
                     self.state.ecs_mut().apply_entity_package(entity_package);
                 },
                 ServerMsg::DeleteEntity(entity) => {
-                    if self.state.read_component_cloned::<Uid>(self.entity) != Some(entity) {
+                    if self.uid() != Some(entity) {
                         self.state
                             .ecs_mut()
                             .delete_entity_and_clear_from_uid_allocator(entity.0);
@@ -1249,6 +1362,9 @@ impl Client {
     /// Get the player's entity.
     pub fn entity(&self) -> EcsEntity { self.entity }
 
+    /// Get the player's Uid.
+    pub fn uid(&self) -> Option<Uid> { self.state.read_component_copied(self.entity) }
+
     /// Get the client state
     pub fn get_client_state(&self) -> ClientState { self.client_state }
 
@@ -1300,7 +1416,7 @@ impl Client {
     pub fn is_admin(&self) -> bool {
         let client_uid = self
             .state
-            .read_component_cloned::<Uid>(self.entity)
+            .read_component_copied::<Uid>(self.entity)
             .expect("Client doesn't have a Uid!!!");
 
         self.player_list
@@ -1311,8 +1427,7 @@ impl Client {
     /// Clean client ECS state
     fn clean_state(&mut self) {
         let client_uid = self
-            .state
-            .read_component_cloned::<Uid>(self.entity)
+            .uid()
             .map(|u| u.into())
             .expect("Client doesn't have a Uid!!!");
 
@@ -1383,7 +1498,7 @@ impl Client {
             comp::ChatType::Tell(from, to) => {
                 let from_alias = alias_of_uid(from);
                 let to_alias = alias_of_uid(to);
-                if Some(from) == self.state.ecs().read_storage::<Uid>().get(self.entity) {
+                if Some(*from) == self.uid() {
                     format!("To [{}]: {}", to_alias, message)
                 } else {
                     format!("From [{}]: {}", from_alias, message)

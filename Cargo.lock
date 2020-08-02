@@ -4692,6 +4692,7 @@ dependencies = [
  "roots",
  "serde",
  "serde_json",
+ "slab",
  "specs",
  "specs-idvs",
  "sum_type",

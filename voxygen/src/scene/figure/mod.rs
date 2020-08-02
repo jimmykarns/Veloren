@@ -26,8 +26,8 @@ use anim::{
 };
 use common::{
     comp::{
-        item::ItemKind, Body, CharacterState, Last, LightAnimation, LightEmitter, Loadout, Ori,
-        PhysicsState, Pos, Scale, Stats, Vel,
+        item::ItemKind, Body, CharacterState, Item, Last, LightAnimation, LightEmitter, Loadout,
+        Ori, PhysicsState, Pos, Scale, Stats, Vel,
     },
     state::{DeltaTime, State},
     states::triple_strike,
@@ -539,6 +539,7 @@ impl FigureMgr {
                 physics,
                 stats,
                 loadout,
+                item,
             ),
         ) in (
             &ecs.entities(),
@@ -552,6 +553,7 @@ impl FigureMgr {
             &ecs.read_storage::<PhysicsState>(),
             ecs.read_storage::<Stats>().maybe(),
             ecs.read_storage::<Loadout>().maybe(),
+            ecs.read_storage::<Item>().maybe(),
         )
             .join()
             .enumerate()
@@ -642,7 +644,13 @@ impl FigureMgr {
                             (c / (1.0 + DAMAGE_FADE_COEFFICIENT * s.health.last_change.0)) as f32
                         })
                 })
-                .unwrap_or(Rgba::broadcast(1.0));
+            .unwrap_or(Rgba::broadcast(1.0))
+            // Highlight targeted collectible entities
+            * if item.is_some() && scene_data.target_entity.map_or(false, |e| e == entity) {
+                Rgba::new(2.0, 2.0, 2.0, 1.0)
+            } else {
+                Rgba::one()
+            };
 
             let scale = scale.map(|s| s.0).unwrap_or(1.0);
 
