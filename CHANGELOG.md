@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- IF THIS IS STILL HERE WHEN THE MR IS REVIEWED XVAR FORGOT TO FILL IN THE CHANGELOG
 
 ### Changed
 - Fixed a bug where leaving the Settings menu by pressing "N" in single player kept the game paused
@@ -94,12 +95,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Animals run/turn at different speeds
 - Updated windowing library (winit 0.19 -> 0.22)
 - Bow M2 is now a charged attack that scales the longer it's held
-- Fixed window resizing on Mac OS X.
-- Dehardcoded many item variants
-- Tooltips avoid the mouse better and disappear when hovered
-- Improved social window functions and visuals
-- Changed agent behaviour to allow fleeing
-- Waypoints now spawn on dungeon staircases
 
 ### Removed
 

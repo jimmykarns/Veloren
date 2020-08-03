@@ -97,6 +97,12 @@ impl Server {
     #[allow(clippy::expect_fun_call)] // TODO: Pending review in #587
     #[allow(clippy::needless_update)] // TODO: Pending review in #587
     pub fn new(settings: ServerSettings) -> Result<Self, Error> {
+        // Run pending DB migrations (if any)
+        debug!("Running DB migrations...");
+        if let Some(e) = persistence::run_migrations(&settings.persistence_db_dir).err() {
+            panic!("Migration error: {:?}", e);
+        }
+
         let mut state = State::default();
         state.ecs_mut().insert(settings.clone());
         state.ecs_mut().insert(EventBus::<ServerEvent>::default());
@@ -292,13 +298,6 @@ impl Server {
             metrics,
             tick_metrics,
         };
-
-        // Run pending DB migrations (if any)
-        debug!("Running DB migrations...");
-
-        if let Some(e) = persistence::run_migrations(&settings.persistence_db_dir).err() {
-            info!(?e, "Migration error");
-        }
 
         debug!(?settings, "created veloren server with");
 
