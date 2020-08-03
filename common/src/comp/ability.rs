@@ -24,7 +24,7 @@ pub enum CharacterAbilityType {
     TripleStrike(Stage),
     LeapMelee,
     SpinMelee,
-    SpawnEntity,
+    SpawnTotem,
 }
 
 impl From<&CharacterState> for CharacterAbilityType {
@@ -38,7 +38,7 @@ impl From<&CharacterState> for CharacterAbilityType {
             CharacterState::LeapMelee(_) => Self::LeapMelee,
             CharacterState::TripleStrike(data) => Self::TripleStrike(data.stage),
             CharacterState::SpinMelee(_) => Self::SpinMelee,
-            CharacterState::SpawnEntity(_) => Self::SpawnEntity,
+            CharacterState::SpawnTotem(_) => Self::SpawnTotem,
             CharacterState::ChargedRanged(_) => Self::ChargedRanged,
             _ => Self::BasicMelee,
         }
@@ -107,7 +107,7 @@ pub enum CharacterAbility {
         projectile_body: Body,
         projectile_light: Option<LightEmitter>,
     },
-    SpawnEntity {
+    SpawnTotem {
         energy_cost: u32,
         holdable: bool,
         prepare_duration: Duration,
@@ -154,7 +154,7 @@ impl CharacterAbility {
                 .energy
                 .try_change_by(-(*energy_cost as i32), EnergySource::Ability)
                 .is_ok(),
-            CharacterAbility::SpawnEntity { energy_cost, .. }
+            CharacterAbility::SpawnTotem { energy_cost, .. }
             | CharacterAbility::ChargedRanged { energy_cost, .. } => update
                 .energy
                 .try_change_by(-(*energy_cost as i32), EnergySource::Ability)
@@ -365,12 +365,12 @@ impl From<&CharacterAbility> for CharacterState {
                 projectile_body: *projectile_body,
                 projectile_light: *projectile_light,
             }),
-            CharacterAbility::SpawnEntity {
+            CharacterAbility::SpawnTotem {
                 energy_cost: _,
                 holdable,
                 prepare_duration,
                 recover_duration,
-            } => CharacterState::SpawnEntity(spawn_entity::Data {
+            } => CharacterState::SpawnTotem(spawn_totem::Data {
                 holdable: *holdable,
                 exhausted: false,
                 prepare_timer: Duration::default(),

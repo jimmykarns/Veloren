@@ -1,5 +1,5 @@
 use crate::{
-    comp::{Agent, CharacterState, Scale, StateUpdate},
+    comp::{Body, CharacterState, Scale, StateUpdate, Stats},
     event::ServerEvent,
     states::utils::*,
     sys::character_behavior::*,
@@ -28,8 +28,6 @@ impl CharacterBehavior for Data {
         handle_move(data, &mut update, 0.3);
         handle_jump(data, &mut update);
 
-        println!("Yo");
-
         if !self.exhausted
             && if self.holdable {
                 data.inputs.holding_ability_key() || self.prepare_timer < self.prepare_duration
@@ -38,7 +36,7 @@ impl CharacterBehavior for Data {
             }
         {
             // Prepare
-            update.character = CharacterState::SpawnEntity(Data {
+            update.character = CharacterState::SpawnTotem(Data {
                 prepare_timer: self.prepare_timer + Duration::from_secs_f32(data.dt.0),
                 holdable: self.holdable,
                 prepare_duration: self.prepare_duration,
@@ -46,19 +44,22 @@ impl CharacterBehavior for Data {
                 exhausted: false,
             });
         } else if !self.exhausted {
-            // Fire
+            // Spawn Totem
+            // TODO: Actual Totem Body
+            // TODO: How to make body immovable?
+            let body: Body = Body::Object(crate::comp::object::Body::Gravestone);
             update.server_events.push_front(ServerEvent::CreateNpc {
                 pos: data.pos.clone(),
-                stats: data.stats.clone(),
+                stats: Stats::new(String::from("Totem"), body),
                 loadout: data.loadout.clone(),
-                body: data.body.clone(),
-                agent: Some(Agent::new(data.pos.0, true)),
+                body,
+                agent: None,
                 alignment: crate::comp::Alignment::Owned(*data.uid),
                 scale: Scale(1.0),
                 drop_item: None,
             });
 
-            update.character = CharacterState::SpawnEntity(Data {
+            update.character = CharacterState::SpawnTotem(Data {
                 prepare_timer: self.prepare_timer,
                 holdable: self.holdable,
                 prepare_duration: self.prepare_duration,
@@ -67,7 +68,7 @@ impl CharacterBehavior for Data {
             });
         } else if self.recover_duration != Duration::default() {
             // Recovery
-            update.character = CharacterState::SpawnEntity(Data {
+            update.character = CharacterState::SpawnTotem(Data {
                 prepare_timer: self.prepare_timer,
                 holdable: self.holdable,
                 prepare_duration: self.prepare_duration,

@@ -233,7 +233,7 @@ impl Tool {
                     ]
                 } else if kind == "Spawn" {
                     vec![
-                        SpawnEntity {
+                        SpawnTotem {
                             holdable: false,
                             energy_cost: 0,
                             prepare_duration: Duration::from_millis(0),
