@@ -11,7 +11,8 @@ use common::{
     event::{EventBus, ServerEvent},
     msg::{
         validate_chat_msg, CharacterInfo, ChatMsgValidationError, ClientMsg, ClientState,
-        PlayerInfo, PlayerListUpdate, RequestStateError, ServerMsg, MAX_BYTES_CHAT_MSG,
+        PlayerInfo, PlayerListUpdate, RequestStateError, ServerMsg, ServerStats,
+        MAX_BYTES_CHAT_MSG,
     },
     state::{BlockChange, Time},
     sync::Uid,
@@ -390,6 +391,11 @@ impl Sys {
                     stats
                         .get_mut(entity)
                         .map(|s| s.skill_set.unlock_skill_group(skill_group_type));
+                },
+                ClientMsg::ServerStats => {
+                    client.notify(ServerMsg::ServerStats(ServerStats {
+                        player_count: player_list.len() as u64,
+                    }));
                 },
             }
         }

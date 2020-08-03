@@ -317,7 +317,6 @@ impl Server {
             git_hash: common::util::GIT_HASH.to_string(),
             git_date: common::util::GIT_DATE.to_string(),
             auth_provider: settings.auth_server_address.clone(),
-            player_count: self.number_of_players(),
         }
     }
 

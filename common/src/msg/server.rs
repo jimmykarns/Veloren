@@ -20,8 +20,6 @@ pub struct ServerInfo {
     pub git_hash: String,
     pub git_date: String,
     pub auth_provider: Option<String>,
-    /// The player count (this is only measured once when the client connects)
-    pub player_count: u64,
 }
 
 /// Inform the client of updates to the player list.
@@ -55,6 +53,11 @@ pub enum InviteAnswer {
     Accepted,
     Declined,
     TimedOut,
+}
+    
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerStats {
+    pub player_count: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -124,6 +127,7 @@ pub enum ServerMsg {
     Notification(Notification),
     SetViewDistance(u32),
     Outcomes(Vec<Outcome>),
+    ServerStats(ServerStats),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
