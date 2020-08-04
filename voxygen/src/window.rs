@@ -475,6 +475,7 @@ pub struct Window {
     pub zoom_inversion: bool,
     pub mouse_y_inversion: bool,
     fullscreen: bool,
+    borderlessFullscreen: bool,
     modifiers: winit::event::ModifiersState,
     needs_refresh_resize: bool,
     keypress_map: HashMap<GameInput, winit::event::ElementState>,
@@ -491,6 +492,7 @@ pub struct Window {
     // Used for screenshots & fullscreen toggle to deduplicate/postpone to after event handler
     take_screenshot: bool,
     toggle_fullscreen: bool,
+    toggle_borderlessFullscreen: bool,
 }
 
 impl Window {
@@ -581,6 +583,7 @@ impl Window {
             zoom_inversion: settings.gameplay.zoom_inversion,
             mouse_y_inversion: settings.gameplay.mouse_y_inversion,
             fullscreen: false,
+            borderlessFullscreen: false,
             modifiers: Default::default(),
             needs_refresh_resize: false,
             keypress_map,
@@ -596,6 +599,7 @@ impl Window {
             message_receiver,
             take_screenshot: false,
             toggle_fullscreen: false,
+            toggle_borderlessFullscreen: false,
         };
 
         this.fullscreen(settings.graphics.fullscreen);
@@ -1044,7 +1048,15 @@ impl Window {
         settings.save_to_file_warn();
     }
 
+    pub fn toggle_borderlessFullscreen(&mut self, settings: &mut Settings) {
+        self.borderlessFullscreen(!self.is_borderlessFullscreen());
+        settings.graphics.borderlessFullscreen = self.is_borderlessFullscreen();
+        settings.save_to_file_warn();
+    }
+
     pub fn is_fullscreen(&self) -> bool { self.fullscreen }
+    
+    pub fn is_borderlessFullscreen(&self) -> bool { self.borderlessFullscreen }
 
     pub fn fullscreen(&mut self, fullscreen: bool) {
         let window = self.window.window();
@@ -1068,6 +1080,33 @@ impl Window {
                             .expect("No video modes available!!")
                     }),
             )));
+        } else {
+            window.set_fullscreen(None);
+        }
+    }
+
+    pub fn borderlessFullscreen(&mut self, borderlessFullscreen: bool) {
+        let window = self.window.window();
+        self.borderlessFullscreen = borderlessFullscreen;
+        if borderlessFullscreen {
+            window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(window.current_monitor())));
+            //     window
+            //         .current_monitor()
+            //         .video_modes()
+            //         .filter(|mode| mode.bit_depth() >= 24 && mode.refresh_rate() >= 59)
+            //         .max_by_key(|mode| mode.size().width)
+            //         .unwrap_or_else(|| {
+            //             warn!(
+            //                 "No video mode with a bit depth of at least 24 and a refresh rate of \
+            //                  at least 60Hz found"
+            //             );
+            //             window
+            //                 .current_monitor()
+            //                 .video_modes()
+            //                 .max_by_key(|mode| mode.size().width)
+            //                 .expect("No video modes available!!")
+            //         }),
+            // )));
         } else {
             window.set_fullscreen(None);
         }

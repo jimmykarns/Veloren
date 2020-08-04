@@ -113,6 +113,8 @@ widget_ids! {
         fluid_mode_list,
         fullscreen_button,
         fullscreen_label,
+        borderlessFullscreen_button,
+        borderlessFullscreen_label,
         save_window_size_button,
         audio_volume_slider,
         audio_volume_text,
@@ -233,6 +235,7 @@ pub enum Event {
     AdjustGamma(f32),
     AdjustWindowSize([u16; 2]),
     ToggleFullscreen,
+    ToggleBorderlessFullscreen,
     ChangeAaMode(AaMode),
     ChangeCloudMode(CloudMode),
     ChangeFluidMode(FluidMode),
@@ -2030,6 +2033,30 @@ impl<'a> Widget for SettingsWindow<'a> {
 
             if self.global_state.settings.graphics.fullscreen != fullscreen {
                 events.push(Event::ToggleFullscreen);
+            }
+
+            // borderlessFullscreen
+            Text::new(&self.localized_strings.get("hud.settings.borderlessFullscreen"))
+                .font_size(self.fonts.cyri.scale(14))
+                .font_id(self.fonts.cyri.conrod_id)
+                .down_from(state.ids.fluid_mode_list, 8.0)
+                .right_from(state.ids.fullscreen_button, 20.0)
+                .color(TEXT_COLOR)
+                .set(state.ids.borderlessFullscreen_label, ui);
+
+            let borderlessFullscreen = ToggleButton::new(
+                self.global_state.settings.graphics.borderlessFullscreen,
+                self.imgs.checkbox,
+                self.imgs.checkbox_checked,
+            )
+            .w_h(18.0, 18.0)
+            .right_from(state.ids.borderlessFullscreen_label, 10.0)
+            .hover_images(self.imgs.checkbox_mo, self.imgs.checkbox_checked_mo)
+            .press_images(self.imgs.checkbox_press, self.imgs.checkbox_checked)
+            .set(state.ids.borderlessFullscreen_button, ui);
+
+            if self.global_state.settings.graphics.borderlessFullscreen != borderlessFullscreen {
+                events.push(Event::ToggleBorderlessFullscreen);
             }
 
             // Save current screen size
