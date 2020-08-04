@@ -264,6 +264,7 @@ pub enum Event {
     MapZoom(f64),
     AdjustWindowSize([u16; 2]),
     ToggleFullscreen,
+    ToggleBorderlessFullscreen,
     ChangeAaMode(AaMode),
     ChangeCloudMode(CloudMode),
     ChangeFluidMode(FluidMode),
@@ -1838,6 +1839,9 @@ impl Hud {
                     },
                     settings_window::Event::ToggleFullscreen => {
                         events.push(Event::ToggleFullscreen);
+                    },
+                    settings_window::Event::ToggleBorderlessFullscreen => {
+                        events.push(Event::ToggleBorderlessFullscreen);
                     },
                     settings_window::Event::AdjustWindowSize(new_size) => {
                         events.push(Event::AdjustWindowSize(new_size));

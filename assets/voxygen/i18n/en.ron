@@ -296,6 +296,7 @@ magically infused items?"#,
         "hud.settings.fluid_rendering_mode.shiny": "Shiny",
         "hud.settings.cloud_rendering_mode.regular": "Regular",
         "hud.settings.fullscreen": "Fullscreen",
+        "hud.settings.borderlessFullscreen": "Borderless fullscreen",
         "hud.settings.save_window_size": "Save window size",
 
         "hud.settings.music_volume": "Music Volume",

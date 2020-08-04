@@ -318,6 +318,7 @@ pub mod con_settings {
         pub toggle_interface: Button,
         pub toggle_debug: Button,
         pub fullscreen: Button,
+        pub borderlessFullscreen: Button,
         pub screenshot: Button,
         pub toggle_ingame_ui: Button,
         pub roll: Button,
@@ -408,6 +409,7 @@ pub mod con_settings {
                 toggle_interface: Button::Simple(GilButton::Unknown),
                 toggle_debug: Button::Simple(GilButton::Unknown),
                 fullscreen: Button::Simple(GilButton::Unknown),
+                borderlessFullscreen: Button::Simple(GilButton::Unknown),
                 screenshot: Button::Simple(GilButton::DPadUp),
                 toggle_ingame_ui: Button::Simple(GilButton::Unknown),
                 roll: Button::Simple(GilButton::RightTrigger),
@@ -606,6 +608,7 @@ pub struct GraphicsSettings {
     pub fluid_mode: FluidMode,
     pub window_size: [u16; 2],
     pub fullscreen: bool,
+    pub borderlessFullscreen: bool,
 }
 
 impl Default for GraphicsSettings {
@@ -622,6 +625,7 @@ impl Default for GraphicsSettings {
             fluid_mode: FluidMode::Shiny,
             window_size: [1920, 1080],
             fullscreen: false,
+            borderlessFullscreen: false,
         }
     }
 }

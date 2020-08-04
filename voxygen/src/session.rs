@@ -947,6 +947,11 @@ impl PlayState for SessionState {
                             .window
                             .toggle_fullscreen(&mut global_state.settings);
                     },
+                    HudEvent::ToggleBorderlessFullscreen => {
+                        global_state
+                            .window
+                            .toggle_borderlessFullscreen(&mut global_state.settings);
+                    },
                     HudEvent::AdjustWindowSize(new_size) => {
                         global_state.window.set_size(new_size.into());
                         global_state.settings.graphics.window_size = new_size;
