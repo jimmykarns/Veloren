@@ -264,9 +264,8 @@ impl Client {
 
         block_on(async {
             loop {
-                match self.singleton_stream.recv().await? {
-                    ServerMsg::ServerStats(stats) => break Ok(stats),
-                    _ => {},
+                if let ServerMsg::ServerStats(stats) = self.singleton_stream.recv().await? {
+                    break Ok(stats);
                 }
             }
         })

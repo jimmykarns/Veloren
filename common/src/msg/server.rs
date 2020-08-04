@@ -54,7 +54,7 @@ pub enum InviteAnswer {
     Declined,
     TimedOut,
 }
-    
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerStats {
     pub player_count: u64,
