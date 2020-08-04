@@ -17,13 +17,13 @@ const float PI = 3.141592;
 const vec3 SKY_DAY_TOP = vec3(0.1, 0.5, 0.9);
 const vec3 SKY_DAY_MID = vec3(0.02, 0.28, 0.8);
 const vec3 SKY_DAY_BOT = vec3(0.1, 0.2, 0.3);
-const vec3 DAY_LIGHT   = vec3(1.5, 1.4, 1.0);//vec3(1.5, 1.4, 1.0);
+const vec3 DAY_LIGHT   = vec3(1.9, 1.75, 0.9);//vec3(1.5, 1.4, 1.0);
 const vec3 SUN_HALO_DAY = vec3(0.35, 0.35, 0.0);
 
 const vec3 SKY_DUSK_TOP = vec3(0.06, 0.1, 0.20);
 const vec3 SKY_DUSK_MID = vec3(0.35, 0.1, 0.15);
 const vec3 SKY_DUSK_BOT = vec3(0.0, 0.1, 0.23);
-const vec3 DUSK_LIGHT   = vec3(8.0, 1.5, 0.15);
+const vec3 DUSK_LIGHT   = vec3(9.0, 1.5, 0.15);
 const vec3 SUN_HALO_DUSK = vec3(1.2, 0.15, 0.0);
 
 const vec3 SKY_NIGHT_TOP = vec3(0.001, 0.001, 0.0025);
@@ -35,13 +35,13 @@ const vec3 NIGHT_LIGHT   = vec3(0.002, 0.02, 0.02);
 // Linear RGB, scattering coefficients for atmosphere at roughly R, G, B wavelengths.
 //
 // See https://en.wikipedia.org/wiki/Diffuse_sky_radiation
-const vec3 MU_SCATTER = vec3(0.05, 0.10, 0.23) * 2.0;
+const vec3 MU_SCATTER = vec3(0.05, 0.10, 0.23) * 1.5;
 
-const float SUN_COLOR_FACTOR = 6.0;//6.0;// * 1.5;//1.8;
+const float SUN_COLOR_FACTOR = 5.0;//6.0;// * 1.5;//1.8;
 
 const float UNDERWATER_MIST_DIST = 100.0;
 
-const float PERSISTENT_AMBIANCE = 1.0 / 512;// 1.0 / 512; // 0.00125 // 0.1;// 0.025; // 0.1;
+const float PERSISTENT_AMBIANCE = 1.0 / 80.0;// 1.0 / 512; // 0.00125 // 0.1;// 0.025; // 0.1;
 
 //vec3 get_sun_dir(float time_of_day) {
 //    const float TIME_FACTOR = (PI * 2.0) / (3600.0 * 24.0);
@@ -121,7 +121,7 @@ DirectionalLight get_moon_info(vec4 _dir, float shade_frac/*, vec4 light_pos[2]*
 // // Calculates extra emission and reflectance (due to sunlight / moonlight).
 // //
 // // reflectence = k_a * i_a + i_a,persistent
-// // emittence = Σ { m ∈ lights } i_m * shadow_m * get_light_reflected(light_m)
+// // emittence = Î£ { m âˆˆ lights } i_m * shadow_m * get_light_reflected(light_m)
 // //
 // // Note that any shadowing to be done that would block the sun and moon, aside from heightmap shadowing (that will be
 // // implemented sooon), should be implicitly provided via k_a, k_d, and k_s.  For instance, shadowing via ambient occlusion.
@@ -157,7 +157,7 @@ DirectionalLight get_moon_info(vec4 _dir, float shade_frac/*, vec4 light_pos[2]*
 //     // TODO: Add shadows.
 //     reflected_light =
 //         sun_chroma * light_reflection_factor(norm, dir, sun_dir, k_d, k_s, alpha) +
-//         moon_chroma * 1.0 * /*4.0 * */light_reflection_factor(norm, dir, moon_dir, k_d, k_s, alpha);
+//         moon_chroma * 2.0 * /*4.0 * */light_reflection_factor(norm, dir, moon_dir, k_d, k_s, alpha);
 //
 //     /* light = sun_chroma + moon_chroma + PERSISTENT_AMBIANCE;
 //     diffuse_light =
@@ -211,71 +211,71 @@ float get_sun_diffuse2(DirectionalLight sun_info, DirectionalLight moon_info, ve
     // HdRd radiation should come in at angle normal to us.
     // const float H_d = 0.23;
     //
-    // Let β be the angle from horizontal
+    // Let Î² be the angle from horizontal
     // (for objects exposed to the sky, where positive when sloping towards south and negative when sloping towards north):
     //
-    //     sin β = (north ⋅ norm) / |north||norm|
+    //     sin Î² = (north â‹… norm) / |north||norm|
     //           = dot(vec3(0, 1, 0), norm)
     //
-    //     cos β = sqrt(1.0 - dot(vec3(0, 1, 0), norm))
+    //     cos Î² = sqrt(1.0 - dot(vec3(0, 1, 0), norm))
     //
     // Let h be the hour angle (180/0.0 at midnight, 90/1.0 at dawn, 0/0.0 at noon, -90/-1.0 at dusk, -180 at midnight/0.0):
-    //     cos h = (midnight ⋅ -light_dir) / |midnight||-light_dir|
-    //           = (noon ⋅ light_dir) / |noon||light_dir|
+    //     cos h = (midnight â‹… -light_dir) / |midnight||-light_dir|
+    //           = (noon â‹… light_dir) / |noon||light_dir|
     //           = dot(vec3(0, 0, 1), light_dir)
     //
-    // Let φ be the latitude at this point. 0 at equator, -90 at south pole / 90 at north pole.
+    // Let Ï† be the latitude at this point. 0 at equator, -90 at south pole / 90 at north pole.
     //
-    // Let δ be the solar declination (angular distance of the sun's rays north [or south[]
+    // Let Î´ be the solar declination (angular distance of the sun's rays north [or south[]
     // of the equator), i.e. the angle made by the line joining the centers of the sun and Earth with its projection on the
     // equatorial plane.  Caused by axial tilt, and 0 at equinoxes.  Normally varies between -23.45 and 23.45 degrees.
     //
-    // Let α (the solar altitude / altitud3 angle) be the vertical angle between the projection of the sun's rays on the
+    // Let Î± (the solar altitude / altitud3 angle) be the vertical angle between the projection of the sun's rays on the
     // horizontal plane and the direction of the sun's rays (passing through a point).
     //
-    // Let Θ_z be the vertical angle between sun's rays and a line perpendicular to the horizontal plane through a point,
+    // Let Î˜_z be the vertical angle between sun's rays and a line perpendicular to the horizontal plane through a point,
     // i.e.
     //
-    // Θ_z = (π/2) - α
+    // Î˜_z = (Ï€/2) - Î±
     //
-    // i.e. cos Θ_z = sin α and
-    //      cos α = sin Θ_z
+    // i.e. cos Î˜_z = sin Î± and
+    //      cos Î± = sin Î˜_z
     //
-    // Let γ_s be the horizontal angle measured from north to the horizontal projection of the sun's rays (positive when
+    // Let Î³_s be the horizontal angle measured from north to the horizontal projection of the sun's rays (positive when
     // measured westwise).
     //
-    // cos Θ_z = cos φ cos h cos δ + sin φ sin δ
-    // cos γ_s = sec α (cos φ sin δ - cos δ sin φ cos h)
-    //         = (1  / √(1 - cos² Θ_z)) (cos φ sin δ - cos δ sin φ cos h)
-    // sin γ_s = sec α cos δ sin h
-    //         = (1 / cos α) cos δ sin h
-    //         = (1 / sin Θ_z) cos δ sin h
-    //         = (1  / √(1 - cos² Θ_z)) cos δ sin h
+    // cos Î˜_z = cos Ï† cos h cos Î´ + sin Ï† sin Î´
+    // cos Î³_s = sec Î± (cos Ï† sin Î´ - cos Î´ sin Ï† cos h)
+    //         = (1  / âˆš(1 - cosÂ² Î˜_z)) (cos Ï† sin Î´ - cos Î´ sin Ï† cos h)
+    // sin Î³_s = sec Î± cos Î´ sin h
+    //         = (1 / cos Î±) cos Î´ sin h
+    //         = (1 / sin Î˜_z) cos Î´ sin h
+    //         = (1  / âˆš(1 - cosÂ² Î˜_z)) cos Î´ sin h
     //
-    // R_b = (sin(δ)sin(φ - β) + cos(δ)cos(h)cos(φ - β))/(sin(δ)sin(φ) + cos(δ)cos(h)cos(φ))
+    // R_b = (sin(Î´)sin(Ï† - Î²) + cos(Î´)cos(h)cos(Ï† - Î²))/(sin(Î´)sin(Ï†) + cos(Î´)cos(h)cos(Ï†))
     //
-    // Assuming we are on the equator (i.e. φ = 0), and there is no axial tilt or we are at an equinox (i.e. δ = 0):
+    // Assuming we are on the equator (i.e. Ï† = 0), and there is no axial tilt or we are at an equinox (i.e. Î´ = 0):
     //
-    // cos Θ_z = 1 * cos h * 1 + 0 * 0 = cos h
-    // cos γ_s = (1  / √(1 - cos² h)) (1 * 0 - 1 * 0 * cos h)
-    //         = (1  / √(1 - cos² h)) * 0
+    // cos Î˜_z = 1 * cos h * 1 + 0 * 0 = cos h
+    // cos Î³_s = (1  / âˆš(1 - cosÂ² h)) (1 * 0 - 1 * 0 * cos h)
+    //         = (1  / âˆš(1 - cosÂ² h)) * 0
     //         = 0
-    // sin γ_s = (1  / √(1 - cos² h)) * sin h
+    // sin Î³_s = (1  / âˆš(1 - cosÂ² h)) * sin h
     //         = sin h / sin h
     //         = 1
     //
-    // R_b = (0 * sin(0 - β) + 1 * cos(h) * cos(0 - β))/(0 * 0 + 1 * cos(h) * 1)
-    //     = (cos(h)cos(-β)) / cos(H)
-    //     = cos(-β), the angle from horizontal.
+    // R_b = (0 * sin(0 - Î²) + 1 * cos(h) * cos(0 - Î²))/(0 * 0 + 1 * cos(h) * 1)
+    //     = (cos(h)cos(-Î²)) / cos(H)
+    //     = cos(-Î²), the angle from horizontal.
     //
-    // NOTE: cos(-β) = cos(β).
+    // NOTE: cos(-Î²) = cos(Î²).
     // float cos_sun = dot(norm, /*-sun_dir*/vec3(0, 0, 1));
     // float cos_moon = dot(norm, -moon_dir);
     //
-    // Let ζ = diffuse reflectance of surrounding ground for solar radiation, then we have
+    // Let Î¶ = diffuse reflectance of surrounding ground for solar radiation, then we have
     //
-    // R_d = (1 + cos β) / 2
-    // R_r = ζ (1 - cos β) / 2
+    // R_d = (1 + cos Î²) / 2
+    // R_r = Î¶ (1 - cos Î²) / 2
     //
     // H_t = H_b R_b + H_d R_d + (H_b + H_d) R_r
     float sin_beta = dot(vec3(0, 1, 0), norm);

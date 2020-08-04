@@ -62,6 +62,9 @@ void main() {
     // smoothstep
     which_norm = which_norm * which_norm * (3 - 2 * abs(which_norm));
 
+    vec3 cam_to_frag = normalize(f_pos - cam_pos.xyz);
+    vec3 view_dir = -cam_to_frag;
+
     // which_norm = mix(0.0, 1.0, which_norm > 0.0);
     // vec3 normals[6] = vec3[](vec3(-1,0,0), vec3(1,0,0), vec3(0,-1,0), vec3(0,1,0), vec3(0,0,-1), vec3(0,0,1));
     vec3 f_norm = mix(faceforward(f_norm, cam_pos.xyz - f_pos, -f_norm), my_norm, which_norm);
@@ -324,6 +327,19 @@ void main() {
             hit_xz ?
                 hit_xy ? xz_dist < xy_dist ? vec3(0.0, sides.y, 0.0) : vec3(0.0, 0.0, sides.z) : vec3(0.0, sides.y, 0.0) :
                 hit_xy ? vec3(0.0, 0.0, sides.z) : vec3(0.0, 0.0, 0.0);
+                // Magic stop-gap code without any physical justification.
+vec3 side_norm = normalize(vec3(my_norm.xy, 0));
+vec3 lerpy_norm;
+if (dot(my_norm, vec3(0, 0, 1)) > 0.99999) {
+    lerpy_norm = vec3(0, 0, 1);
+} else {
+    lerpy_norm = mix(
+        mix(my_norm, side_norm, clamp(dot(side_norm, my_norm) + 0.5, 0, 1)),
+        my_norm,
+        vec3(clamp(dot(view_dir, side_norm), 0, 1))
+    );
+}
+voxel_norm = normalize(mix(voxel_norm, lerpy_norm, my_norm.z - 0.2));
     // vec3 f_ao_view = max(vec3(dot(f_orig_view_dir.yz, sides.yz), dot(f_orig_view_dir.xz, sides.xz), dot(f_orig_view_dir.xy, sides.xy)), 0.0);
     // delta_sides *= sqrt(1.0 - f_ao_view * f_ao_view);
     // delta_sides *= 1.0 - mix(view_dir / f_ao_view, vec3(0.0), equal(f_ao_view, vec3(0.0)));// sqrt(1.0 - f_ao_view * f_ao_view);
@@ -485,8 +501,8 @@ void main() {
             mix(-1.0, 1.0, clamp(pow(f_norm.y * 0.5, 64), 0, 1)),
             mix(-1.0, 1.0, clamp(pow(f_norm.z * 0.5, 64), 0, 1))
         )); */
-    vec3 cam_to_frag = normalize(f_pos - cam_pos.xyz);
-    vec3 view_dir = -cam_to_frag;
+    //vec3 cam_to_frag = normalize(f_pos - cam_pos.xyz);
+    //vec3 view_dir = -cam_to_frag;
     // vec3 view_dir = normalize(f_pos - cam_pos.xyz);
 
 
