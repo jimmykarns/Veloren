@@ -1,7 +1,7 @@
 use crate::{state_ext::StateExt, Server};
 use common::event::{EventBus, ServerEvent};
 use entity_creation::{
-    handle_create_npc, handle_create_waypoint, handle_initialize_character,
+    handle_create_npc, handle_create_totem, handle_create_waypoint, handle_initialize_character,
     handle_loaded_character_data, handle_shoot,
 };
 use entity_manipulation::{
@@ -93,6 +93,14 @@ impl Server {
                 } => handle_create_npc(
                     self, pos, stats, loadout, body, agent, alignment, scale, drop_item,
                 ),
+                ServerEvent::SpawnTotem {
+                    pos,
+                    scale,
+                    drop_item,
+                    kind,
+                    owner,
+                    alignment,
+                } => handle_create_totem(self, pos, scale, drop_item, kind, owner, alignment),
                 ServerEvent::CreateWaypoint(pos) => handle_create_waypoint(self, pos),
                 ServerEvent::ClientDisconnect(entity) => {
                     frontend_events.push(handle_client_disconnect(self, entity))

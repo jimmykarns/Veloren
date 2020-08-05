@@ -50,5 +50,5 @@ pub use player::{Player, MAX_MOUNT_RANGE_SQR};
 pub use projectile::Projectile;
 pub use skills::{Skill, SkillGroup, SkillGroupType, SkillSet};
 pub use stats::{Exp, HealthChange, HealthSource, Level, Stats};
-pub use totem::Totem;
+pub use totem::{Totem, TotemKind};
 pub use visual::{LightAnimation, LightEmitter};

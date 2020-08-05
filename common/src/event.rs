@@ -50,6 +50,15 @@ pub enum ServerEvent {
     },
     ToggleLantern(EcsEntity),
     Mount(EcsEntity, EcsEntity),
+    /// Creates a Totem Entity, which is owned and static
+    SpawnTotem {
+        pos: comp::Pos,
+        scale: comp::Scale,
+        drop_item: Option<Item>,
+        kind: comp::TotemKind,
+        owner: EcsEntity,
+        alignment: comp::Alignment,
+    },
     Unmount(EcsEntity),
     Possess(Uid, Uid),
     LevelUp(EcsEntity, u32),

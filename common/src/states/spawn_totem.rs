@@ -1,5 +1,5 @@
 use crate::{
-    comp::{Body, CharacterState, Scale, StateUpdate, Stats},
+    comp::{Alignment, CharacterState, Scale, StateUpdate, TotemKind::*},
     event::ServerEvent,
     states::utils::*,
     sys::character_behavior::*,
@@ -47,16 +47,13 @@ impl CharacterBehavior for Data {
             // Spawn Totem
             // TODO: Actual Totem Body
             // TODO: How to make body immovable?
-            let body: Body = Body::Object(crate::comp::object::Body::Gravestone);
-            update.server_events.push_front(ServerEvent::CreateNpc {
+            update.server_events.push_front(ServerEvent::SpawnTotem {
                 pos: data.pos.clone(),
-                stats: Stats::new(String::from("Totem"), body),
-                loadout: data.loadout.clone(),
-                body,
-                agent: None,
-                alignment: crate::comp::Alignment::Owned(*data.uid),
+                owner: data.entity,
                 scale: Scale(1.0),
                 drop_item: None,
+                kind: Generic,
+                alignment: Alignment::Owned(*data.uid),
             });
 
             update.character = CharacterState::SpawnTotem(Data {
