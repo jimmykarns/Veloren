@@ -82,6 +82,7 @@ fn tool_desc(tool: &Tool, desc: &str) -> String {
         ToolKind::Dagger(_) => "Dagger",
         ToolKind::Staff(_) => "Staff",
         ToolKind::Shield(_) => "Shield",
+        ToolKind::BossWeapon(_) => "Boss Weapon",
         ToolKind::Debug(_) => "Debug",
         ToolKind::Farming(_) => "Farming Tool",
         ToolKind::Empty => "Empty",

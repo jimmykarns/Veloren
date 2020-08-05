@@ -16,6 +16,7 @@ pub enum ToolKind {
     Dagger(String),
     Staff(String),
     Shield(String),
+    BossWeapon(String),
     Debug(String),
     Farming(String),
     /// This is an placeholder item, it is used by non-humanoid npcs to attack
@@ -32,6 +33,7 @@ impl ToolKind {
             ToolKind::Dagger(_) => Hands::OneHand,
             ToolKind::Staff(_) => Hands::TwoHand,
             ToolKind::Shield(_) => Hands::OneHand,
+            ToolKind::BossWeapon(_) => Hands::TwoHand,
             ToolKind::Debug(_) => Hands::TwoHand,
             ToolKind::Farming(_) => Hands::TwoHand,
             ToolKind::Empty => Hands::OneHand,
@@ -53,6 +55,7 @@ pub enum ToolCategory {
     Dagger,
     Staff,
     Shield,
+    BossWeapon,
     Debug,
     Farming,
     Empty,
@@ -68,6 +71,7 @@ impl From<&ToolKind> for ToolCategory {
             ToolKind::Dagger(_) => ToolCategory::Dagger,
             ToolKind::Staff(_) => ToolCategory::Staff,
             ToolKind::Shield(_) => ToolCategory::Shield,
+            ToolKind::BossWeapon(_) => ToolCategory::BossWeapon,
             ToolKind::Debug(_) => ToolCategory::Debug,
             ToolKind::Farming(_) => ToolCategory::Farming,
             ToolKind::Empty => ToolCategory::Empty,
@@ -141,6 +145,7 @@ impl Tool {
                     buildup_duration: Duration::from_millis(700),
                     recover_duration: Duration::from_millis(300),
                     base_healthchange: (-120.0 * self.base_power()) as i32,
+                    knockback: 0.0,
                     range: 3.5,
                     max_angle: 20.0,
                 },
@@ -157,6 +162,7 @@ impl Tool {
                 buildup_duration: Duration::from_millis(700),
                 recover_duration: Duration::from_millis(150),
                 base_healthchange: (-50.0 * self.base_power()) as i32,
+                knockback: 0.0,
                 range: 3.5,
                 max_angle: 20.0,
             }],
@@ -201,6 +207,7 @@ impl Tool {
                     buildup_duration: Duration::from_millis(100),
                     recover_duration: Duration::from_millis(400),
                     base_healthchange: (-50.0 * self.base_power()) as i32,
+                    knockback: 0.0,
                     range: 3.5,
                     max_angle: 20.0,
                 },
@@ -219,6 +226,7 @@ impl Tool {
                             buildup_duration: Duration::from_millis(0),
                             recover_duration: Duration::from_millis(300),
                             base_healthchange: (-10.0 * self.base_power()) as i32,
+                            knockback: 0.0,
                             range: 5.0,
                             max_angle: 20.0,
                         },
@@ -227,6 +235,7 @@ impl Tool {
                             buildup_duration: Duration::from_millis(0),
                             recover_duration: Duration::from_millis(1000),
                             base_healthchange: (150.0 * self.base_power()) as i32,
+                            knockback: 0.0,
                             range: 10.0,
                             max_angle: 45.0,
                         },
@@ -238,6 +247,7 @@ impl Tool {
                             buildup_duration: Duration::from_millis(100),
                             recover_duration: Duration::from_millis(300),
                             base_healthchange: (-40.0 * self.base_power()) as i32,
+                            knockback: 0.0,
                             range: 3.5,
                             max_angle: 20.0,
                         },
@@ -302,11 +312,35 @@ impl Tool {
                     buildup_duration: Duration::from_millis(100),
                     recover_duration: Duration::from_millis(400),
                     base_healthchange: (-40.0 * self.base_power()) as i32,
+                    knockback: 0.0,
                     range: 3.0,
                     max_angle: 120.0,
                 },
                 BasicBlock,
             ],
+            BossWeapon(kind) => {
+                if kind == "CyclopsHammer" {
+                    vec![BasicMelee {
+                        energy_cost: 0,
+                        buildup_duration: Duration::from_millis(0),
+                        recover_duration: Duration::from_millis(300),
+                        knockback: 20.0,
+                        base_healthchange: -200,
+                        range: 10.0,
+                        max_angle: 120.0,
+                    }]
+                } else {
+                    vec![BasicMelee {
+                        energy_cost: 0,
+                        buildup_duration: Duration::from_millis(100),
+                        recover_duration: Duration::from_millis(300),
+                        base_healthchange: -10,
+                        knockback: 0.0,
+                        range: 1.0,
+                        max_angle: 30.0,
+                    }]
+                }
+            },
             Debug(kind) => {
                 if kind == "Boost" {
                     vec![
@@ -349,6 +383,7 @@ impl Tool {
                 buildup_duration: Duration::from_millis(0),
                 recover_duration: Duration::from_millis(1000),
                 base_healthchange: -20,
+                knockback: 0.0,
                 range: 3.5,
                 max_angle: 15.0,
             }],

@@ -511,6 +511,11 @@
         "voxel.weapon.shield.wood-0",
         (0.0, 0.0, 0.0), (-90.0, 90.0, 0.0), 2.4,
     ),
+    // Boss weapons (for test purposes, remove when done)
+    Tool(BossWeapon("CyclopsHammer")): VoxTrans(
+        "voxel.weapon.bossweapon.cyclops_hammer",
+        (2.0, -1.0, 0.0), (-135.0, 90.0, 0.0), 1.1,
+    ),
     // Lanterns
     Lantern("Black0"): Png(
         "element.icons.lantern_black-0",
