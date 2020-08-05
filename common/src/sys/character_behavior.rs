@@ -1,7 +1,7 @@
 use crate::{
     comp::{
         Attacking, Body, CharacterState, ControlAction, Controller, ControllerInputs, Energy,
-        Loadout, Mounting, Ori, PhysicsState, Pos, StateUpdate, Stats, Vel,
+        Loadout, Mounting, Ori, PhysicsState, Pos, StateUpdate, Stats, Totem, Vel,
     },
     event::{EventBus, LocalEvent, ServerEvent},
     state::DeltaTime,
@@ -58,6 +58,7 @@ pub struct JoinData<'a> {
     pub loadout: &'a Loadout,
     pub body: &'a Body,
     pub physics: &'a PhysicsState,
+    pub totem: Option<&'a Totem>,
     pub attacking: Option<&'a Attacking>,
     pub updater: &'a LazyUpdate,
 }
@@ -71,19 +72,20 @@ type RestrictedMut<'a, C> = PairedStorage<
     SequentialRestriction,
 >;
 pub type JoinTuple<'a> = (
-    Entity,
-    &'a Uid,
-    RestrictedMut<'a, CharacterState>,
-    &'a mut Pos,
-    &'a mut Vel,
-    &'a mut Ori,
-    RestrictedMut<'a, Energy>,
-    RestrictedMut<'a, Loadout>,
-    &'a mut Controller,
-    &'a Stats,
-    &'a Body,
-    &'a PhysicsState,
-    Option<&'a Attacking>,
+    Entity,                            // tuple.0
+    &'a Uid,                           // 1
+    RestrictedMut<'a, CharacterState>, // 2
+    &'a mut Pos,                       // 3
+    &'a mut Vel,                       // 4
+    &'a mut Ori,                       // 5
+    RestrictedMut<'a, Energy>,         // 6
+    RestrictedMut<'a, Loadout>,        // 7
+    &'a mut Controller,                // 8
+    &'a Stats,                         // 9
+    &'a Body,                          // 10
+    &'a PhysicsState,                  // 11
+    Option<&'a Attacking>,             // 12
+    Option<&'a Totem>,                 // 13
 );
 
 fn incorporate_update(tuple: &mut JoinTuple, state_update: StateUpdate) {
@@ -121,6 +123,7 @@ impl<'a> JoinData<'a> {
             body: j.10,
             physics: j.11,
             attacking: j.12,
+            totem: j.13,
             updater,
             dt,
         }
@@ -154,6 +157,7 @@ impl<'a> System<'a> for Sys {
         ReadStorage<'a, Attacking>,
         ReadStorage<'a, Uid>,
         ReadStorage<'a, Mounting>,
+        ReadStorage<'a, Totem>,
     );
 
     #[allow(clippy::while_let_on_iterator)] // TODO: Pending review in #587
@@ -179,6 +183,7 @@ impl<'a> System<'a> for Sys {
             attacking_storage,
             uids,
             mountings,
+            totem_storage,
         ): Self::SystemData,
     ) {
         let mut server_emitter = server_bus.emitter();
@@ -198,6 +203,7 @@ impl<'a> System<'a> for Sys {
             &bodies,
             &physics_states,
             attacking_storage.maybe(),
+            totem_storage.maybe(),
         )
             .join()
         {
