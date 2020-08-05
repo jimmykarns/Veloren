@@ -53,6 +53,7 @@ pub enum ServerEvent {
     /// Creates a Totem Entity, which is owned and static
     SpawnTotem {
         pos: comp::Pos,
+        dir: Dir,
         scale: comp::Scale,
         drop_item: Option<Item>,
         kind: comp::TotemKind,

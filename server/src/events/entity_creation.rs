@@ -5,6 +5,7 @@ use common::{
         Projectile, Scale, Stats, Vel, WaypointArea,
     },
     util::Dir,
+    vol::ReadVol,
 };
 use specs::{Builder, Entity as EcsEntity, WorldExt};
 use tracing::error;
@@ -58,56 +59,96 @@ pub fn handle_create_npc(
     entity.build();
 }
 
-/// Creates a static (unmoving) entity with a totem
-/// component that is owner by a player
+/// Creates a static (unmoving) totem entity by casting a ray
+// toward `cam_dir` direction from `cam_pos`.
+/// Totem is owned by `owner` entity, adds a `Totem` component
+/// to `owner`
 pub fn handle_create_totem(
     server: &mut Server,
-    pos: Pos,
+    cast_pos: Vec3<f32>,
+    cast_dir: Dir,
     scale: Scale,
     drop_item: Option<Item>,
     kind: comp::TotemKind,
     owner: EcsEntity,
     alignment: Alignment,
 ) {
-    let body = match kind {
-        comp::TotemKind::Generic => comp::object::Body::Gravestone,
-        comp::TotemKind::Thunder => comp::object::Body::Scarecrow,
-    };
+    // Cast a ray from `cast_pos` in `cast_dir` direction to see if
+    // an entity can spawn there.
+    let spawn_pos: Option<Vec3<f32>> = {
+        let terrain = server.state.terrain();
+        let cam_ray = terrain
+            .ray(
+                cast_pos + Vec3::unit_z(),
+                cast_pos + cast_dir.normalized() * 100.0,
+            )
+            .until(|block| block.is_solid())
+            .cast();
 
-    let stats = Stats::new(String::from("Totem"), body.into());
-    // Build the entity
-    let builder = server
-        .state
-        .create_object(pos, body)
-        .with(scale)
-        .with(alignment)
-        .with(stats);
+        let cam_dist = cam_ray.0;
 
-    let builder = if let Some(drop_item) = drop_item {
-        builder.with(ItemDrop(drop_item))
-    } else {
-        builder
-    };
+        if let Ok(Some(_)) = cam_ray.1 {
+            let potential_pos =
+                (cast_pos + cast_dir.normalized() * cam_dist + Vec3::unit_z() * 0.05)
+                    .map(|e: f32| e.ceil());
 
-    let entity = builder.build();
-
-    // Create owner's totem comp
-    let totem_comp = comp::Totem { entity, kind };
-    // Add totem comp to totem owner
-    let result = server
-        .state
-        .ecs()
-        .write_storage::<comp::Totem>()
-        .insert(owner, totem_comp);
-
-    println!("{:?}", result);
-
-    // Clean up old Totem if necessary
-    if let Result::Ok(Some(comp)) = result {
-        if let Err(e) = server.state.delete_entity_recorded(comp.entity) {
-            error!(?e, ?comp.entity, "Failed to delete old totem entity.");
+            if let Some(block) = terrain
+                .get((potential_pos - cast_dir.normalized()).map(|e| e.floor() as i32))
+                .ok()
+                .copied()
+            {
+                if block.is_air() {
+                    Some(potential_pos)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
         }
     };
+
+    if let Some(pos) = spawn_pos {
+        let body = match kind {
+            comp::TotemKind::Generic => comp::object::Body::Gravestone,
+            comp::TotemKind::Thunder => comp::object::Body::Scarecrow,
+        };
+
+        let stats = Stats::new(String::from("Totem"), body.into());
+        // Build the entity
+        let builder = server
+            .state
+            .create_object(Pos(pos), body)
+            .with(scale)
+            .with(alignment)
+            .with(stats);
+
+        let builder = if let Some(drop_item) = drop_item {
+            builder.with(ItemDrop(drop_item))
+        } else {
+            builder
+        };
+
+        let entity = builder.build();
+
+        // Create owner's totem comp
+        let totem_comp = comp::Totem { entity, kind };
+        // Add totem comp to totem owner
+        let result = server
+            .state
+            .ecs()
+            .write_storage::<comp::Totem>()
+            .insert(owner, totem_comp);
+
+        // Clean up old Totem if necessary
+        if let Result::Ok(Some(comp)) = result {
+            if let Err(e) = server.state.delete_entity_recorded(comp.entity) {
+                error!(?e, ?comp.entity, "Failed to delete old totem entity.");
+            }
+        };
+    }
 }
 
 pub fn handle_shoot(

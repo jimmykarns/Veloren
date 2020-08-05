@@ -49,6 +49,7 @@ impl CharacterBehavior for Data {
             // TODO: How to make body immovable?
             update.server_events.push_front(ServerEvent::SpawnTotem {
                 pos: data.pos.clone(),
+                dir: data.inputs.look_dir,
                 owner: data.entity,
                 scale: Scale(1.0),
                 drop_item: None,

@@ -95,12 +95,15 @@ impl Server {
                 ),
                 ServerEvent::SpawnTotem {
                     pos,
+                    dir,
                     scale,
                     drop_item,
                     kind,
                     owner,
                     alignment,
-                } => handle_create_totem(self, pos, scale, drop_item, kind, owner, alignment),
+                } => {
+                    handle_create_totem(self, pos.0, dir, scale, drop_item, kind, owner, alignment)
+                },
                 ServerEvent::CreateWaypoint(pos) => handle_create_waypoint(self, pos),
                 ServerEvent::ClientDisconnect(entity) => {
                     frontend_events.push(handle_client_disconnect(self, entity))
