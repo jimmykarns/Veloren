@@ -5,7 +5,7 @@ use super::{
 use crate::{
     i18n::{list_localizations, LanguageMetadata, VoxygenLocalization},
     render::{AaMode, CloudMode, FluidMode},
-    ui::{fonts::ConrodVoxygenFonts, ImageSlider, ScaleMode, ToggleButton},
+    ui::{fonts::ConrodVoxygenFonts, ImageSlider, ScaleMode, ToggleButton, FullscreenMode},
     window::GameInput,
     GlobalState,
 };
@@ -111,10 +111,8 @@ widget_ids! {
         cloud_mode_list,
         fluid_mode_text,
         fluid_mode_list,
-        fullscreen_button,
-        fullscreen_label,
-        borderlessFullscreen_button,
-        borderlessFullscreen_label,
+        fullscreen_mode_text,
+        fullscreen_mode_list,
         save_window_size_button,
         audio_volume_slider,
         audio_volume_text,
@@ -234,8 +232,7 @@ pub enum Event {
     AdjustFOV(u16),
     AdjustGamma(f32),
     AdjustWindowSize([u16; 2]),
-    ToggleFullscreen,
-    ToggleBorderlessFullscreen,
+    ChangeFullscreenMode(FullscreenMode),
     ChangeAaMode(AaMode),
     ChangeCloudMode(CloudMode),
     ChangeFluidMode(FluidMode),
@@ -2012,59 +2009,98 @@ impl<'a> Widget for SettingsWindow<'a> {
                 events.push(Event::ChangeFluidMode(mode_list[clicked]));
             }
 
-            // Fullscreen
-            Text::new(&self.localized_strings.get("hud.settings.fullscreen"))
-                .font_size(self.fonts.cyri.scale(14))
-                .font_id(self.fonts.cyri.conrod_id)
-                .down_from(state.ids.fluid_mode_list, 8.0)
-                .color(TEXT_COLOR)
-                .set(state.ids.fullscreen_label, ui);
-
-            let fullscreen = ToggleButton::new(
-                self.global_state.settings.graphics.fullscreen,
-                self.imgs.checkbox,
-                self.imgs.checkbox_checked,
+            // Fullscreen 2
+            Text::new(
+                &self
+                    .localized_strings
+                    .get("hud.settings.fullscreen_title"),
             )
-            .w_h(18.0, 18.0)
-            .right_from(state.ids.fullscreen_label, 10.0)
-            .hover_images(self.imgs.checkbox_mo, self.imgs.checkbox_checked_mo)
-            .press_images(self.imgs.checkbox_press, self.imgs.checkbox_checked)
-            .set(state.ids.fullscreen_button, ui);
+            .down_from(state.ids.fluid_mode_list, 8.0)
+            .font_size(self.fonts.cyri.scale(14))
+            .font_id(self.fonts.cyri.conrod_id)
+            .color(TEXT_COLOR)
+            .set(state.ids.fullscreen_mode_text, ui);
 
-            if self.global_state.settings.graphics.fullscreen != fullscreen {
-                events.push(Event::ToggleFullscreen);
+            let mode_list = [FullscreenMode::Fullscreen, FullscreenMode::Borderless];
+            let mode_label_list = [
+                &self
+                    .localized_strings
+                    .get("hud.settings.fullscreen_mode.fullscreen"),
+                &self
+                    .localized_strings
+                    .get("hud.settings.fullscreen_mode.borderless"),
+            ];
+
+            // Get which fluid rendering mode is currently active
+            let selected = mode_list
+                .iter()
+                .position(|x| *x == self.global_state.settings.graphics.fullscreen_mode);
+
+            if let Some(clicked) = DropDownList::new(&mode_label_list, selected)
+                .w_h(400.0, 22.0)
+                .color(MENU_BG)
+                .label_color(TEXT_COLOR)
+                .label_font_id(self.fonts.cyri.conrod_id)
+                .down_from(state.ids.fullscreen_mode_text, 8.0)
+                .set(state.ids.fullscreen_mode_list, ui)
+            {
+                events.push(Event::ChangeFullscreenMode(mode_list[clicked]));
+                //events.push(Event::ChangeFluidMode(mode_list[clicked]));
             }
 
-            // borderlessFullscreen
-            Text::new(&self.localized_strings.get("hud.settings.borderlessFullscreen"))
-                .font_size(self.fonts.cyri.scale(14))
-                .font_id(self.fonts.cyri.conrod_id)
-                .down_from(state.ids.fluid_mode_list, 8.0)
-                .right_from(state.ids.fullscreen_button, 20.0)
-                .color(TEXT_COLOR)
-                .set(state.ids.borderlessFullscreen_label, ui);
+            // // Fullscreen
+            // Text::new(&self.localized_strings.get("hud.settings.fullscreen"))
+            //     .font_size(self.fonts.cyri.scale(14))
+            //     .font_id(self.fonts.cyri.conrod_id)
+            //     .down_from(state.ids.fluid_mode_list, 8.0)
+            //     .color(TEXT_COLOR)
+            //     .set(state.ids.fullscreen_label, ui);
 
-            let borderlessFullscreen = ToggleButton::new(
-                self.global_state.settings.graphics.borderlessFullscreen,
-                self.imgs.checkbox,
-                self.imgs.checkbox_checked,
-            )
-            .w_h(18.0, 18.0)
-            .right_from(state.ids.borderlessFullscreen_label, 10.0)
-            .hover_images(self.imgs.checkbox_mo, self.imgs.checkbox_checked_mo)
-            .press_images(self.imgs.checkbox_press, self.imgs.checkbox_checked)
-            .set(state.ids.borderlessFullscreen_button, ui);
+            // let fullscreen = ToggleButton::new(
+            //     self.global_state.settings.graphics.fullscreen,
+            //     self.imgs.checkbox,
+            //     self.imgs.checkbox_checked,
+            // )
+            // .w_h(18.0, 18.0)
+            // .right_from(state.ids.fullscreen_label, 10.0)
+            // .hover_images(self.imgs.checkbox_mo, self.imgs.checkbox_checked_mo)
+            // .press_images(self.imgs.checkbox_press, self.imgs.checkbox_checked)
+            // .set(state.ids.fullscreen_button, ui);
 
-            if self.global_state.settings.graphics.borderlessFullscreen != borderlessFullscreen {
-                events.push(Event::ToggleBorderlessFullscreen);
-            }
+            // if self.global_state.settings.graphics.fullscreen != fullscreen {
+            //     events.push(Event::ToggleFullscreen);
+            // }
+
+            // // borderlessFullscreen
+            // Text::new(&self.localized_strings.get("hud.settings.borderlessFullscreen"))
+            //     .font_size(self.fonts.cyri.scale(14))
+            //     .font_id(self.fonts.cyri.conrod_id)
+            //     .down_from(state.ids.fluid_mode_list, 8.0)
+            //     .right_from(state.ids.fullscreen_button, 20.0)
+            //     .color(TEXT_COLOR)
+            //     .set(state.ids.borderlessFullscreen_label, ui);
+
+            // let borderlessFullscreen = ToggleButton::new(
+            //     self.global_state.settings.graphics.borderlessFullscreen,
+            //     self.imgs.checkbox,
+            //     self.imgs.checkbox_checked,
+            // )
+            // .w_h(18.0, 18.0)
+            // .right_from(state.ids.borderlessFullscreen_label, 10.0)
+            // .hover_images(self.imgs.checkbox_mo, self.imgs.checkbox_checked_mo)
+            // .press_images(self.imgs.checkbox_press, self.imgs.checkbox_checked)
+            // .set(state.ids.borderlessFullscreen_button, ui);
+
+            // if self.global_state.settings.graphics.borderlessFullscreen != borderlessFullscreen {
+            //     events.push(Event::ToggleBorderlessFullscreen);
+            // }
 
             // Save current screen size
             if Button::image(self.imgs.settings_button)
                 .w_h(31.0 * 5.0, 12.0 * 2.0)
                 .hover_image(self.imgs.settings_button_hover)
                 .press_image(self.imgs.settings_button_press)
-                .down_from(state.ids.fullscreen_label, 12.0)
+                .down_from(state.ids.fullscreen_mode_list, 12.0)
                 .label(&self.localized_strings.get("hud.settings.save_window_size"))
                 .label_font_size(self.fonts.cyri.scale(14))
                 .label_color(TEXT_COLOR)
