@@ -46,7 +46,7 @@ use crate::{
     i18n::{i18n_asset_key, LanguageMetadata, VoxygenLocalization},
     render::{AaMode, CloudMode, Consts, FluidMode, Globals, Renderer},
     scene::camera::{self, Camera},
-    ui::{fonts::ConrodVoxygenFonts, slot, Graphic, Ingameable, ScaleMode, Ui},
+    ui::{fonts::ConrodVoxygenFonts, slot, Graphic, Ingameable, ScaleMode, Ui, FullscreenMode},
     window::{Event as WinEvent, GameInput},
     GlobalState,
 };
@@ -263,8 +263,7 @@ pub enum Event {
     ChangeGamma(f32),
     MapZoom(f64),
     AdjustWindowSize([u16; 2]),
-    ToggleFullscreen,
-    ToggleBorderlessFullscreen,
+    ChangeFullscreenMode(FullscreenMode),
     ChangeAaMode(AaMode),
     ChangeCloudMode(CloudMode),
     ChangeFluidMode(FluidMode),
@@ -1837,12 +1836,15 @@ impl Hud {
                     settings_window::Event::ChangeLanguage(language) => {
                         events.push(Event::ChangeLanguage(language));
                     },
-                    settings_window::Event::ToggleFullscreen => {
-                        events.push(Event::ToggleFullscreen);
+                    settings_window::Event::ChangeFullscreenMode(new_fullscreen_mode) => {
+                        events.push(Event::ChangeFullscreenMode(new_fullscreen_mode));
                     },
-                    settings_window::Event::ToggleBorderlessFullscreen => {
-                        events.push(Event::ToggleBorderlessFullscreen);
-                    },
+                    // settings_window::Event::ToggleFullscreen => {
+                    //     events.push(Event::ToggleFullscreen);
+                    // },
+                    // settings_window::Event::ToggleBorderlessFullscreen => {
+                    //     events.push(Event::ToggleBorderlessFullscreen);
+                    // },
                     settings_window::Event::AdjustWindowSize(new_size) => {
                         events.push(Event::AdjustWindowSize(new_size));
                     },

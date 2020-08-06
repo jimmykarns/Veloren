@@ -2,7 +2,7 @@ use crate::{
     hud::{BarNumbers, CrosshairType, Intro, PressBehavior, ShortcutNumbers, XpBar},
     i18n,
     render::{AaMode, CloudMode, FluidMode},
-    ui::ScaleMode,
+    ui::{ScaleMode, FullscreenMode},
     window::{GameInput, KeyMouse},
 };
 use directories_next::{ProjectDirs, UserDirs};
@@ -318,7 +318,6 @@ pub mod con_settings {
         pub toggle_interface: Button,
         pub toggle_debug: Button,
         pub fullscreen: Button,
-        pub borderlessFullscreen: Button,
         pub screenshot: Button,
         pub toggle_ingame_ui: Button,
         pub roll: Button,
@@ -409,7 +408,6 @@ pub mod con_settings {
                 toggle_interface: Button::Simple(GilButton::Unknown),
                 toggle_debug: Button::Simple(GilButton::Unknown),
                 fullscreen: Button::Simple(GilButton::Unknown),
-                borderlessFullscreen: Button::Simple(GilButton::Unknown),
                 screenshot: Button::Simple(GilButton::DPadUp),
                 toggle_ingame_ui: Button::Simple(GilButton::Unknown),
                 roll: Button::Simple(GilButton::RightTrigger),
@@ -607,8 +605,7 @@ pub struct GraphicsSettings {
     pub cloud_mode: CloudMode,
     pub fluid_mode: FluidMode,
     pub window_size: [u16; 2],
-    pub fullscreen: bool,
-    pub borderlessFullscreen: bool,
+    pub fullscreen_mode: FullscreenMode,
 }
 
 impl Default for GraphicsSettings {
@@ -624,8 +621,7 @@ impl Default for GraphicsSettings {
             cloud_mode: CloudMode::Regular,
             fluid_mode: FluidMode::Shiny,
             window_size: [1920, 1080],
-            fullscreen: false,
-            borderlessFullscreen: false,
+            fullscreen_mode: FullscreenMode::Off,
         }
     }
 }

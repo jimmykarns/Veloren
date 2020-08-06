@@ -2,7 +2,8 @@ use crate::{
     controller::*,
     render::{Renderer, WinColorFmt, WinDepthFmt},
     settings::{ControlSettings, Settings},
-    ui, Error,
+    ui::{FullscreenMode}, ui,
+    Error,
 };
 use crossbeam::channel;
 use gilrs::{EventType, Gilrs};
@@ -474,8 +475,7 @@ pub struct Window {
     pub zoom_sensitivity: u32,
     pub zoom_inversion: bool,
     pub mouse_y_inversion: bool,
-    fullscreen: bool,
-    borderlessFullscreen: bool,
+    fullscreen: FullscreenMode,
     modifiers: winit::event::ModifiersState,
     needs_refresh_resize: bool,
     keypress_map: HashMap<GameInput, winit::event::ElementState>,
@@ -492,7 +492,6 @@ pub struct Window {
     // Used for screenshots & fullscreen toggle to deduplicate/postpone to after event handler
     take_screenshot: bool,
     toggle_fullscreen: bool,
-    toggle_borderlessFullscreen: bool,
 }
 
 impl Window {
@@ -582,8 +581,7 @@ impl Window {
             zoom_sensitivity: settings.gameplay.zoom_sensitivity,
             zoom_inversion: settings.gameplay.zoom_inversion,
             mouse_y_inversion: settings.gameplay.mouse_y_inversion,
-            fullscreen: false,
-            borderlessFullscreen: false,
+            fullscreen: FullscreenMode::Off,
             modifiers: Default::default(),
             needs_refresh_resize: false,
             keypress_map,
@@ -599,10 +597,9 @@ impl Window {
             message_receiver,
             take_screenshot: false,
             toggle_fullscreen: false,
-            toggle_borderlessFullscreen: false,
         };
 
-        this.fullscreen(settings.graphics.fullscreen);
+        this.set_fullscreen_mode(settings.graphics.fullscreen_mode);
 
         Ok((this, event_loop))
     }
@@ -1048,25 +1045,32 @@ impl Window {
     }
 
     pub fn toggle_fullscreen(&mut self, settings: &mut Settings) {
-        self.fullscreen(!self.is_fullscreen());
-        settings.graphics.fullscreen = self.is_fullscreen();
+        let fullscreen_mode: FullscreenMode;
+        if self.is_fullscreen() {
+            fullscreen_mode = FullscreenMode::Off;
+        } else {
+            fullscreen_mode = FullscreenMode::Fullscreen;
+        }
+        self.set_fullscreen_mode(fullscreen_mode);
+        settings.graphics.fullscreen_mode = fullscreen_mode;
         settings.save_to_file_warn();
     }
 
-    pub fn toggle_borderlessFullscreen(&mut self, settings: &mut Settings) {
-        self.borderlessFullscreen(!self.is_borderlessFullscreen());
-        settings.graphics.borderlessFullscreen = self.is_borderlessFullscreen();
-        settings.save_to_file_warn();
+    pub fn is_fullscreen(&self) -> bool { 
+        let fullscreen = self.fullscreen;
+        if let FullscreenMode::Off = fullscreen {
+            return false;
+        } else {
+            return true; 
+        }
     }
-
-    pub fn is_fullscreen(&self) -> bool { self.fullscreen }
     
-    pub fn is_borderlessFullscreen(&self) -> bool { self.borderlessFullscreen }
+    //pub fn is_borderlessFullscreen(&self) -> bool { self.borderlessFullscreen }
 
-    pub fn fullscreen(&mut self, fullscreen: bool) {
+    pub fn set_fullscreen_mode(&mut self, fullscreen: FullscreenMode) {
         let window = self.window.window();
         self.fullscreen = fullscreen;
-        if fullscreen {
+        if let FullscreenMode::Fullscreen = fullscreen {
             window.set_fullscreen(Some(winit::window::Fullscreen::Exclusive(
                 window
                     .current_monitor()
@@ -1085,37 +1089,40 @@ impl Window {
                             .expect("No video modes available!!")
                     }),
             )));
-        } else {
+        } if let FullscreenMode::Borderless = fullscreen {
+            window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(window.current_monitor())));
+        }
+        else {
             window.set_fullscreen(None);
         }
     }
 
-    pub fn borderlessFullscreen(&mut self, borderlessFullscreen: bool) {
-        let window = self.window.window();
-        self.borderlessFullscreen = borderlessFullscreen;
-        if borderlessFullscreen {
-            window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(window.current_monitor())));
-            //     window
-            //         .current_monitor()
-            //         .video_modes()
-            //         .filter(|mode| mode.bit_depth() >= 24 && mode.refresh_rate() >= 59)
-            //         .max_by_key(|mode| mode.size().width)
-            //         .unwrap_or_else(|| {
-            //             warn!(
-            //                 "No video mode with a bit depth of at least 24 and a refresh rate of \
-            //                  at least 60Hz found"
-            //             );
-            //             window
-            //                 .current_monitor()
-            //                 .video_modes()
-            //                 .max_by_key(|mode| mode.size().width)
-            //                 .expect("No video modes available!!")
-            //         }),
-            // )));
-        } else {
-            window.set_fullscreen(None);
-        }
-    }
+    // pub fn borderlessFullscreen(&mut self, borderlessFullscreen: bool) {
+    //     let window = self.window.window();
+    //     self.borderlessFullscreen = borderlessFullscreen;
+    //     if borderlessFullscreen {
+    //         window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(window.current_monitor())));
+    //         //     window
+    //         //         .current_monitor()
+    //         //         .video_modes()
+    //         //         .filter(|mode| mode.bit_depth() >= 24 && mode.refresh_rate() >= 59)
+    //         //         .max_by_key(|mode| mode.size().width)
+    //         //         .unwrap_or_else(|| {
+    //         //             warn!(
+    //         //                 "No video mode with a bit depth of at least 24 and a refresh rate of \
+    //         //                  at least 60Hz found"
+    //         //             );
+    //         //             window
+    //         //                 .current_monitor()
+    //         //                 .video_modes()
+    //         //                 .max_by_key(|mode| mode.size().width)
+    //         //                 .expect("No video modes available!!")
+    //         //         }),
+    //         // )));
+    //     } else {
+    //         window.set_fullscreen(None);
+    //     }
+    // }
 
     pub fn needs_refresh_resize(&mut self) { self.needs_refresh_resize = true; }
 

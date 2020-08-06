@@ -65,6 +65,14 @@ enum DrawKind {
     // Text and non-textured geometry
     Plain,
 }
+use serde_derive::{Deserialize, Serialize};
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
+pub enum FullscreenMode {
+    Off,
+    Fullscreen,
+    Borderless,
+}
+
 enum DrawCommand {
     Draw { kind: DrawKind, verts: Range<usize> },
     Scissor(Aabr<u16>),
