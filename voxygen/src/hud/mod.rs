@@ -1839,6 +1839,12 @@ impl Hud {
                     settings_window::Event::ChangeFullscreenMode(new_fullscreen_mode) => {
                         events.push(Event::ChangeFullscreenMode(new_fullscreen_mode));
                     },
+                    // settings_window::Event::ToggleFullscreen => {
+                    //     events.push(Event::ToggleFullscreen);
+                    // },
+                    // settings_window::Event::ToggleBorderlessFullscreen => {
+                    //     events.push(Event::ToggleBorderlessFullscreen);
+                    // },
                     settings_window::Event::AdjustWindowSize(new_size) => {
                         events.push(Event::AdjustWindowSize(new_size));
                     },
