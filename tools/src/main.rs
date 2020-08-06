@@ -125,6 +125,7 @@ fn weapon_stats() -> Result<(), Box<dyn Error>> {
                                 ToolKind::Shield(_) => "Shield".to_string(),
                                 ToolKind::Debug(_) => "Debug".to_string(),
                                 ToolKind::Farming(_) => "Farming".to_string(),
+                                ToolKind::BossWeapon(_) => "Boss Weapon".to_string(),
                                 ToolKind::Empty => "Empty".to_string(),
                             };
 
