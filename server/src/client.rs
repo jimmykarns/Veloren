@@ -1,11 +1,12 @@
 use crate::error::Error;
 use common::msg::{
-    ClientMsg, ClientState, ClientStateMsg, RequestStateError, ServerLoginMsg, ServerMsg,
-    ServerStateMsg,
+    ClientChunkMsg, ClientDefaultMsg, ClientState, ClientStateMsg, RequestStateError,
+    ServerChunkMsg, ServerDefaultMsg, ServerLoginMsg, ServerStateMsg,
 };
 use futures_util::{select, FutureExt};
 use hashbrown::HashSet;
 use network::{Participant, Stream};
+use serde::Serialize;
 use specs::{Component, FlaggedStorage};
 use specs_idvs::IdvStorage;
 use std::sync::{
@@ -31,42 +32,53 @@ impl Component for Client {
 }
 
 impl Client {
-    pub fn notify(&mut self, msg: ServerMsg) {
-        if !self.network_error.load(Ordering::Relaxed) {
-            if let Err(e) = self.default_stream.send(msg) {
+    fn int_notify<M: Serialize>(network_error: &AtomicBool, stream: &mut Stream, msg: M) {
+        if !network_error.load(Ordering::Relaxed) {
+            if let Err(e) = stream.send(msg) {
                 debug!(?e, "got a network error with client");
-                self.network_error.store(true, Ordering::Relaxed);
+                network_error.store(true, Ordering::Relaxed);
             }
         }
+    }
+
+    pub fn notify(&mut self, msg: ServerDefaultMsg) {
+        Self::int_notify(&self.network_error, &mut self.default_stream, msg);
     }
 
     pub fn notify_register(&mut self, msg: ServerLoginMsg) {
-        if !self.network_error.load(Ordering::Relaxed) {
-            if let Err(e) = self.registration_stream.send(msg) {
-                debug!(?e, "got a network error with client");
-                self.network_error.store(true, Ordering::Relaxed);
-            }
-        }
+        Self::int_notify(&self.network_error, &mut self.registration_stream, msg);
     }
 
     pub fn notify_state(&mut self, msg: ServerStateMsg) {
-        if !self.network_error.load(Ordering::Relaxed) {
-            if let Err(e) = self.registration_stream.send(msg) {
-                debug!(?e, "got a network error with client");
-                self.network_error.store(true, Ordering::Relaxed);
-            }
-        }
+        Self::int_notify(&self.network_error, &mut self.registration_stream, msg);
     }
 
-    pub async fn recv(&mut self) -> Result<(Option<ClientMsg>, Option<ClientStateMsg>), Error> {
+    pub fn notify_chunk(&mut self, msg: ServerChunkMsg) {
+        Self::int_notify(&self.network_error, &mut self.chunks_stream, msg);
+    }
+
+    pub async fn recv(
+        &mut self,
+    ) -> Result<
+        (
+            Option<ClientDefaultMsg>,
+            Option<ClientStateMsg>,
+            Option<ClientChunkMsg>,
+        ),
+        Error,
+    > {
         if !self.network_error.load(Ordering::Relaxed) {
             match select!(
-                msg = self.default_stream.recv().fuse() => (Some(msg), None),
-                msg = self.registration_stream.recv().fuse() => (None, Some(msg)),
+                msg = self.default_stream.recv().fuse() => (Some(msg), None, None),
+                msg = self.registration_stream.recv().fuse() => (None, Some(msg), None),
+                msg = self.chunks_stream.recv().fuse() => (None, None, Some(msg)),
             ) {
-                (Some(Ok(msg)), None) => Ok((Some(msg), None)),
-                (None, Some(Ok(msg))) => Ok((None, Some(msg))),
-                (Some(Err(e)), None) | (None, Some(Err(e))) => {
+                (Some(Ok(msg)), None, None) => Ok((Some(msg), None, None)),
+                (None, Some(Ok(msg)), None) => Ok((None, Some(msg), None)),
+                (None, None, Some(Ok(msg))) => Ok((None, None, Some(msg))),
+                (Some(Err(e)), None, None)
+                | (None, Some(Err(e)), None)
+                | (None, None, Some(Err(e))) => {
                     debug!(?e, "got a network error with client while recv");
                     self.network_error.store(true, Ordering::Relaxed);
                     Err(Error::StreamErr(e))

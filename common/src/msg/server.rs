@@ -54,7 +54,7 @@ pub enum Notification {
 
 /// Messages sent from the server to the client
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ServerMsg {
+pub enum ServerDefaultMsg {
     PlayerListUpdate(PlayerListUpdate),
     Ping,
     Pong,
@@ -68,17 +68,20 @@ pub enum ServerMsg {
     CreateEntity(sync::EntityPackage<EcsCompPacket>),
     DeleteEntity(Uid),
     InventoryUpdate(comp::Inventory, comp::InventoryUpdateEvent),
+    TerrainBlockUpdates(HashMap<Vec3<i32>, Block>),
+    Disconnect,
+    Shutdown,
+    /// Send a popup notification such as "Waypoint Saved"
+    Notification(Notification),
+    SetViewDistance(u32),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ServerChunkMsg {
     TerrainChunkUpdate {
         key: Vec2<i32>,
         chunk: Result<Box<TerrainChunk>, ()>,
     },
-    TerrainBlockUpdates(HashMap<Vec3<i32>, Block>),
-    Disconnect,
-    Shutdown,
-    TooManyPlayers,
-    /// Send a popup notification such as "Waypoint Saved"
-    Notification(Notification),
-    SetViewDistance(u32),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -129,6 +132,6 @@ impl From<AuthClientError> for RegisterError {
     fn from(err: AuthClientError) -> Self { Self::AuthError(err.to_string()) }
 }
 
-impl From<comp::ChatMsg> for ServerMsg {
-    fn from(v: comp::ChatMsg) -> Self { ServerMsg::ChatMsg(v) }
+impl From<comp::ChatMsg> for ServerDefaultMsg {
+    fn from(v: comp::ChatMsg) -> Self { ServerDefaultMsg::ChatMsg(v) }
 }

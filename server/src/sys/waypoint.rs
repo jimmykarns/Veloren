@@ -2,7 +2,7 @@ use super::SysTimer;
 use crate::client::Client;
 use common::{
     comp::{Player, Pos, Waypoint, WaypointArea},
-    msg::{Notification, ServerMsg},
+    msg::{Notification, ServerDefaultMsg},
     state::Time,
 };
 use specs::{Entities, Join, Read, ReadStorage, System, Write, WriteStorage};
@@ -40,7 +40,9 @@ impl<'a> System<'a> for Sys {
                     if let Ok(wp_old) = waypoints.insert(entity, Waypoint::new(player_pos.0, *time))
                     {
                         if wp_old.map_or(true, |w| w.elapsed(*time) > NOTIFY_TIME) {
-                            client.notify(ServerMsg::Notification(Notification::WaypointSaved));
+                            client.notify(ServerDefaultMsg::Notification(
+                                Notification::WaypointSaved,
+                            ));
                         }
                     }
                 }

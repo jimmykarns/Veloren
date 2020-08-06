@@ -5,7 +5,7 @@ use crate::{
 use common::{
     comp,
     effect::Effect,
-    msg::{CharacterInfo, ClientState, PlayerListUpdate, ServerMsg},
+    msg::{CharacterInfo, ClientState, PlayerListUpdate, ServerDefaultMsg},
     state::State,
     sync::{Uid, UidAllocator, WorldSyncExt},
     util::Dir,
@@ -47,7 +47,7 @@ pub trait StateExt {
     fn update_character_data(&mut self, entity: EcsEntity, components: PersistedComponents);
     /// Iterates over registered clients and send each `ServerMsg`
     fn send_chat(&self, msg: comp::ChatMsg);
-    fn notify_registered_clients(&self, msg: ServerMsg);
+    fn notify_registered_clients(&self, msg: ServerDefaultMsg);
     /// Delete an entity, recording the deletion in [`DeletedEntities`]
     fn delete_entity_recorded(
         &mut self,
@@ -217,7 +217,7 @@ impl StateExt for State {
             .map(|u| u)
             .expect("Client doesn't have a Uid!!!");
 
-        self.notify_registered_clients(ServerMsg::PlayerListUpdate(
+        self.notify_registered_clients(ServerDefaultMsg::PlayerListUpdate(
             PlayerListUpdate::SelectedCharacter(client_uid, CharacterInfo {
                 name: String::from(&stats.name),
                 level: stats.level.level(),
@@ -253,7 +253,7 @@ impl StateExt for State {
             | comp::ChatType::Kill
             | comp::ChatType::Meta
             | comp::ChatType::World(_) => {
-                self.notify_registered_clients(ServerMsg::ChatMsg(msg.clone()))
+                self.notify_registered_clients(ServerDefaultMsg::ChatMsg(msg.clone()))
             },
             comp::ChatType::Tell(u, t) => {
                 for (client, uid) in (
@@ -263,7 +263,7 @@ impl StateExt for State {
                     .join()
                 {
                     if uid == u || uid == t {
-                        client.notify(ServerMsg::ChatMsg(msg.clone()));
+                        client.notify(ServerDefaultMsg::ChatMsg(msg.clone()));
                     }
                 }
             },
@@ -275,7 +275,7 @@ impl StateExt for State {
                 if let Some(speaker_pos) = entity_opt.and_then(|e| positions.get(e)) {
                     for (client, pos) in (&mut ecs.write_storage::<Client>(), &positions).join() {
                         if is_within(comp::ChatMsg::SAY_DISTANCE, pos, speaker_pos) {
-                            client.notify(ServerMsg::ChatMsg(msg.clone()));
+                            client.notify(ServerDefaultMsg::ChatMsg(msg.clone()));
                         }
                     }
                 }
@@ -287,7 +287,7 @@ impl StateExt for State {
                 if let Some(speaker_pos) = entity_opt.and_then(|e| positions.get(e)) {
                     for (client, pos) in (&mut ecs.write_storage::<Client>(), &positions).join() {
                         if is_within(comp::ChatMsg::REGION_DISTANCE, pos, speaker_pos) {
-                            client.notify(ServerMsg::ChatMsg(msg.clone()));
+                            client.notify(ServerDefaultMsg::ChatMsg(msg.clone()));
                         }
                     }
                 }
@@ -299,7 +299,7 @@ impl StateExt for State {
                 if let Some(speaker_pos) = entity_opt.and_then(|e| positions.get(e)) {
                     for (client, pos) in (&mut ecs.write_storage::<Client>(), &positions).join() {
                         if is_within(comp::ChatMsg::NPC_DISTANCE, pos, speaker_pos) {
-                            client.notify(ServerMsg::ChatMsg(msg.clone()));
+                            client.notify(ServerDefaultMsg::ChatMsg(msg.clone()));
                         }
                     }
                 }
@@ -313,7 +313,7 @@ impl StateExt for State {
                     .join()
                 {
                     if s == &faction.0 {
-                        client.notify(ServerMsg::ChatMsg(msg.clone()));
+                        client.notify(ServerDefaultMsg::ChatMsg(msg.clone()));
                     }
                 }
             },
@@ -325,7 +325,7 @@ impl StateExt for State {
                     .join()
                 {
                     if s == &group.0 {
-                        client.notify(ServerMsg::ChatMsg(msg.clone()));
+                        client.notify(ServerDefaultMsg::ChatMsg(msg.clone()));
                     }
                 }
             },
@@ -333,7 +333,7 @@ impl StateExt for State {
     }
 
     /// Sends the message to all connected clients
-    fn notify_registered_clients(&self, msg: ServerMsg) {
+    fn notify_registered_clients(&self, msg: ServerDefaultMsg) {
         for client in (&mut self.ecs().write_storage::<Client>())
             .join()
             .filter(|c| c.is_registered())

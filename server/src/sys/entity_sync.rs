@@ -8,7 +8,7 @@ use crate::{
 };
 use common::{
     comp::{ForceUpdate, Inventory, InventoryUpdate, Last, Ori, Pos, Vel},
-    msg::ServerMsg,
+    msg::ServerDefaultMsg,
     region::{Event as RegionEvent, RegionMap},
     state::TimeOfDay,
     sync::{CompSyncPackage, Uid},
@@ -118,13 +118,14 @@ impl<'a> System<'a> for Sys {
                                 (uid, pos, velocities.get(entity), orientations.get(entity))
                             })
                         }) {
-                            let create_msg =
-                                ServerMsg::CreateEntity(tracked_comps.create_entity_package(
+                            let create_msg = ServerDefaultMsg::CreateEntity(
+                                tracked_comps.create_entity_package(
                                     entity,
                                     Some(*pos),
                                     vel.copied(),
                                     ori.copied(),
-                                ));
+                                ),
+                            );
                             for (client, regions, client_entity, _) in &mut subscribers {
                                 if maybe_key
                                     .as_ref()
@@ -147,7 +148,7 @@ impl<'a> System<'a> for Sys {
                                     .map(|key| !regions.contains(key))
                                     .unwrap_or(true)
                                 {
-                                    client.notify(ServerMsg::DeleteEntity(uid));
+                                    client.notify(ServerDefaultMsg::DeleteEntity(uid));
                                 }
                             }
                         }
@@ -164,14 +165,14 @@ impl<'a> System<'a> for Sys {
                     .take_deleted_in_region(key)
                     .unwrap_or_default(),
             );
-            let entity_sync_msg = ServerMsg::EntitySync(entity_sync_package);
-            let comp_sync_msg = ServerMsg::CompSync(comp_sync_package);
+            let entity_sync_msg = ServerDefaultMsg::EntitySync(entity_sync_package);
+            let comp_sync_msg = ServerDefaultMsg::CompSync(comp_sync_package);
             subscribers.iter_mut().for_each(move |(client, _, _, _)| {
                 client.notify(entity_sync_msg.clone());
                 client.notify(comp_sync_msg.clone());
             });
 
-            let mut send_msg = |msg: ServerMsg,
+            let mut send_msg = |msg: ServerDefaultMsg,
                                 entity: EcsEntity,
                                 pos: Pos,
                                 force_update: Option<&ForceUpdate>,
@@ -277,7 +278,7 @@ impl<'a> System<'a> for Sys {
                 }
 
                 send_msg(
-                    ServerMsg::CompSync(comp_sync_package),
+                    ServerDefaultMsg::CompSync(comp_sync_package),
                     entity,
                     pos,
                     force_update,
@@ -301,7 +302,7 @@ impl<'a> System<'a> for Sys {
                     })
             {
                 for uid in &deleted {
-                    client.notify(ServerMsg::DeleteEntity(Uid(*uid)));
+                    client.notify(ServerDefaultMsg::DeleteEntity(Uid(*uid)));
                 }
             }
         }
@@ -310,7 +311,7 @@ impl<'a> System<'a> for Sys {
 
         // Sync inventories
         for (client, inventory, update) in (&mut clients, &inventories, &inventory_updates).join() {
-            client.notify(ServerMsg::InventoryUpdate(
+            client.notify(ServerDefaultMsg::InventoryUpdate(
                 inventory.clone(),
                 update.event(),
             ));
@@ -323,7 +324,7 @@ impl<'a> System<'a> for Sys {
         // Sync resources
         // TODO: doesn't really belong in this system (rename system or create another
         // system?)
-        let tof_msg = ServerMsg::TimeOfDay(*time_of_day);
+        let tof_msg = ServerDefaultMsg::TimeOfDay(*time_of_day);
         for client in (&mut clients).join() {
             client.notify(tof_msg.clone());
         }

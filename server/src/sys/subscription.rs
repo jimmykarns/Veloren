@@ -5,7 +5,7 @@ use super::{
 use crate::client::{self, Client, RegionSubscription};
 use common::{
     comp::{Ori, Player, Pos, Vel},
-    msg::ServerMsg,
+    msg::ServerDefaultMsg,
     region::{region_in_vd, regions_in_vd, Event as RegionEvent, RegionMap},
     sync::Uid,
     terrain::TerrainChunkSize,
@@ -151,7 +151,7 @@ impl<'a> System<'a> for Sys {
                                             .map(|key| subscription.regions.contains(key))
                                             .unwrap_or(false)
                                         {
-                                            client.notify(ServerMsg::DeleteEntity(uid));
+                                            client.notify(ServerDefaultMsg::DeleteEntity(uid));
                                         }
                                     }
                                 },
@@ -159,7 +159,7 @@ impl<'a> System<'a> for Sys {
                         }
                         // Tell client to delete entities in the region
                         for (&uid, _) in (&uids, region.entities()).join() {
-                            client.notify(ServerMsg::DeleteEntity(uid));
+                            client.notify(ServerDefaultMsg::DeleteEntity(uid));
                         }
                     }
                     // Send deleted entities since they won't be processed for this client in entity
@@ -169,7 +169,7 @@ impl<'a> System<'a> for Sys {
                         .iter()
                         .flat_map(|v| v.iter())
                     {
-                        client.notify(ServerMsg::DeleteEntity(Uid(*uid)));
+                        client.notify(ServerDefaultMsg::DeleteEntity(Uid(*uid)));
                     }
                 }
 
@@ -194,7 +194,7 @@ impl<'a> System<'a> for Sys {
                             {
                                 // Send message to create entity and tracked components and physics
                                 // components
-                                client.notify(ServerMsg::CreateEntity(
+                                client.notify(ServerDefaultMsg::CreateEntity(
                                     tracked_comps.create_entity_package(
                                         entity,
                                         Some(*pos),
@@ -247,7 +247,7 @@ pub fn initialize_region_subscription(world: &World, entity: specs::Entity) {
                     .join()
                 {
                     // Send message to create entity and tracked components and physics components
-                    client.notify(ServerMsg::CreateEntity(
+                    client.notify(ServerDefaultMsg::CreateEntity(
                         tracked_comps.create_entity_package(
                             entity,
                             Some(*pos),

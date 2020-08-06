@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use vek::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ClientMsg {
+pub enum ClientDefaultMsg {
     ControllerInputs(comp::ControllerInputs),
     ControlEvent(comp::ControlEvent),
     ControlAction(comp::ControlAction),
@@ -25,14 +25,16 @@ pub enum ClientMsg {
         vel: comp::Vel,
         ori: comp::Ori,
     },
-    TerrainChunkRequest {
-        key: Vec2<i32>,
-    },
     Disconnect,
     Terminate,
     UnlockSkill(Skill),
     RefundSkill(Skill),
     UnlockSkillGroup(SkillGroupType),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ClientChunkMsg {
+    TerrainChunkRequest { key: Vec2<i32> },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

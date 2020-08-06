@@ -5,7 +5,7 @@ use common::{
     comp::{self, item, Alignment, CharacterAbility, ItemConfig, Player, Pos},
     event::{EventBus, ServerEvent},
     generation::get_npc_name,
-    msg::ServerMsg,
+    msg::ServerChunkMsg,
     npc::NPC_NAMES,
     state::TerrainChanges,
     terrain::TerrainGrid,
@@ -62,7 +62,7 @@ impl<'a> System<'a> for Sys {
                 Ok((chunk, supplement)) => (chunk, supplement),
                 Err(entity) => {
                     if let Some(client) = clients.get_mut(entity) {
-                        client.notify(ServerMsg::TerrainChunkUpdate {
+                        client.notify_chunk(ServerChunkMsg::TerrainChunkUpdate {
                             key,
                             chunk: Err(()),
                         });
@@ -86,7 +86,7 @@ impl<'a> System<'a> for Sys {
                     .magnitude_squared();
 
                 if adjusted_dist_sqr <= view_distance.pow(2) {
-                    client.notify(ServerMsg::TerrainChunkUpdate {
+                    client.notify_chunk(ServerChunkMsg::TerrainChunkUpdate {
                         key,
                         chunk: Ok(Box::new(chunk.clone())),
                     });

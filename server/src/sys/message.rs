@@ -10,9 +10,9 @@ use common::{
     },
     event::{EventBus, ServerEvent},
     msg::{
-        validate_chat_msg, CharacterInfo, ChatMsgValidationError, ClientMsg, ClientState,
-        ClientStateMsg, PlayerInfo, PlayerListUpdate, RequestStateError, ServerMsg, ServerStateMsg,
-        MAX_BYTES_CHAT_MSG,
+        validate_chat_msg, CharacterInfo, ChatMsgValidationError, ClientChunkMsg, ClientDefaultMsg,
+        ClientState, ClientStateMsg, PlayerInfo, PlayerListUpdate, RequestStateError,
+        ServerChunkMsg, ServerDefaultMsg, ServerStateMsg, MAX_BYTES_CHAT_MSG,
     },
     state::{BlockChange, Time},
     sync::Uid,
@@ -107,7 +107,7 @@ impl Sys {
                         client.allow_state_register(ClientState::Registered);
 
                         // Send initial player list
-                        client.notify(ServerMsg::PlayerListUpdate(PlayerListUpdate::Init(
+                        client.notify(ServerDefaultMsg::PlayerListUpdate(PlayerListUpdate::Init(
                             player_list.clone(),
                         )));
 
@@ -127,7 +127,7 @@ impl Sys {
                     .map(|(max, vd)| vd > max)
                     .unwrap_or(false)
                 {
-                    client.notify(ServerMsg::SetViewDistance(
+                    client.notify(ServerDefaultMsg::SetViewDistance(
                         settings.max_view_distance.unwrap_or(0),
                     ));
                 };
@@ -215,13 +215,12 @@ impl Sys {
     }
 
     #[allow(clippy::too_many_arguments)]
-    async fn handle_client_msg(
-        msg: ClientMsg,
+    async fn handle_client_default_msg(
+        msg: ClientDefaultMsg,
         server_emitter: &mut common::event::Emitter<'_, ServerEvent>,
         new_chat_msgs: &mut Vec<(Option<specs::Entity>, ChatMsg)>,
         entity: specs::Entity,
         client: &mut Client,
-        terrain: &ReadExpect<'_, TerrainGrid>,
         uids: &ReadStorage<'_, Uid>,
         can_build: &ReadStorage<'_, CanBuild>,
         force_updates: &ReadStorage<'_, ForceUpdate>,
@@ -236,7 +235,7 @@ impl Sys {
         settings: &Read<'_, ServerSettings>,
     ) -> Result<(), crate::error::Error> {
         match msg {
-            ClientMsg::SetViewDistance(view_distance) => {
+            ClientDefaultMsg::SetViewDistance(view_distance) => {
                 if let ClientState::Character { .. } = client.client_state {
                     players.get_mut(entity).map(|player| {
                         player.view_distance = Some(
@@ -252,13 +251,13 @@ impl Sys {
                         .map(|max| view_distance > max)
                         .unwrap_or(false)
                     {
-                        client.notify(ServerMsg::SetViewDistance(
+                        client.notify(ServerDefaultMsg::SetViewDistance(
                             settings.max_view_distance.unwrap_or(0),
                         ));
                     }
                 }
             },
-            ClientMsg::ControllerInputs(inputs) => match client.client_state {
+            ClientDefaultMsg::ControllerInputs(inputs) => match client.client_state {
                 ClientState::Connected | ClientState::Registered | ClientState::Spectator => {
                     client.error_state(RequestStateError::Impossible)
                 },
@@ -269,7 +268,7 @@ impl Sys {
                 },
                 ClientState::Pending => {},
             },
-            ClientMsg::ControlEvent(event) => match client.client_state {
+            ClientDefaultMsg::ControlEvent(event) => match client.client_state {
                 ClientState::Connected | ClientState::Registered | ClientState::Spectator => {
                     client.error_state(RequestStateError::Impossible)
                 },
@@ -286,7 +285,7 @@ impl Sys {
                 },
                 ClientState::Pending => {},
             },
-            ClientMsg::ControlAction(event) => match client.client_state {
+            ClientDefaultMsg::ControlAction(event) => match client.client_state {
                 ClientState::Connected | ClientState::Registered | ClientState::Spectator => {
                     client.error_state(RequestStateError::Impossible)
                 },
@@ -297,7 +296,7 @@ impl Sys {
                 },
                 ClientState::Pending => {},
             },
-            ClientMsg::ChatMsg(message) => match client.client_state {
+            ClientDefaultMsg::ChatMsg(message) => match client.client_state {
                 ClientState::Connected => client.error_state(RequestStateError::Impossible),
                 ClientState::Registered | ClientState::Spectator | ClientState::Character => {
                     match validate_chat_msg(&message) {
@@ -319,7 +318,7 @@ impl Sys {
                 },
                 ClientState::Pending => {},
             },
-            ClientMsg::PlayerPhysics { pos, vel, ori } => match client.client_state {
+            ClientDefaultMsg::PlayerPhysics { pos, vel, ori } => match client.client_state {
                 ClientState::Character => {
                     if force_updates.get(entity).is_none()
                         && stats.get(entity).map_or(true, |s| !s.is_dead)
@@ -332,17 +331,56 @@ impl Sys {
                 // Only characters can send positions.
                 _ => client.error_state(RequestStateError::Impossible),
             },
-            ClientMsg::BreakBlock(pos) => {
+            ClientDefaultMsg::BreakBlock(pos) => {
                 if can_build.get(entity).is_some() {
                     block_changes.set(pos, Block::empty());
                 }
             },
-            ClientMsg::PlaceBlock(pos, block) => {
+            ClientDefaultMsg::PlaceBlock(pos, block) => {
                 if can_build.get(entity).is_some() {
                     block_changes.try_set(pos, block);
                 }
             },
-            ClientMsg::TerrainChunkRequest { key } => match client.client_state {
+            // Always possible.
+            ClientDefaultMsg::Ping => client.notify(ServerDefaultMsg::Pong),
+            ClientDefaultMsg::Pong => {},
+            ClientDefaultMsg::Disconnect => {
+                client.notify(ServerDefaultMsg::Disconnect);
+            },
+            ClientDefaultMsg::Terminate => {
+                server_emitter.emit(ServerEvent::ClientDisconnect(entity));
+            },
+            ClientDefaultMsg::UnlockSkill(skill) => {
+                stats
+                    .get_mut(entity)
+                    .map(|s| s.skill_set.unlock_skill(skill));
+            },
+            ClientDefaultMsg::RefundSkill(skill) => {
+                stats
+                    .get_mut(entity)
+                    .map(|s| s.skill_set.refund_skill(skill));
+            },
+            ClientDefaultMsg::UnlockSkillGroup(skill_group_type) => {
+                stats
+                    .get_mut(entity)
+                    .map(|s| s.skill_set.unlock_skill_group(skill_group_type));
+            },
+        }
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn handle_client_chunk_msg(
+        msg: ClientChunkMsg,
+        server_emitter: &mut common::event::Emitter<'_, ServerEvent>,
+        entity: specs::Entity,
+        client: &mut Client,
+        terrain: &ReadExpect<'_, TerrainGrid>,
+        positions: &mut WriteStorage<'_, Pos>,
+        players: &mut WriteStorage<'_, Player>,
+    ) -> Result<(), crate::error::Error> {
+        match msg {
+            ClientChunkMsg::TerrainChunkRequest { key } => match client.client_state {
                 ClientState::Connected | ClientState::Registered => {
                     client.error_state(RequestStateError::Impossible);
                 },
@@ -361,44 +399,23 @@ impl Sys {
                     };
                     if in_vd {
                         match terrain.get_key(key) {
-                            Some(chunk) => client.notify(ServerMsg::TerrainChunkUpdate {
-                                key,
-                                chunk: Ok(Box::new(chunk.clone())),
-                            }),
+                            Some(chunk) => {
+                                client.notify_chunk(ServerChunkMsg::TerrainChunkUpdate {
+                                    key,
+                                    chunk: Ok(Box::new(chunk.clone())),
+                                })
+                            },
                             None => server_emitter.emit(ServerEvent::ChunkRequest(entity, key)),
                         }
                     }
                 },
                 ClientState::Pending => {},
             },
-            // Always possible.
-            ClientMsg::Ping => client.notify(ServerMsg::Pong),
-            ClientMsg::Pong => {},
-            ClientMsg::Disconnect => {
-                client.notify(ServerMsg::Disconnect);
-            },
-            ClientMsg::Terminate => {
-                server_emitter.emit(ServerEvent::ClientDisconnect(entity));
-            },
-            ClientMsg::UnlockSkill(skill) => {
-                stats
-                    .get_mut(entity)
-                    .map(|s| s.skill_set.unlock_skill(skill));
-            },
-            ClientMsg::RefundSkill(skill) => {
-                stats
-                    .get_mut(entity)
-                    .map(|s| s.skill_set.refund_skill(skill));
-            },
-            ClientMsg::UnlockSkillGroup(skill_group_type) => {
-                stats
-                    .get_mut(entity)
-                    .map(|s| s.skill_set.unlock_skill_group(skill_group_type));
-            },
         }
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn handle_all_msg(
         server_emitter: &mut common::event::Emitter<'_, ServerEvent>,
         new_chat_msgs: &mut Vec<(Option<specs::Entity>, ChatMsg)>,
@@ -430,14 +447,13 @@ impl Sys {
             let res = client.recv().await?;
             *cnt += 1;
             match res {
-                (Some(msg), None) => {
-                    Self::handle_client_msg(
+                (Some(msg), None, None) => {
+                    Self::handle_client_default_msg(
                         msg,
                         server_emitter,
                         new_chat_msgs,
                         entity,
                         client,
-                        terrain,
                         uids,
                         can_build,
                         force_updates,
@@ -453,7 +469,7 @@ impl Sys {
                     )
                     .await?
                 },
-                (None, Some(msg)) => {
+                (None, Some(msg), None) => {
                     Self::handle_client_state_msg(
                         msg,
                         server_emitter,
@@ -469,6 +485,18 @@ impl Sys {
                         players,
                         settings,
                         alias_validator,
+                    )
+                    .await?
+                },
+                (None, None, Some(msg)) => {
+                    Self::handle_client_chunk_msg(
+                        msg,
+                        server_emitter,
+                        entity,
+                        client,
+                        terrain,
+                        positions,
+                        players,
                     )
                     .await?
                 },
@@ -611,7 +639,7 @@ impl<'a> System<'a> for Sys {
                 server_emitter.emit(ServerEvent::ClientDisconnect(entity));
             } else if time.0 - client.last_ping > CLIENT_TIMEOUT * 0.5 {
                 // Try pinging the client if the timeout is nearing.
-                client.notify(ServerMsg::Ping);
+                client.notify(ServerDefaultMsg::Ping);
             }
         }
 
@@ -619,12 +647,13 @@ impl<'a> System<'a> for Sys {
         // Tell all clients to add them to the player list.
         for entity in new_players {
             if let (Some(uid), Some(player)) = (uids.get(entity), players.get(entity)) {
-                let msg = ServerMsg::PlayerListUpdate(PlayerListUpdate::Add(*uid, PlayerInfo {
-                    player_alias: player.alias.clone(),
-                    is_online: true,
-                    is_admin: admins.get(entity).is_some(),
-                    character: None, // new players will be on character select.
-                }));
+                let msg =
+                    ServerDefaultMsg::PlayerListUpdate(PlayerListUpdate::Add(*uid, PlayerInfo {
+                        player_alias: player.alias.clone(),
+                        is_online: true,
+                        is_admin: admins.get(entity).is_some(),
+                        character: None, // new players will be on character select.
+                    }));
                 for client in (&mut clients).join().filter(|c| c.is_registered()) {
                     client.notify(msg.clone())
                 }

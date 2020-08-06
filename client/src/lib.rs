@@ -21,9 +21,10 @@ use common::{
         InventoryUpdateEvent,
     },
     msg::{
-        validate_chat_msg, ChatMsgValidationError, ClientMsg, ClientState, ClientStateMsg,
-        Notification, PlayerInfo, PlayerListUpdate, RegisterError, RequestStateError, ServerInfo,
-        ServerLoginMsg, ServerMsg, ServerStateMsg, MAX_BYTES_CHAT_MSG,
+        validate_chat_msg, ChatMsgValidationError, ClientChunkMsg, ClientDefaultMsg, ClientState,
+        ClientStateMsg, Notification, PlayerInfo, PlayerListUpdate, RegisterError,
+        RequestStateError, ServerChunkMsg, ServerDefaultMsg, ServerInfo, ServerLoginMsg,
+        ServerStateMsg, MAX_BYTES_CHAT_MSG,
     },
     recipe::RecipeBook,
     state::State,
@@ -83,7 +84,7 @@ pub struct Client {
     participant: Option<Participant>,
     state_stream: Stream,
     default_stream: Stream,
-    _chunks_stream: Stream,
+    chunks_stream: Stream,
 
     last_server_ping: f64,
     last_server_pong: f64,
@@ -195,7 +196,7 @@ impl Client {
             ServerLoginMsg::TooManyPlayers => Err(Error::TooManyPlayers),
         }?;
 
-        default_stream.send(ClientMsg::Ping)?;
+        default_stream.send(ClientDefaultMsg::Ping)?;
 
         let mut thread_pool = ThreadPoolBuilder::new()
             .name("veloren-worker".into())
@@ -218,7 +219,7 @@ impl Client {
             participant: Some(participant),
             state_stream,
             default_stream,
-            _chunks_stream: chunks_stream,
+            chunks_stream,
 
             last_server_ping: 0.0,
             last_server_pong: 0.0,
@@ -320,7 +321,7 @@ impl Client {
     /// Send disconnect message to the server
     pub fn request_logout(&mut self) {
         debug!("Requesting logout from server");
-        if let Err(e) = self.default_stream.send(ClientMsg::Disconnect) {
+        if let Err(e) = self.default_stream.send(ClientDefaultMsg::Disconnect) {
             error!(
                 ?e,
                 "Couldn't send disconnect package to server, did server close already?"
@@ -338,41 +339,43 @@ impl Client {
     pub fn set_view_distance(&mut self, view_distance: u32) {
         self.view_distance = Some(view_distance.max(1).min(65));
         self.default_stream
-            .send(ClientMsg::SetViewDistance(self.view_distance.unwrap()))
+            .send(ClientDefaultMsg::SetViewDistance(
+                self.view_distance.unwrap(),
+            ))
             .unwrap();
         // Can't fail
     }
 
     pub fn use_slot(&mut self, slot: comp::slot::Slot) {
         self.default_stream
-            .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
-                InventoryManip::Use(slot),
-            )))
+            .send(ClientDefaultMsg::ControlEvent(
+                ControlEvent::InventoryManip(InventoryManip::Use(slot)),
+            ))
             .unwrap();
     }
 
     pub fn swap_slots(&mut self, a: comp::slot::Slot, b: comp::slot::Slot) {
         self.default_stream
-            .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
-                InventoryManip::Swap(a, b),
-            )))
+            .send(ClientDefaultMsg::ControlEvent(
+                ControlEvent::InventoryManip(InventoryManip::Swap(a, b)),
+            ))
             .unwrap();
     }
 
     pub fn drop_slot(&mut self, slot: comp::slot::Slot) {
         self.default_stream
-            .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
-                InventoryManip::Drop(slot),
-            )))
+            .send(ClientDefaultMsg::ControlEvent(
+                ControlEvent::InventoryManip(InventoryManip::Drop(slot)),
+            ))
             .unwrap();
     }
 
     pub fn pick_up(&mut self, entity: EcsEntity) {
         if let Some(uid) = self.state.ecs().read_storage::<Uid>().get(entity).copied() {
             self.default_stream
-                .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
-                    InventoryManip::Pickup(uid),
-                )))
+                .send(ClientDefaultMsg::ControlEvent(
+                    ControlEvent::InventoryManip(InventoryManip::Pickup(uid)),
+                ))
                 .unwrap();
         }
     }
@@ -392,9 +395,9 @@ impl Client {
     pub fn craft_recipe(&mut self, recipe: &str) -> bool {
         if self.can_craft_recipe(recipe) {
             self.default_stream
-                .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
-                    InventoryManip::CraftRecipe(recipe.to_string()),
-                )))
+                .send(ClientDefaultMsg::ControlEvent(
+                    ControlEvent::InventoryManip(InventoryManip::CraftRecipe(recipe.to_string())),
+                ))
                 .unwrap();
             true
         } else {
@@ -413,7 +416,7 @@ impl Client {
 
     pub fn toggle_lantern(&mut self) {
         self.default_stream
-            .send(ClientMsg::ControlEvent(ControlEvent::ToggleLantern))
+            .send(ClientDefaultMsg::ControlEvent(ControlEvent::ToggleLantern))
             .unwrap();
     }
 
@@ -428,14 +431,14 @@ impl Client {
     pub fn mount(&mut self, entity: EcsEntity) {
         if let Some(uid) = self.state.ecs().read_storage::<Uid>().get(entity).copied() {
             self.default_stream
-                .send(ClientMsg::ControlEvent(ControlEvent::Mount(uid)))
+                .send(ClientDefaultMsg::ControlEvent(ControlEvent::Mount(uid)))
                 .unwrap();
         }
     }
 
     pub fn unmount(&mut self) {
         self.default_stream
-            .send(ClientMsg::ControlEvent(ControlEvent::Unmount))
+            .send(ClientDefaultMsg::ControlEvent(ControlEvent::Unmount))
             .unwrap();
     }
 
@@ -448,7 +451,7 @@ impl Client {
             .map_or(false, |s| s.is_dead)
         {
             self.default_stream
-                .send(ClientMsg::ControlEvent(ControlEvent::Respawn))
+                .send(ClientDefaultMsg::ControlEvent(ControlEvent::Respawn))
                 .unwrap();
         }
     }
@@ -532,7 +535,7 @@ impl Client {
             controller.actions.push(control_action);
         }
         self.default_stream
-            .send(ClientMsg::ControlAction(control_action))
+            .send(ClientDefaultMsg::ControlAction(control_action))
             .unwrap();
     }
 
@@ -564,7 +567,7 @@ impl Client {
         match validate_chat_msg(&message) {
             Ok(()) => self
                 .default_stream
-                .send(ClientMsg::ChatMsg(message))
+                .send(ClientDefaultMsg::ChatMsg(message))
                 .unwrap(),
             Err(ChatMsgValidationError::TooLong) => tracing::warn!(
                 "Attempted to send a message that's too long (Over {} bytes)",
@@ -581,21 +584,21 @@ impl Client {
 
     pub fn place_block(&mut self, pos: Vec3<i32>, block: Block) {
         self.default_stream
-            .send(ClientMsg::PlaceBlock(pos, block))
+            .send(ClientDefaultMsg::PlaceBlock(pos, block))
             .unwrap();
     }
 
     pub fn remove_block(&mut self, pos: Vec3<i32>) {
         self.default_stream
-            .send(ClientMsg::BreakBlock(pos))
+            .send(ClientDefaultMsg::BreakBlock(pos))
             .unwrap();
     }
 
     pub fn collect_block(&mut self, pos: Vec3<i32>) {
         self.default_stream
-            .send(ClientMsg::ControlEvent(ControlEvent::InventoryManip(
-                InventoryManip::Collect(pos),
-            )))
+            .send(ClientDefaultMsg::ControlEvent(
+                ControlEvent::InventoryManip(InventoryManip::Collect(pos)),
+            ))
             .unwrap();
     }
 
@@ -652,7 +655,7 @@ impl Client {
                 );
             }
             self.default_stream
-                .send(ClientMsg::ControllerInputs(inputs))?;
+                .send(ClientDefaultMsg::ControllerInputs(inputs))?;
         }
 
         // 2) Build up a list of events for this frame, to be passed to the frontend.
@@ -749,8 +752,8 @@ impl Client {
                         if self.state.terrain().get_key(*key).is_none() {
                             if !skip_mode && !self.pending_chunks.contains_key(key) {
                                 if self.pending_chunks.len() < 4 {
-                                    self.default_stream
-                                        .send(ClientMsg::TerrainChunkRequest { key: *key })?;
+                                    self.chunks_stream
+                                        .send(ClientChunkMsg::TerrainChunkRequest { key: *key })?;
                                     self.pending_chunks.insert(*key, Instant::now());
                                 } else {
                                     skip_mode = true;
@@ -782,7 +785,7 @@ impl Client {
 
         // Send a ping to the server once every second
         if self.state.get_time() - self.last_server_ping > 1. {
-            self.default_stream.send(ClientMsg::Ping)?;
+            self.default_stream.send(ClientDefaultMsg::Ping)?;
             self.last_server_ping = self.state.get_time();
         }
 
@@ -794,7 +797,7 @@ impl Client {
                 self.state.read_storage().get(self.entity).cloned(),
             ) {
                 self.default_stream
-                    .send(ClientMsg::PlayerPhysics { pos, vel, ori })?;
+                    .send(ClientDefaultMsg::PlayerPhysics { pos, vel, ori })?;
             }
         }
 
@@ -853,16 +856,15 @@ impl Client {
 
     async fn handle_server_default_msg(
         &mut self,
-        msg: ServerMsg,
+        msg: ServerDefaultMsg,
         frontend_events: &mut Vec<Event>,
     ) -> Result<(), Error> {
         match msg {
-            ServerMsg::TooManyPlayers => {
-                return Err(Error::ServerWentMad);
+            ServerDefaultMsg::Shutdown => return Err(Error::ServerShutdown),
+            ServerDefaultMsg::PlayerListUpdate(PlayerListUpdate::Init(list)) => {
+                self.player_list = list
             },
-            ServerMsg::Shutdown => return Err(Error::ServerShutdown),
-            ServerMsg::PlayerListUpdate(PlayerListUpdate::Init(list)) => self.player_list = list,
-            ServerMsg::PlayerListUpdate(PlayerListUpdate::Add(uid, player_info)) => {
+            ServerDefaultMsg::PlayerListUpdate(PlayerListUpdate::Add(uid, player_info)) => {
                 if let Some(old_player_info) = self.player_list.insert(uid, player_info.clone()) {
                     warn!(
                         "Received msg to insert {} with uid {} into the player list but there was \
@@ -871,7 +873,7 @@ impl Client {
                     );
                 }
             },
-            ServerMsg::PlayerListUpdate(PlayerListUpdate::Admin(uid, admin)) => {
+            ServerDefaultMsg::PlayerListUpdate(PlayerListUpdate::Admin(uid, admin)) => {
                 if let Some(player_info) = self.player_list.get_mut(&uid) {
                     player_info.is_admin = admin;
                 } else {
@@ -882,7 +884,10 @@ impl Client {
                     );
                 }
             },
-            ServerMsg::PlayerListUpdate(PlayerListUpdate::SelectedCharacter(uid, char_info)) => {
+            ServerDefaultMsg::PlayerListUpdate(PlayerListUpdate::SelectedCharacter(
+                uid,
+                char_info,
+            )) => {
                 if let Some(player_info) = self.player_list.get_mut(&uid) {
                     player_info.character = Some(char_info);
                 } else {
@@ -893,7 +898,7 @@ impl Client {
                     );
                 }
             },
-            ServerMsg::PlayerListUpdate(PlayerListUpdate::LevelChange(uid, next_level)) => {
+            ServerDefaultMsg::PlayerListUpdate(PlayerListUpdate::LevelChange(uid, next_level)) => {
                 if let Some(player_info) = self.player_list.get_mut(&uid) {
                     player_info.character = match &player_info.character {
                         Some(character) => Some(common::msg::CharacterInfo {
@@ -912,7 +917,7 @@ impl Client {
                     };
                 }
             },
-            ServerMsg::PlayerListUpdate(PlayerListUpdate::Remove(uid)) => {
+            ServerDefaultMsg::PlayerListUpdate(PlayerListUpdate::Remove(uid)) => {
                 // Instead of removing players, mark them as offline because we need to
                 // remember the names of disconnected players in chat.
                 //
@@ -937,7 +942,7 @@ impl Client {
                     );
                 }
             },
-            ServerMsg::PlayerListUpdate(PlayerListUpdate::Alias(uid, new_name)) => {
+            ServerDefaultMsg::PlayerListUpdate(PlayerListUpdate::Alias(uid, new_name)) => {
                 if let Some(player_info) = self.player_list.get_mut(&uid) {
                     player_info.player_alias = new_name;
                 } else {
@@ -949,10 +954,10 @@ impl Client {
                 }
             },
 
-            ServerMsg::Ping => {
-                self.default_stream.send(ClientMsg::Pong)?;
+            ServerDefaultMsg::Ping => {
+                self.default_stream.send(ClientDefaultMsg::Pong)?;
             },
-            ServerMsg::Pong => {
+            ServerDefaultMsg::Pong => {
                 self.last_server_pong = self.state.get_time();
                 self.last_ping_delta = self.state.get_time() - self.last_server_ping;
 
@@ -964,38 +969,38 @@ impl Client {
                 }
                 self.ping_deltas.push_back(self.last_ping_delta);
             },
-            ServerMsg::ChatMsg(m) => frontend_events.push(Event::Chat(m)),
-            ServerMsg::SetPlayerEntity(uid) => {
+            ServerDefaultMsg::ChatMsg(m) => frontend_events.push(Event::Chat(m)),
+            ServerDefaultMsg::SetPlayerEntity(uid) => {
                 if let Some(entity) = self.state.ecs().entity_from_uid(uid.0) {
                     self.entity = entity;
                 } else {
                     return Err(Error::Other("Failed to find entity from uid.".to_owned()));
                 }
             },
-            ServerMsg::TimeOfDay(time_of_day) => {
+            ServerDefaultMsg::TimeOfDay(time_of_day) => {
                 *self.state.ecs_mut().write_resource() = time_of_day;
             },
-            ServerMsg::EntitySync(entity_sync_package) => {
+            ServerDefaultMsg::EntitySync(entity_sync_package) => {
                 self.state
                     .ecs_mut()
                     .apply_entity_sync_package(entity_sync_package);
             },
-            ServerMsg::CompSync(comp_sync_package) => {
+            ServerDefaultMsg::CompSync(comp_sync_package) => {
                 self.state
                     .ecs_mut()
                     .apply_comp_sync_package(comp_sync_package);
             },
-            ServerMsg::CreateEntity(entity_package) => {
+            ServerDefaultMsg::CreateEntity(entity_package) => {
                 self.state.ecs_mut().apply_entity_package(entity_package);
             },
-            ServerMsg::DeleteEntity(entity) => {
+            ServerDefaultMsg::DeleteEntity(entity) => {
                 if self.state.read_component_cloned::<Uid>(self.entity) != Some(entity) {
                     self.state
                         .ecs_mut()
                         .delete_entity_and_clear_from_uid_allocator(entity.0);
                 }
             },
-            ServerMsg::InventoryUpdate(inventory, event) => {
+            ServerDefaultMsg::InventoryUpdate(inventory, event) => {
                 match event {
                     InventoryUpdateEvent::CollectFailed => {},
                     _ => {
@@ -1008,30 +1013,35 @@ impl Client {
 
                 frontend_events.push(Event::InventoryUpdated(event));
             },
-            ServerMsg::TerrainChunkUpdate { key, chunk } => {
-                if let Ok(chunk) = chunk {
-                    self.state.insert_chunk(key, *chunk);
-                }
-                self.pending_chunks.remove(&key);
-            },
-            ServerMsg::TerrainBlockUpdates(mut blocks) => {
+            ServerDefaultMsg::TerrainBlockUpdates(mut blocks) => {
                 blocks.drain().for_each(|(pos, block)| {
                     self.state.set_block(pos, block);
                 });
             },
-            ServerMsg::Disconnect => {
+            ServerDefaultMsg::Disconnect => {
                 frontend_events.push(Event::Disconnect);
-                self.default_stream.send(ClientMsg::Terminate)?;
+                self.default_stream.send(ClientDefaultMsg::Terminate)?;
             },
-            ServerMsg::Notification(n) => {
+            ServerDefaultMsg::Notification(n) => {
                 frontend_events.push(Event::Notification(n));
             },
-            ServerMsg::SetViewDistance(vd) => {
+            ServerDefaultMsg::SetViewDistance(vd) => {
                 self.view_distance = Some(vd);
                 frontend_events.push(Event::SetViewDistance(vd));
             },
         }
         Ok(())
+    }
+
+    async fn handle_server_chunk_msg(&mut self, msg: ServerChunkMsg) {
+        match msg {
+            ServerChunkMsg::TerrainChunkUpdate { key, chunk } => {
+                if let Ok(chunk) = chunk {
+                    self.state.insert_chunk(key, *chunk);
+                }
+                self.pending_chunks.remove(&key);
+            },
+        }
     }
 
     async fn handle_server_msg(
@@ -1042,11 +1052,15 @@ impl Client {
         loop {
             *cnt += 1;
             match select!(
-                msg = self.default_stream.recv().fuse() => (Some(msg?), None),
-                msg = self.state_stream.recv().fuse() => (None, Some(msg?)),
+                msg = self.default_stream.recv().fuse() => (Some(msg?), None, None),
+                msg = self.state_stream.recv().fuse() => (None, Some(msg?), None),
+                msg = self.chunks_stream.recv().fuse() => (None, None, Some(msg?)),
             ) {
-                (Some(msg), None) => self.handle_server_default_msg(msg, frontend_events).await?,
-                (None, Some(msg)) => self.handle_server_state_msg(msg).await,
+                (Some(msg), None, None) => {
+                    self.handle_server_default_msg(msg, frontend_events).await?
+                },
+                (None, Some(msg), None) => self.handle_server_state_msg(msg).await,
+                (None, None, Some(msg)) => self.handle_server_chunk_msg(msg).await,
                 _ => unreachable!("Cannot return from select"),
             }
         }
@@ -1248,7 +1262,7 @@ impl Client {
 impl Drop for Client {
     fn drop(&mut self) {
         trace!("Dropping client");
-        if let Err(e) = self.default_stream.send(ClientMsg::Disconnect) {
+        if let Err(e) = self.default_stream.send(ClientDefaultMsg::Disconnect) {
             warn!(
                 ?e,
                 "Error during drop of client, couldn't send disconnect package, is the connection \

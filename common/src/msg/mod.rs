@@ -4,11 +4,12 @@ pub mod server;
 
 // Reexports
 pub use self::{
-    client::{ClientMsg, ClientStateMsg},
+    client::{ClientChunkMsg, ClientDefaultMsg, ClientStateMsg},
     ecs_packet::EcsCompPacket,
     server::{
         CharacterInfo, Notification, PlayerInfo, PlayerListUpdate, RegisterError,
-        RequestStateError, ServerInfo, ServerLoginMsg, ServerMsg, ServerStateMsg,
+        RequestStateError, ServerChunkMsg, ServerDefaultMsg, ServerInfo, ServerLoginMsg,
+        ServerStateMsg,
     },
 };
 use serde::{Deserialize, Serialize};

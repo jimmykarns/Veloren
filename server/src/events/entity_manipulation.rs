@@ -5,7 +5,7 @@ use common::{
         self, item::lottery::Lottery, object, Body, Damage, DamageSource, HealthChange,
         HealthSource, Player, Stats,
     },
-    msg::{PlayerListUpdate, ServerMsg},
+    msg::{PlayerListUpdate, ServerDefaultMsg},
     state::BlockChange,
     sync::{Uid, WorldSyncExt},
     sys::combat::BLOCK_ANGLE,
@@ -328,7 +328,7 @@ pub fn handle_level_up(server: &mut Server, entity: EcsEntity, new_level: u32) {
 
     server
         .state
-        .notify_registered_clients(ServerMsg::PlayerListUpdate(PlayerListUpdate::LevelChange(
-            *uid, new_level,
-        )));
+        .notify_registered_clients(ServerDefaultMsg::PlayerListUpdate(
+            PlayerListUpdate::LevelChange(*uid, new_level),
+        ));
 }

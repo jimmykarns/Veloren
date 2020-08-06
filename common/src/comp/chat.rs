@@ -1,4 +1,4 @@
-use crate::{msg::ServerMsg, sync::Uid};
+use crate::{msg::ServerDefaultMsg, sync::Uid};
 use serde::{Deserialize, Serialize};
 use specs::Component;
 use specs_idvs::IdvStorage;
@@ -97,11 +97,11 @@ impl ChatType {
         }
     }
 
-    pub fn server_msg<S>(self, msg: S) -> ServerMsg
+    pub fn server_msg<S>(self, msg: S) -> ServerDefaultMsg
     where
         S: Into<String>,
     {
-        ServerMsg::ChatMsg(self.chat_msg(msg))
+        ServerDefaultMsg::ChatMsg(self.chat_msg(msg))
     }
 }
 

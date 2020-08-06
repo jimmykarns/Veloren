@@ -33,7 +33,7 @@ use common::{
     cmd::ChatCommand,
     comp::{self, ChatType},
     event::{EventBus, ServerEvent},
-    msg::{ClientState, ServerInfo, ServerLoginMsg, ServerMsg, ServerStateMsg},
+    msg::{ClientState, ServerDefaultMsg, ServerInfo, ServerLoginMsg, ServerStateMsg},
     recipe::default_recipe_book,
     state::{State, TimeOfDay},
     sync::WorldSyncExt,
@@ -704,7 +704,7 @@ impl Server {
         }
     }
 
-    pub fn notify_client(&self, entity: EcsEntity, msg: ServerMsg) {
+    pub fn notify_client(&self, entity: EcsEntity, msg: ServerDefaultMsg) {
         if let Some(client) = self.state.ecs().write_storage::<Client>().get_mut(entity) {
             client.notify(msg)
         }
@@ -756,5 +756,8 @@ impl Server {
 }
 
 impl Drop for Server {
-    fn drop(&mut self) { self.state.notify_registered_clients(ServerMsg::Shutdown); }
+    fn drop(&mut self) {
+        self.state
+            .notify_registered_clients(ServerDefaultMsg::Shutdown);
+    }
 }

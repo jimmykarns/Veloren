@@ -9,7 +9,7 @@ use common::{
     cmd::{ChatCommand, CHAT_COMMANDS, CHAT_SHORTCUTS},
     comp::{self, ChatType, Item},
     event::{EventBus, ServerEvent},
-    msg::{Notification, PlayerListUpdate, ServerMsg},
+    msg::{Notification, PlayerListUpdate, ServerDefaultMsg},
     npc::{self, get_npc_name},
     state::TimeOfDay,
     sync::{Uid, WorldSyncExt},
@@ -417,8 +417,10 @@ fn handle_alias(
             ecs.read_storage::<comp::Player>().get(target),
             old_alias_optional,
         ) {
-            let msg =
-                ServerMsg::PlayerListUpdate(PlayerListUpdate::Alias(*uid, player.alias.clone()));
+            let msg = ServerDefaultMsg::PlayerListUpdate(PlayerListUpdate::Alias(
+                *uid,
+                player.alias.clone(),
+            ));
             server.state.notify_registered_clients(msg);
 
             // Announce alias change if target has a Body.
@@ -993,7 +995,10 @@ fn handle_waypoint(
                 .write_storage::<comp::Waypoint>()
                 .insert(target, comp::Waypoint::new(pos.0, *time));
             server.notify_client(client, ChatType::CommandInfo.server_msg("Waypoint saved!"));
-            server.notify_client(client, ServerMsg::Notification(Notification::WaypointSaved));
+            server.notify_client(
+                client,
+                ServerDefaultMsg::Notification(Notification::WaypointSaved),
+            );
         },
         None => server.notify_client(
             client,
@@ -1029,7 +1034,7 @@ fn handle_adminify(
                     ecs.write_storage().insert(player, comp::Admin).is_ok()
                 };
                 // Update player list so the player shows up as admin in client chat.
-                let msg = ServerMsg::PlayerListUpdate(PlayerListUpdate::Admin(
+                let msg = ServerDefaultMsg::PlayerListUpdate(PlayerListUpdate::Admin(
                     *ecs.read_storage::<Uid>()
                         .get(player)
                         .expect("Player should have uid"),
@@ -1484,7 +1489,7 @@ fn find_target(
     ecs: &specs::World,
     opt_alias: Option<String>,
     fallback: EcsEntity,
-) -> Result<EcsEntity, ServerMsg> {
+) -> Result<EcsEntity, ServerDefaultMsg> {
     if let Some(alias) = opt_alias {
         (&ecs.entities(), &ecs.read_storage::<comp::Player>())
             .join()
@@ -1556,7 +1561,7 @@ fn handle_set_level(
                     .expect("Failed to get uid for player");
                 server
                     .state
-                    .notify_registered_clients(ServerMsg::PlayerListUpdate(
+                    .notify_registered_clients(ServerDefaultMsg::PlayerListUpdate(
                         PlayerListUpdate::LevelChange(uid, lvl),
                     ));
 
