@@ -2009,11 +2009,11 @@ impl<'a> Widget for SettingsWindow<'a> {
                 events.push(Event::ChangeFluidMode(mode_list[clicked]));
             }
 
-            // Fullscreen 2
+            // FullscreenMode
             Text::new(
                 &self
                     .localized_strings
-                    .get("hud.settings.fullscreen_title"),
+                    .get("hud.settings.fullscreen_mode"),
             )
             .down_from(state.ids.fluid_mode_list, 8.0)
             .font_size(self.fonts.cyri.scale(14))
@@ -2021,8 +2021,11 @@ impl<'a> Widget for SettingsWindow<'a> {
             .color(TEXT_COLOR)
             .set(state.ids.fullscreen_mode_text, ui);
 
-            let mode_list = [FullscreenMode::Fullscreen, FullscreenMode::Borderless];
+            let mode_list = [FullscreenMode::Off, FullscreenMode::Exclusive, FullscreenMode::Borderless];
             let mode_label_list = [
+                &self
+                    .localized_strings
+                    .get("hud.settings.fullscreen_mode.off"),
                 &self
                     .localized_strings
                     .get("hud.settings.fullscreen_mode.fullscreen"),
@@ -2031,7 +2034,7 @@ impl<'a> Widget for SettingsWindow<'a> {
                     .get("hud.settings.fullscreen_mode.borderless"),
             ];
 
-            // Get which fluid rendering mode is currently active
+            // Get which fullscreen mode is currently active
             let selected = mode_list
                 .iter()
                 .position(|x| *x == self.global_state.settings.graphics.fullscreen_mode);
@@ -2045,55 +2048,7 @@ impl<'a> Widget for SettingsWindow<'a> {
                 .set(state.ids.fullscreen_mode_list, ui)
             {
                 events.push(Event::ChangeFullscreenMode(mode_list[clicked]));
-                //events.push(Event::ChangeFluidMode(mode_list[clicked]));
             }
-
-            // // Fullscreen
-            // Text::new(&self.localized_strings.get("hud.settings.fullscreen"))
-            //     .font_size(self.fonts.cyri.scale(14))
-            //     .font_id(self.fonts.cyri.conrod_id)
-            //     .down_from(state.ids.fluid_mode_list, 8.0)
-            //     .color(TEXT_COLOR)
-            //     .set(state.ids.fullscreen_label, ui);
-
-            // let fullscreen = ToggleButton::new(
-            //     self.global_state.settings.graphics.fullscreen,
-            //     self.imgs.checkbox,
-            //     self.imgs.checkbox_checked,
-            // )
-            // .w_h(18.0, 18.0)
-            // .right_from(state.ids.fullscreen_label, 10.0)
-            // .hover_images(self.imgs.checkbox_mo, self.imgs.checkbox_checked_mo)
-            // .press_images(self.imgs.checkbox_press, self.imgs.checkbox_checked)
-            // .set(state.ids.fullscreen_button, ui);
-
-            // if self.global_state.settings.graphics.fullscreen != fullscreen {
-            //     events.push(Event::ToggleFullscreen);
-            // }
-
-            // // borderlessFullscreen
-            // Text::new(&self.localized_strings.get("hud.settings.borderlessFullscreen"))
-            //     .font_size(self.fonts.cyri.scale(14))
-            //     .font_id(self.fonts.cyri.conrod_id)
-            //     .down_from(state.ids.fluid_mode_list, 8.0)
-            //     .right_from(state.ids.fullscreen_button, 20.0)
-            //     .color(TEXT_COLOR)
-            //     .set(state.ids.borderlessFullscreen_label, ui);
-
-            // let borderlessFullscreen = ToggleButton::new(
-            //     self.global_state.settings.graphics.borderlessFullscreen,
-            //     self.imgs.checkbox,
-            //     self.imgs.checkbox_checked,
-            // )
-            // .w_h(18.0, 18.0)
-            // .right_from(state.ids.borderlessFullscreen_label, 10.0)
-            // .hover_images(self.imgs.checkbox_mo, self.imgs.checkbox_checked_mo)
-            // .press_images(self.imgs.checkbox_press, self.imgs.checkbox_checked)
-            // .set(state.ids.borderlessFullscreen_button, ui);
-
-            // if self.global_state.settings.graphics.borderlessFullscreen != borderlessFullscreen {
-            //     events.push(Event::ToggleBorderlessFullscreen);
-            // }
 
             // Save current screen size
             if Button::image(self.imgs.settings_button)

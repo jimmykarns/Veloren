@@ -949,17 +949,6 @@ impl PlayState for SessionState {
                         global_state.settings.graphics.fullscreen_mode = new_fullscreen_mode;
                         global_state.settings.save_to_file_warn();
                     },
-
-                    // HudEvent::ToggleFullscreen => {
-                    //     global_state
-                    //         .window
-                    //         .toggle_fullscreen(&mut global_state.settings);
-                    // },
-                    // HudEvent::ToggleBorderlessFullscreen => {
-                    //     global_state
-                    //         .window
-                    //         .toggle_borderlessFullscreen(&mut global_state.settings);
-                    // },
                     HudEvent::AdjustWindowSize(new_size) => {
                         global_state.window.set_size(new_size.into());
                         global_state.settings.graphics.window_size = new_size;

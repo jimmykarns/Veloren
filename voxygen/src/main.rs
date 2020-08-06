@@ -127,7 +127,6 @@ fn main() {
 
     audio.set_music_volume(settings.audio.music_volume);
     audio.set_sfx_volume(settings.audio.sfx_volume);
-
     // Load the profile.
     let profile = Profile::load();
 
@@ -144,6 +143,9 @@ fn main() {
             "Impossible to load language: change to the default language (English) instead.",
         );
         settings.language.selected_language = i18n::REFERENCE_LANG.to_owned();
+
+        error!("Lang {}", &settings.language.selected_language);
+        
         load_watched::<VoxygenLocalization>(
             &i18n_asset_key(&settings.language.selected_language),
             &mut localization_watcher,

@@ -69,7 +69,7 @@ use serde_derive::{Deserialize, Serialize};
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum FullscreenMode {
     Off,
-    Fullscreen,
+    Exclusive,
     Borderless,
 }
 

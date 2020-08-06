@@ -1049,7 +1049,7 @@ impl Window {
         if self.is_fullscreen() {
             fullscreen_mode = FullscreenMode::Off;
         } else {
-            fullscreen_mode = FullscreenMode::Fullscreen;
+            fullscreen_mode = FullscreenMode::Exclusive;
         }
         self.set_fullscreen_mode(fullscreen_mode);
         settings.graphics.fullscreen_mode = fullscreen_mode;
@@ -1064,13 +1064,11 @@ impl Window {
             return true; 
         }
     }
-    
-    //pub fn is_borderlessFullscreen(&self) -> bool { self.borderlessFullscreen }
 
     pub fn set_fullscreen_mode(&mut self, fullscreen: FullscreenMode) {
         let window = self.window.window();
         self.fullscreen = fullscreen;
-        if let FullscreenMode::Fullscreen = fullscreen {
+        if let FullscreenMode::Exclusive = fullscreen {
             window.set_fullscreen(Some(winit::window::Fullscreen::Exclusive(
                 window
                     .current_monitor()
@@ -1096,33 +1094,6 @@ impl Window {
             window.set_fullscreen(None);
         }
     }
-
-    // pub fn borderlessFullscreen(&mut self, borderlessFullscreen: bool) {
-    //     let window = self.window.window();
-    //     self.borderlessFullscreen = borderlessFullscreen;
-    //     if borderlessFullscreen {
-    //         window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(window.current_monitor())));
-    //         //     window
-    //         //         .current_monitor()
-    //         //         .video_modes()
-    //         //         .filter(|mode| mode.bit_depth() >= 24 && mode.refresh_rate() >= 59)
-    //         //         .max_by_key(|mode| mode.size().width)
-    //         //         .unwrap_or_else(|| {
-    //         //             warn!(
-    //         //                 "No video mode with a bit depth of at least 24 and a refresh rate of \
-    //         //                  at least 60Hz found"
-    //         //             );
-    //         //             window
-    //         //                 .current_monitor()
-    //         //                 .video_modes()
-    //         //                 .max_by_key(|mode| mode.size().width)
-    //         //                 .expect("No video modes available!!")
-    //         //         }),
-    //         // )));
-    //     } else {
-    //         window.set_fullscreen(None);
-    //     }
-    // }
 
     pub fn needs_refresh_resize(&mut self) { self.needs_refresh_resize = true; }
 
