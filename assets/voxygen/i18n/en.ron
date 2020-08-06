@@ -297,7 +297,7 @@ magically infused items?"#,
         "hud.settings.cloud_rendering_mode.regular": "Regular",
         "hud.settings.fullscreen_mode": "Fullscreen Mode",
         "hud.settings.fullscreen_mode.off": "Off",
-        "hud.settings.fullscreen_mode.fullscreen": "Fullscreen",
+        "hud.settings.fullscreen_mode.fullscreen": "Exclusive",
         "hud.settings.fullscreen_mode.borderless": "Borderless",
         "hud.settings.save_window_size": "Save window size",
 
