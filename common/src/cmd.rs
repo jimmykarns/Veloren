@@ -246,11 +246,6 @@ impl ChatCommand {
                 "Join/leave the specified faction",
                 NoAdmin,
             ),
-            //ChatCommand::JoinGroup => ChatCommandData::new(
-            //    vec![Any("group", Optional)],
-            //    "Join/leave the specified group",
-            //    NoAdmin,
-            //),
             ChatCommand::Jump => cmd(
                 vec![
                     Float("x", 0.0, Required),

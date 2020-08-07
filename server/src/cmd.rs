@@ -588,7 +588,6 @@ fn handle_spawn(
                                 comp::Alignment::Npc | comp::Alignment::Tame => {
                                     Some(comp::group::NPC)
                                 },
-                                // TODO: handle
                                 comp::Alignment::Owned(_) => unreachable!(),
                             } {
                                 let _ =
