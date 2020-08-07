@@ -1087,7 +1087,7 @@ impl Window {
                             .expect("No video modes available!!")
                     }),
             )));
-        } if let FullscreenMode::Borderless = fullscreen {
+        } else if let FullscreenMode::Borderless = fullscreen {
             window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(window.current_monitor())));
         }
         else {
