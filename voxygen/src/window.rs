@@ -1059,9 +1059,9 @@ impl Window {
     pub fn is_fullscreen(&self) -> bool { 
         let fullscreen = self.fullscreen;
         if let FullscreenMode::Off = fullscreen {
-            return false;
+            false
         } else {
-            return true; 
+            true
         }
     }
 
