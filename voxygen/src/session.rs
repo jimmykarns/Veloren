@@ -943,9 +943,7 @@ impl PlayState for SessionState {
                         self.hud.update_language(self.voxygen_i18n.clone());
                     },
                     HudEvent::ChangeFullscreenMode(new_fullscreen_mode) => {
-                        global_state
-                            .window
-                            .set_fullscreen_mode(new_fullscreen_mode);
+                        global_state.window.set_fullscreen_mode(new_fullscreen_mode);
                         global_state.settings.graphics.fullscreen_mode = new_fullscreen_mode;
                         global_state.settings.save_to_file_warn();
                     },

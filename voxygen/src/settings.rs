@@ -2,7 +2,7 @@ use crate::{
     hud::{BarNumbers, CrosshairType, Intro, PressBehavior, ShortcutNumbers, XpBar},
     i18n,
     render::{AaMode, CloudMode, FluidMode},
-    ui::{ScaleMode, FullscreenMode},
+    ui::{FullscreenMode, ScaleMode},
     window::{GameInput, KeyMouse},
 };
 use directories_next::{ProjectDirs, UserDirs};

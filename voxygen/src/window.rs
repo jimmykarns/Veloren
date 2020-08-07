@@ -2,7 +2,8 @@ use crate::{
     controller::*,
     render::{Renderer, WinColorFmt, WinDepthFmt},
     settings::{ControlSettings, Settings},
-    ui::{FullscreenMode}, ui,
+    ui,
+    ui::FullscreenMode,
     Error,
 };
 use crossbeam::channel;
@@ -1056,7 +1057,7 @@ impl Window {
         settings.save_to_file_warn();
     }
 
-    pub fn is_fullscreen(&self) -> bool { 
+    pub fn is_fullscreen(&self) -> bool {
         let fullscreen = self.fullscreen;
         if let FullscreenMode::Off = fullscreen {
             false
@@ -1088,9 +1089,10 @@ impl Window {
                     }),
             )));
         } else if let FullscreenMode::Borderless = fullscreen {
-            window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(window.current_monitor())));
-        }
-        else {
+            window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(
+                window.current_monitor(),
+            )));
+        } else {
             window.set_fullscreen(None);
         }
     }

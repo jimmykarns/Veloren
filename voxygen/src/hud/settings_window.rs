@@ -5,7 +5,7 @@ use super::{
 use crate::{
     i18n::{list_localizations, LanguageMetadata, VoxygenLocalization},
     render::{AaMode, CloudMode, FluidMode},
-    ui::{fonts::ConrodVoxygenFonts, ImageSlider, ScaleMode, ToggleButton, FullscreenMode},
+    ui::{fonts::ConrodVoxygenFonts, FullscreenMode, ImageSlider, ScaleMode, ToggleButton},
     window::GameInput,
     GlobalState,
 };
@@ -2010,18 +2010,18 @@ impl<'a> Widget for SettingsWindow<'a> {
             }
 
             // FullscreenMode
-            Text::new(
-                &self
-                    .localized_strings
-                    .get("hud.settings.fullscreen_mode"),
-            )
-            .down_from(state.ids.fluid_mode_list, 8.0)
-            .font_size(self.fonts.cyri.scale(14))
-            .font_id(self.fonts.cyri.conrod_id)
-            .color(TEXT_COLOR)
-            .set(state.ids.fullscreen_mode_text, ui);
+            Text::new(&self.localized_strings.get("hud.settings.fullscreen_mode"))
+                .down_from(state.ids.fluid_mode_list, 8.0)
+                .font_size(self.fonts.cyri.scale(14))
+                .font_id(self.fonts.cyri.conrod_id)
+                .color(TEXT_COLOR)
+                .set(state.ids.fullscreen_mode_text, ui);
 
-            let mode_list = [FullscreenMode::Off, FullscreenMode::Exclusive, FullscreenMode::Borderless];
+            let mode_list = [
+                FullscreenMode::Off,
+                FullscreenMode::Exclusive,
+                FullscreenMode::Borderless,
+            ];
             let mode_label_list = [
                 &self
                     .localized_strings
