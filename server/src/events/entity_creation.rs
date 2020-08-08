@@ -2,7 +2,7 @@ use crate::{sys, Server, StateExt};
 use common::{
     comp::{
         self, Agent, Alignment, Body, Gravity, Item, ItemDrop, LightEmitter, Loadout, Pos,
-        Projectile, Scale, Stats, Vel, WaypointArea,
+        Projectile, Scale, Shockwave, Stats, Vel, WaypointArea,
     },
     outcome::Outcome,
     util::Dir,
@@ -111,6 +111,12 @@ pub fn handle_shoot(
         builder = builder.with(gravity)
     }
 
+    builder.build();
+}
+
+pub fn handle_shockwave(server: &mut Server, shockwave: Shockwave) {
+    let state = server.state_mut();
+    let builder = state.create_shockwave(shockwave);
     builder.build();
 }
 
