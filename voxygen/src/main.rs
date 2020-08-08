@@ -144,8 +144,6 @@ fn main() {
         );
         settings.language.selected_language = i18n::REFERENCE_LANG.to_owned();
 
-        error!("Lang {}", &settings.language.selected_language);
-
         load_watched::<VoxygenLocalization>(
             &i18n_asset_key(&settings.language.selected_language),
             &mut localization_watcher,

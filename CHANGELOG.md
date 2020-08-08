@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Fullscreen modes now show two options (exclusive and borderless)
 - Improved camera aiming
 - Made civsim, sites, etc. deterministic from the same seed
 - Improved animations by adding orientation variation

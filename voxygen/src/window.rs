@@ -623,7 +623,15 @@ impl Window {
         }
         if self.toggle_fullscreen {
             self.toggle_fullscreen = false;
-            self.toggle_fullscreen(settings);
+            let fullscreen_mode: FullscreenMode;
+            if self.is_fullscreen() {
+                fullscreen_mode = FullscreenMode::Off;
+            } else {
+                fullscreen_mode = FullscreenMode::Exclusive;
+            }
+            self.set_fullscreen_mode(fullscreen_mode);
+            settings.graphics.fullscreen_mode = fullscreen_mode;
+            settings.save_to_file_warn();
         }
     }
 
