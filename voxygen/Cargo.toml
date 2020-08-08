@@ -14,7 +14,7 @@ singleplayer = ["server"]
 tweak = ["const-tweaker"]
 hot-anim = ["anim/use-dyn-lib"]
 
-default = ["gl", "singleplayer", "msgbox"]
+default = ["gl", "msgbox"]
 
 [dependencies]
 common = { package = "veloren-common", path = "../common" }

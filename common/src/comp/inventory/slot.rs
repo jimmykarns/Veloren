@@ -164,9 +164,9 @@ fn loadout_insert(
 ///
 /// let mut loadout = LoadoutBuilder::new()
 ///     .defaults()
-///     .active_item(LoadoutBuilder::default_item_config_from_str(Some(
-///         "common.items.weapons.sword.zweihander_sword_0",
-///     )))
+///     .active_item(LoadoutBuilder::default_item_config_from_str(
+///         "common.items.weapons.sword.zweihander_sword_0"
+///     ))
 ///     .build();
 ///
 /// let slot = EquipSlot::Mainhand;
@@ -274,7 +274,7 @@ pub fn swap(
 ///     LoadoutBuilder,
 /// };
 ///
-/// let boots: Option<Item> = Some(assets::load_expect_cloned(
+/// let boots: Option<Item> = Some(Item::new_from_asset_expect(
 ///     "common.items.testing.test_boots",
 /// ));
 ///
@@ -341,9 +341,9 @@ pub fn equip(slot: usize, inventory: &mut Inventory, loadout: &mut Loadout) {
 ///
 /// let mut loadout = LoadoutBuilder::new()
 ///     .defaults()
-///     .active_item(LoadoutBuilder::default_item_config_from_str(Some(
-///         "common.items.weapons.sword.zweihander_sword_0",
-///     )))
+///     .active_item(LoadoutBuilder::default_item_config_from_str(
+///         "common.items.weapons.sword.zweihander_sword_0"
+///     ))
 ///     .build();
 ///
 /// let slot = EquipSlot::Mainhand;
@@ -362,6 +362,7 @@ pub fn unequip(slot: EquipSlot, inventory: &mut Inventory, loadout: &mut Loadout
 mod tests {
     use super::*;
     use crate::{assets, LoadoutBuilder};
+    use crate::comp::Item;
 
     #[test]
     fn test_unequip_items_both_hands() {
@@ -370,9 +371,9 @@ mod tests {
             amount: 0,
         };
 
-        let sword = LoadoutBuilder::default_item_config_from_str(Some(
-            "common.items.weapons.sword.zweihander_sword_0",
-        ));
+        let sword = LoadoutBuilder::default_item_config_from_str(
+            "common.items.weapons.sword.zweihander_sword_0"
+        );
 
         let mut loadout = LoadoutBuilder::new()
             .defaults()
@@ -396,11 +397,11 @@ mod tests {
 
     #[test]
     fn test_equip_item() {
-        let boots: Option<comp::Item> = Some(assets::load_expect_cloned(
+        let boots: Option<comp::Item> = Some(Item::new_from_asset_expect(
             "common.items.testing.test_boots",
         ));
 
-        let starting_sandles: Option<comp::Item> = Some(assets::load_expect_cloned(
+        let starting_sandles: Option<comp::Item> = Some(Item::new_from_asset_expect(
             "common.items.armor.starter.sandals_0",
         ));
 
@@ -425,11 +426,11 @@ mod tests {
 
     #[test]
     fn test_loadout_replace() {
-        let boots: Option<comp::Item> = Some(assets::load_expect_cloned(
+        let boots: Option<comp::Item> = Some(Item::new_from_asset_expect(
             "common.items.testing.test_boots",
         ));
 
-        let starting_sandles: Option<comp::Item> = Some(assets::load_expect_cloned(
+        let starting_sandles: Option<comp::Item> = Some(Item::new_from_asset_expect(
             "common.items.armor.starter.sandals_0",
         ));
 
@@ -454,9 +455,9 @@ mod tests {
 
     #[test]
     fn test_loadout_remove() {
-        let sword = LoadoutBuilder::default_item_config_from_str(Some(
+        let sword = LoadoutBuilder::default_item_config_from_str(
             "common.items.weapons.sword.zweihander_sword_0",
-        ));
+        );
 
         let mut loadout = LoadoutBuilder::new()
             .defaults()

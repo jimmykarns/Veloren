@@ -10,24 +10,23 @@ extern crate diesel;
 use super::{
     error::Error,
     establish_connection,
-    models::{
-        Body, Character, Inventory, InventoryUpdate, Loadout, LoadoutUpdate, NewCharacter,
-        NewLoadout, Stats, StatsJoinData, StatsUpdate,
-    },
+    models::*,
     schema,
 };
 use crate::{comp, persistence::models::SkillSetData};
 use common::{
-    character::{Character as CharacterData, CharacterItem, MAX_CHARACTERS_PER_PLAYER},
+    character::{CharacterItem, MAX_CHARACTERS_PER_PLAYER},
     LoadoutBuilder,
 };
 use crossbeam::{channel, channel::TryIter};
 use diesel::prelude::*;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
+use crate::persistence::conversions::convert_inventory;
+use std::sync::atomic::Ordering;
 
 type CharacterLoaderRequest = (specs::Entity, CharacterLoaderRequestKind);
 
-/// Available database operations when modifying a player's characetr list
+/// Available database operations when modifying a player's character list
 enum CharacterLoaderRequestKind {
     CreateCharacter {
         player_uuid: String,
@@ -160,7 +159,7 @@ impl CharacterLoader {
             CharacterLoaderRequestKind::CreateCharacter {
                 player_uuid,
                 character_alias,
-                character_tool,
+                character_tool, // TODO: Remove tool column from character table
                 body,
             },
         )) {
@@ -233,38 +232,43 @@ impl Drop for CharacterLoader {
 ///
 /// After first logging in, and after a character is selected, we fetch this
 /// data for the purpose of inserting their persisted data for the entity.
-fn load_character_data(player_uuid: &str, character_id: i32, db_dir: &str) -> CharacterDataResult {
-    let connection = establish_connection(db_dir)?;
+fn load_character_data(_player_uuid: &str, _character_id: i32, _db_dir: &str) -> CharacterDataResult {
+    // let connection = establish_connection(db_dir);
+    //
+    // let result = schema::character::dsl::character
+    //     .filter(schema::character::id.eq(character_id))
+    //     .filter(schema::character::player_uuid.eq(player_uuid))
+    //     .inner_join(schema::body::table)
+    //     .inner_join(schema::stats::table)
+    //     .inner_join(schema::inventory::table)
+    //     .inner_join(schema::loadout::table)
+    //     .first::<(Character, Body, Stats, Inventory, Loadout)>(&connection);
+    //
+    // match result {
+    //     Ok((character_data, body_data, stats_data, inventory, loadout)) => Ok((
+    //         comp::Body::from(&body_data),
+    //         comp::Stats::from(StatsJoinData {
+    //             alias: &character_data.alias,
+    //             body: &comp::Body::from(&body_data),
+    //             stats: &stats_data,
+    //         }),
+    //         comp::Inventory::from(inventory),
+    //         comp::Loadout::from(&loadout),
+    //     )),
+    //     Err(e) => {
+    //         error!(
+    //             ?e,
+    //             ?character_id,
+    //             "Failed to load character data for character"
+    //         );
+    //         Err(Error::CharacterDataError)
+    //     },
+    // }
+    // (comp::Body, comp::Stats, comp::Inventory, comp::Loadout);
 
-    let result = schema::character::dsl::character
-        .filter(schema::character::id.eq(character_id))
-        .filter(schema::character::player_uuid.eq(player_uuid))
-        .inner_join(schema::body::table)
-        .inner_join(schema::stats::table)
-        .inner_join(schema::inventory::table)
-        .inner_join(schema::loadout::table)
-        .first::<(Character, Body, Stats, Inventory, Loadout)>(&connection);
-
-    match result {
-        Ok((character_data, body_data, stats_data, inventory, loadout)) => Ok((
-            comp::Body::from(&body_data),
-            comp::Stats::from(StatsJoinData {
-                alias: &character_data.alias,
-                body: &comp::Body::from(&body_data),
-                stats: &stats_data,
-            }),
-            comp::Inventory::from(inventory),
-            comp::Loadout::from(&loadout),
-        )),
-        Err(e) => {
-            error!(
-                ?e,
-                ?character_id,
-                "Failed to load character data for character"
-            );
-            Err(Error::CharacterDataError)
-        },
-    }
+    // TODO: Redo character data loading
+    let body = comp::Body::Humanoid(comp::body::humanoid::Body::random());
+    Ok((body, comp::Stats::new("test name".to_owned(), body), comp::Inventory::default(), comp::Loadout::default()))
 }
 
 /// Loads a list of characters belonging to the player. This data is a small
@@ -274,37 +278,54 @@ fn load_character_data(player_uuid: &str, character_id: i32, db_dir: &str) -> Ch
 /// In the event that a join fails, for a character (i.e. they lack an entry for
 /// stats, body, etc...) the character is skipped, and no entry will be
 /// returned.
-fn load_character_list(player_uuid: &str, db_dir: &str) -> CharacterListResult {
-    let result = schema::character::dsl::character
-        .filter(schema::character::player_uuid.eq(player_uuid))
-        .order(schema::character::id.desc())
-        .inner_join(schema::body::table)
-        .inner_join(schema::stats::table)
-        .inner_join(schema::loadout::table)
-        .load::<(Character, Body, Stats, Loadout)>(&establish_connection(db_dir)?);
+fn load_character_list(_player_uuid: &str, _db_dir: &str) -> CharacterListResult {
+    // let result = schema::character::dsl::character
+    //     .filter(schema::character::player_uuid.eq(player_uuid))
+    //     .order(schema::character::id.desc())
+    //     .inner_join(schema::body::table)
+    //     .inner_join(schema::stats::table)
+    //     .inner_join(schema::loadout::table)
+    //     .load::<(Character, Body, Stats, Loadout)>(&establish_connection(db_dir));
+    //
+    // match result {
+    //     Ok(data) => Ok(data
+    //         .iter()
+    //         .map(|(character_data, body_data, stats_data, loadout)| {
+    //             let character = CharacterData::from(character_data);
+    //             let body = comp::Body::from(body_data);
+    //             let level = stats_data.level as usize;
+    //             let loadout = comp::Loadout::from(loadout);
+    //
+    //             CharacterItem {
+    //                 character,
+    //                 body,
+    //                 level,
+    //                 loadout,
+    //             }
+    //         })
+    //         .collect()),
+    //     Err(e) => {
+    //         error!(?e, ?player_uuid, "Failed to load character list for player");
+    //         Err(Error::CharacterDataError)
+    //     },
+    // }
+    // pub character: Character,
+    // pub body: comp::Body,
+    // pub level: usize,
+    // pub loadout: comp::Loadout,
 
-    match result {
-        Ok(data) => Ok(data
-            .iter()
-            .map(|(character_data, body_data, stats_data, loadout)| {
-                let character = CharacterData::from(character_data);
-                let body = comp::Body::from(body_data);
-                let level = stats_data.level as usize;
-                let loadout = comp::Loadout::from(loadout);
-
-                CharacterItem {
-                    character,
-                    body,
-                    level,
-                    loadout,
-                }
-            })
-            .collect()),
-        Err(e) => {
-            error!(?e, ?player_uuid, "Failed to load character list for player");
-            Err(Error::CharacterDataError)
+    let mut result = Vec::<CharacterItem>::new();
+    result.push(CharacterItem {
+        body: comp::Body::Humanoid(comp::body::humanoid::Body::random()),
+        character: common::character::Character {
+            id: Some(2),
+            alias: "Test Alias".to_owned(),
+            tool: None
         },
-    }
+        level: 999,
+        loadout: comp::Loadout::default()
+    });
+    Ok(result)
 }
 
 /// Create a new character with provided comp::Character and comp::Body data.
@@ -390,7 +411,7 @@ fn create_character(
                 let loadout = LoadoutBuilder::new()
                     .defaults()
                     .active_item(LoadoutBuilder::default_item_config_from_str(
-                        character_tool.as_deref(),
+                        character_tool.as_deref().unwrap(), // TODO: remove tool/unwrap
                     ))
                     .build();
 
@@ -454,7 +475,7 @@ fn check_character_limit(uuid: &str, db_dir: &str) -> Result<(), Error> {
     }
 }
 
-type CharacterUpdateData = (StatsUpdate, InventoryUpdate, LoadoutUpdate);
+type CharacterUpdateData = (StatsUpdate, comp::Inventory, LoadoutUpdate);
 
 /// A unidirectional messaging resource for saving characters in a
 /// background thread.
@@ -471,7 +492,9 @@ impl CharacterUpdater {
         let (update_tx, update_rx) = channel::unbounded::<Vec<(i32, CharacterUpdateData)>>();
         let handle = std::thread::spawn(move || {
             while let Ok(updates) = update_rx.recv() {
+                info!("Persistence batch update starting");
                 batch_update(updates.into_iter(), &db_dir);
+                info!("Persistence batch update finished");
             }
         });
 
@@ -487,13 +510,13 @@ impl CharacterUpdater {
         updates: impl Iterator<Item = (i32, &'a comp::Stats, &'a comp::Inventory, &'a comp::Loadout)>,
     ) {
         let updates = updates
-            .map(|(id, stats, inventory, loadout)| {
+            .map(|(character_id, stats, inventory, loadout)| {
                 (
-                    id,
+                    character_id,
                     (
                         StatsUpdate::from(stats),
-                        InventoryUpdate::from(inventory),
-                        LoadoutUpdate::from((id, loadout)),
+                        inventory.clone(),
+                        LoadoutUpdate::from((character_id, loadout)),
                     ),
                 )
             })
@@ -519,19 +542,18 @@ impl CharacterUpdater {
 fn batch_update(updates: impl Iterator<Item = (i32, CharacterUpdateData)>, db_dir: &str) {
     let connection = establish_connection(db_dir);
 
-    if let Err(e) = connection.and_then(|connection| {
-        connection.transaction::<_, diesel::result::Error, _>(|| {
-            updates.for_each(
-                |(character_id, (stats_update, inventory_update, loadout_update))| {
-                    update(
-                        character_id,
-                        &stats_update,
-                        &inventory_update,
-                        &loadout_update,
-                        &connection,
-                    )
-                },
-            );
+    if let Err(e) = connection.transaction::<_, diesel::result::Error, _>(|| {
+        updates.for_each(
+            |(character_id, (stats_update, inventory, loadout_update))| {
+                update(
+                    character_id,
+                    &stats_update,
+                    inventory,
+                    &loadout_update,
+                    &connection,
+                )
+            },
+        );
 
             Ok(())
         })
@@ -540,46 +562,111 @@ fn batch_update(updates: impl Iterator<Item = (i32, CharacterUpdateData)>, db_di
     }
 }
 
+fn get_new_entity_id(conn: &SqliteConnection) -> i32 {
+    use super::schema::entity::dsl::*;
+
+    diesel::insert_into(entity)
+        .default_values()
+        .execute(conn)
+        .expect("Failed to create new entity record");
+
+    let new_entity_id = entity
+        .order(entity_id.desc())
+        .select(entity_id)
+        .first::<i32>(conn)
+        .expect("new entity ID was null?");
+
+    info!("Got new entity_id: {}", new_entity_id);
+    new_entity_id
+}
+
+// TODO: Make this return result and use a sub-transaction instead of expects and error! everywhere
 /// NOTE: Only call while a transaction is held!
 fn update(
     character_id: i32,
-    stats: &StatsUpdate,
-    inventory: &InventoryUpdate,
-    loadout: &LoadoutUpdate,
+    _stats: &StatsUpdate,
+    inventory: comp::Inventory,
+    _loadout: &LoadoutUpdate,
     connection: &SqliteConnection,
 ) {
-    // Update Stats
-    if let Err(e) =
-        diesel::update(schema::stats::table.filter(schema::stats::character_id.eq(character_id)))
-            .set(stats)
-            .execute(connection)
-    {
-        error!(?e, ?character_id, "Failed to update stats for character",)
+    use super::schema::item::dsl::*;
+
+    // TODO: Store the character's pseudo-container IDs during login so we don't have to fetch them each save?
+    let inventory_container_id: i32;
+    match item
+        .select(item_id)
+        .filter(parent_container_item_id.eq(character_id)
+                                        .and(item_definition_id.eq("veloren.core.pseudo_containers.inventory")))
+        .first::<i32>(connection) {
+        Ok(id) => { inventory_container_id = id },
+        Err(e) => {
+            error!(?e, ?character_id, "Failed to retrieve inventory container ID");
+            return;
+        }
     }
 
-    // Update Inventory
-    if let Err(e) = diesel::update(
-        schema::inventory::table.filter(schema::inventory::character_id.eq(character_id)),
-    )
-    .set(inventory)
-    .execute(connection)
-    {
-        warn!(
-            ?e,
-            ?character_id,
-            "Failed to update inventory for character",
-        )
+    let item_pairs = convert_inventory(inventory, inventory_container_id);
+
+    // TODO: Refactor this, batch into multiple inserts/updates etc
+    for mut item_pair in item_pairs.into_iter() {
+        if item_pair.model.item_id.is_none() {
+            let id = get_new_entity_id(connection);
+            info!("Inserting item_id: {}", id);
+            item_pair.model.item_id = Some(id);
+
+            // TODO: Fix this cast.
+            // TODO: Set this for all items only after the sub-transaction for this character has succeeded
+            // Set the item_id inside the Arc to the new entity_id - this results in the original
+            // item_id on the Item instance on the main game thread being updated.
+            item_pair.comp.item_id.store(id as u64, Ordering::Relaxed);
+                //.unwrap().set(id as u64);
+
+            diesel::insert_into(item)
+                .values(item_pair.model)
+                .execute(connection)
+                .expect("Failed to insert items");
+        } else {
+            info!("Updating item_id: {}", item_pair.model.item_id.unwrap());
+            diesel::update(item.filter(item_id.eq(item_pair.model.item_id.unwrap())))
+                .set(item_pair.model)
+                .execute(connection);
+        }
     }
+
+
+
+    // Update Stats
+    // if let Err(e) =
+    //     diesel::update(schema::stats::table.filter(schema::stats::character_id.eq(character_id)))
+    //         .set(stats)
+    //         .execute(connection)
+    // {
+    //     error!(?e, ?character_id, "Failed to update stats for character",)
+    // }
+
+    // // Update Inventory
+    // if let Err(e) = diesel::update(
+    //     schema::inventory::table.filter(schema::inventory::character_id.eq(character_id)),
+    // )
+    // .set(inventory)
+    // .execute(connection)
+    // {
+    //     warn!(
+    //         ?e,
+    //         ?character_id,
+    //         "Failed to update inventory for character",
+    //     )
+    // }
 
     // Update Loadout
-    if let Err(e) = diesel::update(
-        schema::loadout::table.filter(schema::loadout::character_id.eq(character_id)),
-    )
-    .set(loadout)
-    .execute(connection)
-    {
-        warn!(?e, ?character_id, "Failed to update loadout for character",)
-    }
+    // if let Err(e) = diesel::update(
+    //     schema::loadout::table.filter(schema::loadout::character_id.eq(character_id)),
+    // )
+    // .set(loadout)
+    // .execute(connection)
+    // {
+    //     warn!(?e, ?character_id, "Failed to update loadout for character",)
+    // }
 }
 
 impl Drop for CharacterUpdater {

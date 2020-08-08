@@ -12,7 +12,7 @@ fn maps_wield_while_equipping() {
     let mut loadout = Loadout::default();
 
     loadout.active_item = Some(ItemConfig {
-        item: assets::load_expect_cloned("common.items.weapons.axe.starter_axe"),
+        item: Item::new_from_asset_expect("common.items.weapons.axe.starter_axe"),
         ability1: None,
         ability2: None,
         ability3: None,
@@ -40,7 +40,7 @@ fn maps_unwield() {
     let mut loadout = Loadout::default();
 
     loadout.active_item = Some(ItemConfig {
-        item: assets::load_expect_cloned("common.items.weapons.bow.starter_bow"),
+        item: Item::new_from_asset_expect("common.items.weapons.bow.starter_bow"),
         ability1: None,
         ability2: None,
         ability3: None,
@@ -66,7 +66,7 @@ fn maps_basic_melee() {
     let mut loadout = Loadout::default();
 
     loadout.active_item = Some(ItemConfig {
-        item: assets::load_expect_cloned("common.items.weapons.axe.starter_axe"),
+        item: Item::new_from_asset_expect("common.items.weapons.axe.starter_axe"),
         ability1: None,
         ability2: None,
         ability3: None,
@@ -102,7 +102,7 @@ fn matches_ability_stage() {
     let mut loadout = Loadout::default();
 
     loadout.active_item = Some(ItemConfig {
-        item: assets::load_expect_cloned("common.items.weapons.sword.starter_sword"),
+        item: Item::new_from_asset_expect("common.items.weapons.sword.starter_sword"),
         ability1: None,
         ability2: None,
         ability3: None,
@@ -143,7 +143,7 @@ fn ignores_different_ability_stage() {
     let mut loadout = Loadout::default();
 
     loadout.active_item = Some(ItemConfig {
-        item: assets::load_expect_cloned("common.items.weapons.sword.starter_sword"),
+        item: Item::new_from_asset_expect("common.items.weapons.sword.starter_sword"),
         ability1: None,
         ability2: None,
         ability3: None,

@@ -3,6 +3,7 @@ CREATE TABLE entity
     entity_id INTEGER NOT NULL
         CONSTRAINT entity_pk PRIMARY KEY AUTOINCREMENT
         CONSTRAINT entity_pk_2 UNIQUE
+        DEFAULT NULL
 );
 
 CREATE TABLE item
@@ -11,7 +12,7 @@ CREATE TABLE item
         CONSTRAINT item_pk PRIMARY KEY
         CONSTRAINT item_pk_2 UNIQUE,
     parent_container_item_id INTEGER NOT NULL
-        REFERENCES item,
+        REFERENCES item(item_id),
     item_definition_id       TEXT    NOT NULL,
     stack_size               INTEGER,
     position                 TEXT
@@ -35,8 +36,7 @@ VALUES  ((SELECT MAX(entity_id) FROM entity),
          NULL);
 
 -- Create a temporary table for mapping between the existing character ID and the new entity ID
-PRAGMA temp_store = MEMORY;
-CREATE /*TEMP*/ TABLE _new_character_ids
+CREATE TEMP TABLE _new_character_ids
 (
     character_id INT NOT NULL
         PRIMARY KEY,
@@ -97,8 +97,7 @@ CREATE TEMP TABLE _loadout_temp
 (
     id INTEGER not null
         primary key,
-    character_id INT not null
-        references character,
+    character_id INT not null,
     items TEXT NOT NULL
 );
 
@@ -163,7 +162,7 @@ SET     id = id - 1000000;
 CREATE TABLE body
 (
     character_id INT NOT NULL
-        PRIMARY KEY REFERENCES character,
+        PRIMARY KEY REFERENCES character(id),
     species SMALLINT NOT NULL,
     body_type SMALLINT NOT NULL,
     hair_style SMALLINT NOT NULL,
@@ -195,7 +194,7 @@ CREATE TABLE loadout
     id INTEGER not null
         primary key,
     character_id INT not null
-        references character,
+        references character(id),
     items TEXT NOT NULL
 );
 
@@ -205,12 +204,13 @@ SELECT  l.id,
         nci.entity_id,
         l.items
 FROM    _loadout_temp l
-            JOIN    _new_character_ids nci ON l.character_id = nci.character_id;
+JOIN    _new_character_ids nci ON l.character_id = nci.character_id;
 
 CREATE TABLE inventory
 (
     character_id INTEGER NOT NULL
-        PRIMARY KEY,
+        PRIMARY KEY
+        references character(id),
     items TEXT NOT NULL
 );
 
@@ -219,12 +219,13 @@ INTO    inventory
 SELECT  nci.entity_id,
         i.items
 FROM    _inventory_temp i
-            JOIN    _new_character_ids nci ON i.character_id = nci.character_id;
+JOIN    _new_character_ids nci ON i.character_id = nci.character_id;
 
 CREATE TABLE stats
 (
     character_id INT NOT NULL
-        PRIMARY KEY,
+        PRIMARY KEY
+        references character(id),
     level INT DEFAULT 1 NOT NULL,
     exp INT DEFAULT 0 NOT NULL,
     endurance INT DEFAULT 0 NOT NULL,

@@ -15,6 +15,10 @@ use specs::{Component, FlaggedStorage};
 use specs_idvs::IdvStorage;
 use std::{fs::File, io::BufReader};
 use vek::Rgb;
+use tracing::{info, warn};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+use crate::assets::Error;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Throwable {
@@ -82,8 +86,36 @@ pub enum ItemKind {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug)]
+pub struct ItemId(AtomicU64);
+
+impl Default for ItemId {
+    fn default() -> Self {
+        ItemId(AtomicU64::new(0))
+    }
+}
+
+impl ItemId {
+    fn get(&self) -> Option<u64> {
+        Some(self.0.load(Ordering::Relaxed)).filter(|x| *x != 0)
+    }
+
+    pub fn set(&mut self, item_id: u64) {
+        if self.0.load(Ordering::Relaxed) > 0 {
+            panic!("Cannot set an item_id twice");
+        }
+        self.0.store(item_id, Ordering::Relaxed);
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Derivative)]
+#[derivative(PartialEq)]
 pub struct Item {
+    #[serde(skip)]
+    #[derivative(PartialEq="ignore")]
+    pub item_id: Arc<AtomicU64>,
+    item_definition_id: Option<String>, //TODO: Intern these strings?
     name: String,
     description: String,
     pub kind: ItemKind,
@@ -101,14 +133,36 @@ impl Item {
     // TODO: consider alternatives such as default abilities that can be added to a
     // loadout when no weapon is present
     pub fn empty() -> Self {
+        info!("Created empty item");
         Self {
+            item_id: Arc::new(AtomicU64::new(0)),
+            item_definition_id: None,
             name: "Empty Item".to_owned(),
             description: "This item may grant abilities, but is invisible".to_owned(),
             kind: ItemKind::Tool(Tool::empty()),
         }
     }
 
-    pub fn expect_from_asset(asset: &str) -> Self { (*assets::load_expect::<Self>(asset)).clone() }
+    /// Creates a new instance of an `Item` from the provided asset identifier
+    /// Panics if the asset does not exist.
+    pub fn new_from_asset_expect(asset: &str) -> Self {
+        let mut item = assets::load_expect_cloned::<Item>(asset);
+
+        // item_definition_id is the asset ID
+        item.item_definition_id = Some(asset.to_owned());
+        info!("Created instance of item expect {:?}", item.item_definition_id);
+        item
+    }
+
+    pub fn new_from_asset(asset: &str) -> Result<Self, Error> {
+        let mut item = assets::load_cloned::<Item>(asset)?;
+
+        // item_definition_id is the asset ID
+        item.item_definition_id = Some(asset.to_owned());
+        info!("Created instance of item {:?}", item.item_definition_id);
+
+        Ok(item)
+    }
 
     pub fn set_amount(&mut self, give_amount: u32) -> Result<(), assets::Error> {
         use ItemKind::*;
@@ -124,6 +178,18 @@ impl Item {
                 // Tools and armor don't stack
                 Err(assets::Error::InvalidType)
             },
+        }
+    }
+
+    //pub fn item_id(&self) -> Option<u64> { self.item_id.get() }
+
+    pub fn item_definition_id(&self) -> &str {
+        match &self.item_definition_id {
+            Some(x) => x.as_str(),
+            _ => {
+                warn!("Tried to get item_definition_id from item without one set.");
+                "null_item_definition"
+            }
         }
     }
 
@@ -145,44 +211,44 @@ impl Item {
 
     pub fn try_reclaim_from_block(block: Block) -> Option<Self> {
         match block.kind() {
-            BlockKind::Apple => Some(assets::load_expect_cloned("common.items.food.apple")),
-            BlockKind::Mushroom => Some(assets::load_expect_cloned("common.items.food.mushroom")),
-            BlockKind::Velorite => Some(assets::load_expect_cloned("common.items.ore.velorite")),
+            BlockKind::Apple => Some(Item::new_from_asset_expect("common.items.food.apple")),
+            BlockKind::Mushroom => Some(Item::new_from_asset_expect("common.items.food.mushroom")),
+            BlockKind::Velorite => Some(Item::new_from_asset_expect("common.items.ore.velorite")),
             BlockKind::VeloriteFrag => {
-                Some(assets::load_expect_cloned("common.items.ore.veloritefrag"))
+                Some(Item::new_from_asset_expect("common.items.ore.veloritefrag"))
             },
-            BlockKind::BlueFlower => Some(assets::load_expect_cloned("common.items.flowers.blue")),
-            BlockKind::PinkFlower => Some(assets::load_expect_cloned("common.items.flowers.pink")),
+            BlockKind::BlueFlower => Some(Item::new_from_asset_expect("common.items.flowers.blue")),
+            BlockKind::PinkFlower => Some(Item::new_from_asset_expect("common.items.flowers.pink")),
             BlockKind::PurpleFlower => {
-                Some(assets::load_expect_cloned("common.items.flowers.purple"))
+                Some(Item::new_from_asset_expect("common.items.flowers.purple"))
             },
-            BlockKind::RedFlower => Some(assets::load_expect_cloned("common.items.flowers.red")),
+            BlockKind::RedFlower => Some(Item::new_from_asset_expect("common.items.flowers.red")),
             BlockKind::WhiteFlower => {
-                Some(assets::load_expect_cloned("common.items.flowers.white"))
+                Some(Item::new_from_asset_expect("common.items.flowers.white"))
             },
             BlockKind::YellowFlower => {
-                Some(assets::load_expect_cloned("common.items.flowers.yellow"))
+                Some(Item::new_from_asset_expect("common.items.flowers.yellow"))
             },
-            BlockKind::Sunflower => Some(assets::load_expect_cloned("common.items.flowers.sun")),
-            BlockKind::LongGrass => Some(assets::load_expect_cloned("common.items.grasses.long")),
+            BlockKind::Sunflower => Some(Item::new_from_asset_expect("common.items.flowers.sun")),
+            BlockKind::LongGrass => Some(Item::new_from_asset_expect("common.items.grasses.long")),
             BlockKind::MediumGrass => {
-                Some(assets::load_expect_cloned("common.items.grasses.medium"))
+                Some(Item::new_from_asset_expect("common.items.grasses.medium"))
             },
-            BlockKind::ShortGrass => Some(assets::load_expect_cloned("common.items.grasses.short")),
-            BlockKind::Coconut => Some(assets::load_expect_cloned("common.items.food.coconut")),
+            BlockKind::ShortGrass => Some(Item::new_from_asset_expect("common.items.grasses.short")),
+            BlockKind::Coconut => Some(Item::new_from_asset_expect("common.items.food.coconut")),
             BlockKind::Chest => {
                 let chosen = assets::load_expect::<Lottery<String>>("common.loot_table");
                 let chosen = chosen.choose();
 
-                Some(assets::load_expect_cloned(chosen))
+                Some(Item::new_from_asset_expect(chosen))
             },
-            BlockKind::Stones => Some(assets::load_expect_cloned(
+            BlockKind::Stones => Some(Item::new_from_asset_expect(
                 "common.items.crafting_ing.stones",
             )),
-            BlockKind::Twigs => Some(assets::load_expect_cloned(
+            BlockKind::Twigs => Some(Item::new_from_asset_expect(
                 "common.items.crafting_ing.twigs",
             )),
-            BlockKind::ShinyGem => Some(assets::load_expect_cloned(
+            BlockKind::ShinyGem => Some(Item::new_from_asset_expect(
                 "common.items.crafting_ing.shiny_gem",
             )),
             _ => None,

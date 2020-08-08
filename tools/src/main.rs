@@ -43,9 +43,9 @@ fn armor_stats() -> Result<(), Box<dyn Error>> {
                         .to_string()
                         .replace("/", ".");
 
-                    let asset = assets::load_expect_cloned::<comp::Item>(asset_identifier);
+                    let item = comp::Item::new_from_asset_expect(asset_identifier);
 
-                    match &asset.kind {
+                    match &item.kind {
                         comp::item::ItemKind::Armor(armor) => {
                             let protection = match armor.get_protection() {
                                 Protection::Invincible => "Invincible".to_string(),
@@ -68,12 +68,12 @@ fn armor_stats() -> Result<(), Box<dyn Error>> {
                             wtr.write_record(&[
                                 asset_identifier,
                                 &kind,
-                                asset.name(),
+                                item.name(),
                                 &protection,
                             ])?;
                         },
                         // Skip non-armor
-                        _ => println!("Skipping non-armor item: {:?}", asset),
+                        _ => println!("Skipping non-armor item: {:?}", item),
                     }
                 }
             },
@@ -109,9 +109,9 @@ fn weapon_stats() -> Result<(), Box<dyn Error>> {
                         .display()
                         .to_string()
                         .replace("/", ".");
-                    let asset = assets::load_expect_cloned::<comp::Item>(asset_identifier);
+                    let item = comp::Item::new_from_asset_expect(asset_identifier);
 
-                    match &asset.kind {
+                    match &item.kind {
                         comp::item::ItemKind::Tool(tool) => {
                             let power = tool.base_power().to_string();
                             let equip_time = tool.equip_time().subsec_millis().to_string();
@@ -131,13 +131,13 @@ fn weapon_stats() -> Result<(), Box<dyn Error>> {
                             wtr.write_record(&[
                                 asset_identifier,
                                 &kind,
-                                asset.name(),
+                                item.name(),
                                 &power,
                                 &equip_time,
                             ])?;
                         },
                         // Skip non-armor
-                        _ => println!("Skipping non-weapon item: {:?}", asset),
+                        _ => println!("Skipping non-weapon item: {:?}", item),
                     }
                 }
             },

@@ -1,8 +1,8 @@
 pub mod item;
 pub mod slot;
 
-use crate::{assets, recipe::Recipe};
-use item::{Item, ItemKind};
+use crate::{recipe::Recipe};
+use item::{Consumable, Item, ItemKind};
 use serde::{Deserialize, Serialize};
 use specs::{Component, FlaggedStorage, HashMapStorage};
 use specs_idvs::IdvStorage;
@@ -517,8 +517,8 @@ impl Default for Inventory {
             slots: vec![None; 36],
             amount: 0,
         };
-        inventory.push(assets::load_expect_cloned("common.items.food.cheese"));
-        inventory.push(assets::load_expect_cloned("common.items.food.apple"));
+        inventory.push(Item::new_from_asset_expect("common.items.food.cheese"));
+        inventory.push(Item::new_from_asset_expect("common.items.food.apple"));
         inventory
     }
 }

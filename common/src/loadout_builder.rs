@@ -1,5 +1,4 @@
 use crate::{
-    assets,
     comp::{
         item::{Item, ItemKind},
         Body, CharacterAbility, ItemConfig, Loadout,
@@ -18,7 +17,7 @@ use std::time::Duration;
 /// let loadout = LoadoutBuilder::new()
 ///     .defaults()
 ///     .active_item(LoadoutBuilder::default_item_config_from_str(
-///         Some("common.items.weapons.sword.zweihander_sword_0"),
+///         "common.items.weapons.sword.zweihander_sword_0"
 ///     ))
 ///     .build();
 /// ```
@@ -48,16 +47,16 @@ impl LoadoutBuilder {
     /// Set default armor items for the loadout. This may vary with game
     /// updates, but should be safe defaults for a new character.
     pub fn defaults(self) -> Self {
-        self.chest(Some(assets::load_expect_cloned(
+        self.chest(Some(Item::new_from_asset_expect(
             "common.items.armor.starter.rugged_chest",
         )))
-        .pants(Some(assets::load_expect_cloned(
+        .pants(Some(Item::new_from_asset_expect(
             "common.items.armor.starter.rugged_pants",
         )))
-        .foot(Some(assets::load_expect_cloned(
+        .foot(Some(Item::new_from_asset_expect(
             "common.items.armor.starter.sandals_0",
         )))
-        .lantern(Some(assets::load_expect_cloned(
+        .lantern(Some(Item::new_from_asset_expect(
             "common.items.armor.starter.lantern",
         )))
     }
@@ -66,7 +65,7 @@ impl LoadoutBuilder {
     pub fn animal(body: Body) -> Self {
         Self(Loadout {
             active_item: Some(ItemConfig {
-                item: assets::load_expect_cloned("common.items.weapons.empty.empty"),
+                item: Item::new_from_asset_expect("common.items.weapons.empty.empty"),
                 ability1: Some(CharacterAbility::BasicMelee {
                     energy_cost: 10,
                     buildup_duration: Duration::from_millis(600),
@@ -102,30 +101,22 @@ impl LoadoutBuilder {
     /// abilities or their timings is desired, you should create and provide
     /// the item config directly to the [active_item](#method.active_item)
     /// method
-    pub fn default_item_config_from_item(maybe_item: Option<Item>) -> Option<ItemConfig> {
-        if let Some(item) = maybe_item {
-            if let ItemKind::Tool(tool) = &item.kind {
-                let mut abilities = tool.get_abilities();
-                let mut ability_drain = abilities.drain(..);
+    pub fn default_item_config_from_item(item: Item) -> Option<ItemConfig> {
+        if let ItemKind::Tool(tool) = &item.kind {
+            let mut abilities = tool.get_abilities();
+            let mut ability_drain = abilities.drain(..);
 
-                return Some(ItemConfig {
-                    item,
-                    ability1: ability_drain.next(),
-                    ability2: ability_drain.next(),
-                    ability3: ability_drain.next(),
-                    block_ability: Some(CharacterAbility::BasicBlock),
-                    dodge_ability: Some(CharacterAbility::Roll),
-                });
-            }
+            return Some(ItemConfig {
+                item,
+                ability1: ability_drain.next(),
+                ability2: ability_drain.next(),
+                ability3: ability_drain.next(),
+                block_ability: Some(CharacterAbility::BasicBlock),
+                dodge_ability: Some(CharacterAbility::Roll),
+            });
         }
 
         None
-    }
-
-    /// Get an [Item](../comp/struct.Item.html) by its string
-    /// reference by loading its asset
-    pub fn item_from_str(item_ref: Option<&str>) -> Option<Item> {
-        item_ref.and_then(|specifier| assets::load_cloned::<Item>(&specifier).ok())
     }
 
     /// Get an item's (weapon's) default
@@ -134,8 +125,8 @@ impl LoadoutBuilder {
     /// the default abilities for that item via the
     /// [default_item_config_from_item](#method.default_item_config_from_item)
     /// function
-    pub fn default_item_config_from_str(item_ref: Option<&str>) -> Option<ItemConfig> {
-        Self::default_item_config_from_item(Self::item_from_str(item_ref))
+    pub fn default_item_config_from_str(item_ref: &str) -> Option<ItemConfig> {
+        Self::default_item_config_from_item(Item::new_from_asset_expect(item_ref))
     }
 
     pub fn active_item(mut self, item: Option<ItemConfig>) -> Self {

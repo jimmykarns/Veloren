@@ -11,7 +11,6 @@ use crate::{
 };
 use client::Client;
 use common::{
-    assets,
     assets::load_expect,
     character::{Character, CharacterItem, MAX_CHARACTERS_PER_PLAYER},
     comp::{self, humanoid},
@@ -360,8 +359,8 @@ impl CharSelectionUi {
                     level: 1,
                     loadout: LoadoutBuilder::new()
                         .defaults()
-                        .active_item(LoadoutBuilder::default_item_config_from_str(*tool))
-                        .build(),
+                        .active_item(LoadoutBuilder::default_item_config_from_str((*tool).unwrap())) // TODO: Remove tool/unwrap
+                        .build()
                 }])
             },
         }
@@ -385,13 +384,13 @@ impl CharSelectionUi {
                     block_ability: None,
                     dodge_ability: None,
                 });
-                loadout.chest = Some(assets::load_expect_cloned(
+                loadout.chest = Some(comp::Item::new_from_asset_expect(
                     "common.items.armor.starter.rugged_chest",
                 ));
-                loadout.pants = Some(assets::load_expect_cloned(
+                loadout.pants = Some(comp::Item::new_from_asset_expect(
                     "common.items.armor.starter.rugged_pants",
                 ));
-                loadout.foot = Some(assets::load_expect_cloned(
+                loadout.foot = Some(comp::Item::new_from_asset_expect(
                     "common.items.armor.starter.sandals_0",
                 ));
                 Some(loadout.clone())

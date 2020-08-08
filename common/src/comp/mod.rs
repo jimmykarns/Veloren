@@ -1,7 +1,7 @@
 mod ability;
 mod admin;
 pub mod agent;
-mod body;
+pub mod body;
 mod character_state;
 mod chat;
 mod controller;

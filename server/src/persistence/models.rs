@@ -1,6 +1,6 @@
 extern crate serde_json;
 
-use super::schema::{body, character, inventory, loadout, stats};
+use super::schema::{body, character, entity, inventory, item, loadout, stats};
 use crate::comp;
 use common::character::Character as CharacterData;
 use diesel::sql_types::Text;
@@ -346,6 +346,22 @@ impl From<(i32, &comp::Loadout)> for LoadoutUpdate {
             items: LoadoutData(loadout.clone()),
         }
     }
+}
+
+#[derive(Debug, Insertable, PartialEq, AsChangeset)]
+#[table_name = "item"]
+pub struct Item {
+    pub item_id: Option<i32>,
+    pub parent_container_item_id: i32,
+    pub item_definition_id: String,
+    pub stack_size: Option<i32>,
+    pub position: Option<String>
+}
+
+#[derive(Debug, Insertable, PartialEq)]
+#[table_name = "entity"]
+pub struct Entity {
+    pub entity_id: i32
 }
 
 #[cfg(test)]

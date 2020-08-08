@@ -188,7 +188,7 @@ pub fn handle_destroy(server: &mut Server, entity: EcsEntity, cause: HealthSourc
             let chosen = assets::load_expect::<Lottery<String>>("common.loot_table");
             let chosen = chosen.choose();
 
-            assets::load_expect_cloned(chosen)
+            comp::Item::new_from_asset_expect(chosen)
         };
 
         let _ = state.ecs().write_storage().insert(entity, item);
