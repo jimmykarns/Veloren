@@ -540,12 +540,12 @@ impl<'a> System<'a> for Sys {
             let mass = mass.map(|m| m.0).unwrap_or(scale);
 
             // Group to ignore collisions with
-            let ignore_group = projectile
+            let owner_group = projectile
                 .and_then(|p| p.owner)
                 .and_then(|uid| uid_allocator.retrieve_entity_internal(uid.into()))
                 .and_then(|e| groups.get(e));
 
-            for (other, pos_other, scale_other, mass_other, _, _, group) in (
+            for (other, pos_other, scale_other, mass_other, _, _, group_b) in (
                 &uids,
                 &positions,
                 scales.maybe(),
@@ -556,7 +556,11 @@ impl<'a> System<'a> for Sys {
             )
                 .join()
             {
-                if ignore_group.is_some() && ignore_group == group {
+                if owner_group
+                    .map(|group_a| Some(group_a) == group_b)
+                    // If owner is not in a group then they won't have the group component
+                    .unwrap_or(Some(*other) == projectile.and_then(|p| p.owner))
+                {
                     continue;
                 }
 

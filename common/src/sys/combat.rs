@@ -30,8 +30,8 @@ impl<'a> System<'a> for Sys {
         ReadStorage<'a, Stats>,
         ReadStorage<'a, Loadout>,
         ReadStorage<'a, group::Group>,
+        ReadStorage<'a, CharacterState>,
         WriteStorage<'a, Attacking>,
-        WriteStorage<'a, CharacterState>,
     );
 
     fn run(
@@ -48,8 +48,8 @@ impl<'a> System<'a> for Sys {
             stats,
             loadouts,
             groups,
-            mut attacking_storage,
             character_states,
+            mut attacking_storage,
         ): Self::SystemData,
     ) {
         let mut server_emitter = server_bus.emitter();

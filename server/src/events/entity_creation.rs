@@ -1,8 +1,8 @@
 use crate::{sys, Server, StateExt};
 use common::{
     comp::{
-        self, Agent, Alignment, Body, Gravity, Item, ItemDrop, LightEmitter, Loadout, Pos,
-        Projectile, Scale, Shockwave, Stats, Vel, WaypointArea,
+        self, shockwave, Agent, Alignment, Body, Gravity, Item, ItemDrop, LightEmitter,
+        Loadout, Ori, Pos, Projectile, Scale, Stats, Vel, WaypointArea,
     },
     outcome::Outcome,
     util::Dir,
@@ -114,10 +114,14 @@ pub fn handle_shoot(
     builder.build();
 }
 
-pub fn handle_shockwave(server: &mut Server, shockwave: Shockwave) {
+pub fn handle_shockwave(
+    server: &mut Server,
+    properties: shockwave::Properties,
+    pos: Pos,
+    ori: Ori,
+) {
     let state = server.state_mut();
-    let builder = state.create_shockwave(shockwave);
-    builder.build();
+    state.create_shockwave(properties, pos, ori).build();
 }
 
 pub fn handle_create_waypoint(server: &mut Server, pos: Vec3<f32>) {
