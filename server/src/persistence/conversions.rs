@@ -10,7 +10,9 @@ pub struct ItemModelPair {
 
 pub fn convert_inventory(inventory: Inventory, character_container_id: i32) -> Vec<ItemModelPair> {
     inventory.slots.into_iter().filter_map(|x| x).map(|item| {
-        ItemModelPair {
+        info!("comp item_definition_id: {} item_id: {} unique_item_id: {}", item.item_definition_id(), item.item_id.load(Ordering::Relaxed), item.item_unique_id);
+
+        let pair = ItemModelPair {
             model: Item {
                 item_definition_id: item.item_definition_id().to_owned(),
                 position: None, // TODO
@@ -28,6 +30,10 @@ pub fn convert_inventory(inventory: Inventory, character_container_id: i32) -> V
                 }
             },
             comp: item
-        }
+        };
+
+        info!("modl item_definition_id: {} item_id: {}", pair.model.item_definition_id, pair.model.item_id.map_or(0, |x| x));
+
+        pair
     }).collect()
 }

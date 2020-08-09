@@ -19,6 +19,7 @@ use tracing::{info, warn};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use crate::assets::Error;
+use global_counter::primitive::exact::CounterU64;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Throwable {
@@ -108,6 +109,8 @@ impl ItemId {
     }
 }
 
+static ITEM_UNIQUE_ID : CounterU64 = CounterU64::new(1);
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[derive(Derivative)]
 #[derivative(PartialEq)]
@@ -115,6 +118,8 @@ pub struct Item {
     #[serde(skip)]
     #[derivative(PartialEq="ignore")]
     pub item_id: Arc<AtomicU64>,
+    #[serde(skip)]
+    pub item_unique_id: u64,
     item_definition_id: Option<String>, //TODO: Intern these strings?
     name: String,
     description: String,
@@ -136,6 +141,7 @@ impl Item {
         info!("Created empty item");
         Self {
             item_id: Arc::new(AtomicU64::new(0)),
+            item_unique_id: 0,
             item_definition_id: None,
             name: "Empty Item".to_owned(),
             description: "This item may grant abilities, but is invisible".to_owned(),
@@ -150,7 +156,7 @@ impl Item {
 
         // item_definition_id is the asset ID
         item.item_definition_id = Some(asset.to_owned());
-        info!("Created instance of item expect {:?}", item.item_definition_id);
+        item.item_unique_id = ITEM_UNIQUE_ID.inc();
         item
     }
 
@@ -159,6 +165,7 @@ impl Item {
 
         // item_definition_id is the asset ID
         item.item_definition_id = Some(asset.to_owned());
+        item.item_unique_id = ITEM_UNIQUE_ID.inc();
         info!("Created instance of item {:?}", item.item_definition_id);
 
         Ok(item)

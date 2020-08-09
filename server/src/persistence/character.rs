@@ -611,7 +611,7 @@ fn update(
     for mut item_pair in item_pairs.into_iter() {
         if item_pair.model.item_id.is_none() {
             let id = get_new_entity_id(connection);
-            info!("Inserting item_id: {}", id);
+            info!("Inserting model item_id: {} comp unique item id {}", id, item_pair.comp.item_unique_id);
             item_pair.model.item_id = Some(id);
 
             // TODO: Fix this cast.
@@ -626,7 +626,7 @@ fn update(
                 .execute(connection)
                 .expect("Failed to insert items");
         } else {
-            info!("Updating item_id: {}", item_pair.model.item_id.unwrap());
+            info!("Updating item_id: {} unique_item_id: {}", item_pair.model.item_id.unwrap(), item_pair.comp.item_unique_id);
             diesel::update(item.filter(item_id.eq(item_pair.model.item_id.unwrap())))
                 .set(item_pair.model)
                 .execute(connection);
