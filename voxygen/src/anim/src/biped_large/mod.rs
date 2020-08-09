@@ -120,6 +120,7 @@ pub struct SkeletonAttr {
     hand: (f32, f32, f32),
     leg: (f32, f32, f32),
     foot: (f32, f32, f32),
+    beast: bool,
 }
 
 impl<'a> std::convert::TryFrom<&'a comp::Body> for SkeletonAttr {
@@ -145,6 +146,7 @@ impl Default for SkeletonAttr {
             hand: (0.0, 0.0, 0.0),
             leg: (0.0, 0.0, 0.0),
             foot: (0.0, 0.0, 0.0),
+            beast: false,
         }
     }
 }
@@ -177,7 +179,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
                 (Wendigo, _) => (-1.0, 29.0),
                 (Troll, _) => (-1.0, 27.5),
                 (Dullahan, _) => (0.0, 29.0),
-                (Werewolf, _) => (3.0, 30.5),
+                (Werewolf, _) => (3.0, 26.5),
             },
             lower_torso: match (body.species, body.body_type) {
                 (Ogre, Male) => (1.0, -7.0),
@@ -186,7 +188,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
                 (Wendigo, _) => (-1.5, -6.0),
                 (Troll, _) => (1.0, -10.5),
                 (Dullahan, _) => (0.0, -6.5),
-                (Werewolf, _) => (1.0, -14.5),
+                (Werewolf, _) => (1.0, -10.0),
             },
             tail: match (body.species, body.body_type) {
                 (Ogre, _) => (0.0, 0.0),
@@ -194,7 +196,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
                 (Wendigo, _) => (0.0, 0.0),
                 (Troll, _) => (0.0, 0.0),
                 (Dullahan, _) => (0.0, 0.0),
-                (Werewolf, _) => (-5.5, 2.0),
+                (Werewolf, _) => (-5.5, -2.0),
             },
             shoulder: match (body.species, body.body_type) {
                 (Ogre, Male) => (12.0, 0.5, 0.0),
@@ -231,6 +233,10 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
                 (Troll, _) => (6.0, 0.5, 4.0),
                 (Dullahan, _) => (4.0, 2.5, 8.0),
                 (Werewolf, _) => (5.5, 6.5, 6.0),
+            },
+            beast: match (body.species, body.body_type) {
+                (Werewolf, _) => (true),
+                _ => (false),
             },
         }
     }
