@@ -533,6 +533,10 @@
             "dullahan": {
                 "keyword": "dullahan",
                 "generic": "Dullahan"
+            },
+            "werewolf": {
+                "keyword": "werewolf",
+                "generic": "Werewolf"
             }
         }
     },

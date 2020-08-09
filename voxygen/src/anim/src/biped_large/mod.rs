@@ -160,6 +160,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
                 (Wendigo, _) => (3.0, 13.5),
                 (Troll, _) => (6.0, 10.0),
                 (Dullahan, _) => (3.0, 6.0),
+                (Werewolf, _) => (19.0, 1.0),
             },
             jaw: match (body.species, body.body_type) {
                 (Ogre, _) => (0.0, 0.0),
@@ -167,6 +168,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
                 (Wendigo, _) => (0.0, 0.0),
                 (Troll, _) => (2.0, -4.0),
                 (Dullahan, _) => (0.0, 0.0),
+                (Werewolf, _) => (-2.5, -4.5),
             },
             upper_torso: match (body.species, body.body_type) {
                 (Ogre, Male) => (0.0, 28.0),
@@ -175,6 +177,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
                 (Wendigo, _) => (-1.0, 29.0),
                 (Troll, _) => (-1.0, 27.5),
                 (Dullahan, _) => (0.0, 29.0),
+                (Werewolf, _) => (3.0, 30.5),
             },
             lower_torso: match (body.species, body.body_type) {
                 (Ogre, Male) => (1.0, -7.0),
@@ -183,6 +186,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
                 (Wendigo, _) => (-1.5, -6.0),
                 (Troll, _) => (1.0, -10.5),
                 (Dullahan, _) => (0.0, -6.5),
+                (Werewolf, _) => (1.0, -14.5),
             },
             tail: match (body.species, body.body_type) {
                 (Ogre, _) => (0.0, 0.0),
@@ -190,6 +194,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
                 (Wendigo, _) => (0.0, 0.0),
                 (Troll, _) => (0.0, 0.0),
                 (Dullahan, _) => (0.0, 0.0),
+                (Werewolf, _) => (-5.5, 2.0),
             },
             shoulder: match (body.species, body.body_type) {
                 (Ogre, Male) => (12.0, 0.5, 0.0),
@@ -198,6 +203,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
                 (Wendigo, _) => (9.0, 0.5, -0.5),
                 (Troll, _) => (11.0, 0.5, -1.5),
                 (Dullahan, _) => (14.0, 0.5, 4.5),
+                (Werewolf, _) => (9.0, 4.0, -6.5),
             },
             hand: match (body.species, body.body_type) {
                 (Ogre, Male) => (14.5, 0.0, -2.0),
@@ -206,6 +212,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
                 (Wendigo, _) => (12.0, 0.0, -0.5),
                 (Troll, _) => (11.5, 0.0, -1.5),
                 (Dullahan, _) => (14.5, 0.0, -2.5),
+                (Werewolf, _) => (10.0, 2.5, -11.0),
             },
             leg: match (body.species, body.body_type) {
                 (Ogre, Male) => (0.0, 0.0, -4.0),
@@ -214,6 +221,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
                 (Wendigo, _) => (2.0, 2.0, -2.5),
                 (Troll, _) => (5.0, 0.0, -6.0),
                 (Dullahan, _) => (0.0, 0.0, -5.0),
+                (Werewolf, _) => (4.5, 0.5, -3.0),
             },
             foot: match (body.species, body.body_type) {
                 (Ogre, Male) => (4.0, 2.5, 8.0),
@@ -222,6 +230,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
                 (Wendigo, _) => (5.0, 0.5, 6.0),
                 (Troll, _) => (6.0, 0.5, 4.0),
                 (Dullahan, _) => (4.0, 2.5, 8.0),
+                (Werewolf, _) => (5.5, 6.5, 6.0),
             },
         }
     }
