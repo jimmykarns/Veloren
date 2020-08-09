@@ -920,6 +920,11 @@ impl PlayState for SessionState {
                         global_state.settings.save_to_file_warn();
                     },
                     HudEvent::ChangeAaMode(new_aa_mode) => {
+                        // No need to change when new == current.
+                        if new_aa_mode == global_state.settings.graphics.aa_mode {
+                            break
+                        }
+
                         // Do this first so if it crashes the setting isn't saved :)
                         global_state
                             .window
@@ -930,6 +935,11 @@ impl PlayState for SessionState {
                         global_state.settings.save_to_file_warn();
                     },
                     HudEvent::ChangeCloudMode(new_cloud_mode) => {
+                        // No need to change when new == current.
+                        if new_cloud_mode == global_state.settings.graphics.cloud_mode {
+                            break
+                        }
+
                         // Do this first so if it crashes the setting isn't saved :)
                         global_state
                             .window
@@ -940,6 +950,11 @@ impl PlayState for SessionState {
                         global_state.settings.save_to_file_warn();
                     },
                     HudEvent::ChangeFluidMode(new_fluid_mode) => {
+                        // No need to change when new == current.
+                        if new_fluid_mode == global_state.settings.graphics.fluid_mode {
+                            break
+                        }
+
                         // Do this first so if it crashes the setting isn't saved :)
                         global_state
                             .window
