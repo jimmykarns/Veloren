@@ -2,6 +2,7 @@ mod ability;
 mod admin;
 pub mod agent;
 mod body;
+mod buff;
 mod character_state;
 mod chat;
 mod controller;
@@ -28,6 +29,7 @@ pub use body::{
     biped_large, bird_medium, bird_small, critter, dragon, fish_medium, fish_small, golem,
     humanoid, object, quadruped_low, quadruped_medium, quadruped_small, AllBodies, Body, BodyData,
 };
+pub use buff::{Buff, BuffCategoryId, BuffChange, BuffData, BuffId, Buffs};
 pub use character_state::{Attacking, CharacterState, StateUpdate};
 pub use chat::{
     ChatMode, ChatMsg, ChatType, Faction, SpeechBubble, SpeechBubbleType, UnresolvedChatMsg,

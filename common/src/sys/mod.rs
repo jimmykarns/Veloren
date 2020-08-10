@@ -1,4 +1,5 @@
 pub mod agent;
+mod buff;
 pub mod character_behavior;
 pub mod combat;
 pub mod controller;
@@ -19,6 +20,7 @@ pub const MOUNT_SYS: &str = "mount_sys";
 pub const PHYS_SYS: &str = "phys_sys";
 pub const PROJECTILE_SYS: &str = "projectile_sys";
 pub const STATS_SYS: &str = "stats_sys";
+pub const BUFFS_SYS: &str = "buffs_sys";
 
 pub fn add_local_systems(dispatch_builder: &mut DispatcherBuilder) {
     dispatch_builder.add(agent::Sys, AGENT_SYS, &[]);
@@ -28,6 +30,7 @@ pub fn add_local_systems(dispatch_builder: &mut DispatcherBuilder) {
         CONTROLLER_SYS,
     ]);
     dispatch_builder.add(stats::Sys, STATS_SYS, &[]);
+    dispatch_builder.add(buff::Sys, BUFFS_SYS, &[]);
     dispatch_builder.add(phys::Sys, PHYS_SYS, &[CONTROLLER_SYS, MOUNT_SYS, STATS_SYS]);
     dispatch_builder.add(projectile::Sys, PROJECTILE_SYS, &[PHYS_SYS]);
     dispatch_builder.add(combat::Sys, COMBAT_SYS, &[PROJECTILE_SYS]);
