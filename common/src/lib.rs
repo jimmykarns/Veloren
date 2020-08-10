@@ -44,4 +44,3 @@ pub mod volumes;
 pub use loadout_builder::LoadoutBuilder;
 
 #[macro_use] extern crate derivative;
-#[macro_use] extern crate global_counter;

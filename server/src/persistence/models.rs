@@ -27,6 +27,7 @@ pub struct Character {
 #[derive(Insertable)]
 #[table_name = "character"]
 pub struct NewCharacter<'a> {
+    pub id: i32,
     pub player_uuid: &'a str,
     pub alias: &'a str,
     pub tool: Option<&'a str>,
@@ -348,10 +349,20 @@ impl From<(i32, &comp::Loadout)> for LoadoutUpdate {
     }
 }
 
-#[derive(Debug, Insertable, PartialEq, AsChangeset)]
+#[derive(Debug, Insertable, PartialEq, Queryable, AsChangeset)]
 #[table_name = "item"]
 pub struct Item {
     pub item_id: Option<i32>,
+    pub parent_container_item_id: i32,
+    pub item_definition_id: String,
+    pub stack_size: Option<i32>,
+    pub position: Option<String>
+}
+
+
+#[derive(Debug, Queryable)]
+pub struct ItemQuery {
+    pub item_id: i32,
     pub parent_container_item_id: i32,
     pub item_definition_id: String,
     pub stack_size: Option<i32>,

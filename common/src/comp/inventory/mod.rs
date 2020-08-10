@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use specs::{Component, FlaggedStorage, HashMapStorage};
 use specs_idvs::IdvStorage;
 use std::ops::Not;
+use tracing::info;
 
 // The limit on distance between the entity and a collectible (squared)
 pub const MAX_PICKUP_RANGE_SQR: f32 = 64.0;
@@ -27,6 +28,14 @@ pub enum Error {
 
 #[allow(clippy::len_without_is_empty)] // TODO: Pending review in #587
 impl Inventory {
+    pub fn new_empty() -> Inventory {
+        let mut inventory = Inventory {
+                slots: vec![None; 36],
+                amount: 0,
+        };
+        inventory
+    }
+
     pub fn slots(&self) -> &[Option<Item>] { &self.slots }
 
     pub fn len(&self) -> usize { self.slots.len() }
@@ -49,12 +58,8 @@ impl Inventory {
                 for slot in &mut self.slots {
                     if slot
                         .as_ref()
-                        .map(|s| s.name() == item.name())
+                        .map(|s| s.item_definition_id() == item.item_definition_id())
                         .unwrap_or(false)
-                        && slot
-                            .as_ref()
-                            .map(|s| s.description() == item.description())
-                            .unwrap_or(false)
                     {
                         if let Some(Item {
                             kind: ItemKind::Utility { kind, amount },
@@ -80,12 +85,8 @@ impl Inventory {
                 for slot in &mut self.slots {
                     if slot
                         .as_ref()
-                        .map(|s| s.name() == item.name())
+                        .map(|s| s.item_definition_id() == item.item_definition_id())
                         .unwrap_or(false)
-                        && slot
-                            .as_ref()
-                            .map(|s| s.description() == item.description())
-                            .unwrap_or(false)
                     {
                         if let Some(Item {
                             kind: ItemKind::Consumable { kind, amount, .. },
@@ -111,12 +112,8 @@ impl Inventory {
                 for slot in &mut self.slots {
                     if slot
                         .as_ref()
-                        .map(|s| s.name() == item.name())
+                        .map(|s| s.item_definition_id() == item.item_definition_id())
                         .unwrap_or(false)
-                        && slot
-                            .as_ref()
-                            .map(|s| s.description() == item.description())
-                            .unwrap_or(false)
                     {
                         if let Some(Item {
                             kind: ItemKind::Throwable { kind, amount, .. },
@@ -141,12 +138,8 @@ impl Inventory {
                 for slot in &mut self.slots {
                     if slot
                         .as_ref()
-                        .map(|s| s.name() == item.name())
+                        .map(|s| s.item_definition_id() == item.item_definition_id())
                         .unwrap_or(false)
-                        && slot
-                            .as_ref()
-                            .map(|s| s.description() == item.description())
-                            .unwrap_or(false)
                     {
                         if let Some(Item {
                             kind: ItemKind::Ingredient { kind, amount },
@@ -249,8 +242,7 @@ impl Inventory {
                 amount: new_amount, ..
             } => match self.slots.get_mut(cell) {
                 Some(Some(slot_item)) => {
-                    if slot_item.name() == item.name()
-                        && slot_item.description() == item.description()
+                    if slot_item.item_definition_id() == item.item_definition_id()
                     {
                         if let Item {
                             kind: ItemKind::Utility { amount, .. },
@@ -278,8 +270,7 @@ impl Inventory {
                 amount: new_amount, ..
             } => match self.slots.get_mut(cell) {
                 Some(Some(slot_item)) => {
-                    if slot_item.name() == item.name()
-                        && slot_item.description() == item.description()
+                    if slot_item.item_definition_id() == item.item_definition_id()
                     {
                         if let Item {
                             kind: ItemKind::Ingredient { amount, .. },
@@ -307,8 +298,7 @@ impl Inventory {
                 amount: new_amount, ..
             } => match self.slots.get_mut(cell) {
                 Some(Some(slot_item)) => {
-                    if slot_item.name() == item.name()
-                        && slot_item.description() == item.description()
+                    if slot_item.item_definition_id() == item.item_definition_id()
                     {
                         if let Item {
                             kind: ItemKind::Consumable { amount, .. },
@@ -336,8 +326,7 @@ impl Inventory {
                 amount: new_amount, ..
             } => match self.slots.get_mut(cell) {
                 Some(Some(slot_item)) => {
-                    if slot_item.name() == item.name()
-                        && slot_item.description() == item.description()
+                    if slot_item.item_definition_id() == item.item_definition_id()
                     {
                         if let Item {
                             kind: ItemKind::Throwable { amount, .. },

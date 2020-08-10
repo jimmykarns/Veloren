@@ -361,7 +361,7 @@ pub fn unequip(slot: EquipSlot, inventory: &mut Inventory, loadout: &mut Loadout
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assets, LoadoutBuilder};
+    use crate::{LoadoutBuilder};
     use crate::comp::Item;
 
     #[test]
