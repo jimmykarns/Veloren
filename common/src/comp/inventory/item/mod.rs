@@ -189,6 +189,10 @@ impl Item {
         }
     }
 
+    pub fn is_same_item_def_as(&self, other: &Item) -> bool {
+        self.item_definition_id() == other.item_definition_id()
+    }
+
     pub fn name(&self) -> &str { &self.name }
 
     pub fn description(&self) -> &str { &self.description }

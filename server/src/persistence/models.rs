@@ -20,8 +20,7 @@ pub struct StatsJoinData<'a> {
 pub struct Character {
     pub id: i32,
     pub player_uuid: String,
-    pub alias: String,
-    pub tool: Option<String>,
+    pub alias: String
 }
 
 #[derive(Insertable)]
@@ -29,16 +28,14 @@ pub struct Character {
 pub struct NewCharacter<'a> {
     pub id: i32,
     pub player_uuid: &'a str,
-    pub alias: &'a str,
-    pub tool: Option<&'a str>,
+    pub alias: &'a str
 }
 
 impl From<&Character> for CharacterData {
     fn from(character: &Character) -> CharacterData {
         CharacterData {
             id: Some(character.id),
-            alias: String::from(&character.alias),
-            tool: character.tool.clone(),
+            alias: String::from(&character.alias)
         }
     }
 }

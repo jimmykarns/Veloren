@@ -352,8 +352,7 @@ impl CharSelectionUi {
                 Some(vec![CharacterItem {
                     character: Character {
                         id: None,
-                        alias: name.clone(),
-                        tool: tool.map(|specifier| specifier.to_string()),
+                        alias: name.clone()
                     },
                     body,
                     level: 1,

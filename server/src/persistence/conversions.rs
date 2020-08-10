@@ -40,7 +40,6 @@ pub fn convert_inventory_from_database_items(database_items: &Vec<ItemQuery>) ->
         let mut item = common::comp::Item::new_from_asset_expect(db_item.item_definition_id.as_str());
         item.item_id = Arc::new(AtomicU64::new(db_item.item_id as u64));
         if let Some(amount) = db_item.stack_size {
-            info!("Setting item amount for {} to {}", db_item.item_definition_id, amount);
             item.set_amount(amount as u32);
         }
         item
@@ -52,7 +51,6 @@ pub fn convert_inventory_from_database_items(database_items: &Vec<ItemQuery>) ->
 pub fn convert_character_from_database(character: &Character) -> common::character::Character {
     common::character::Character {
         id: Some(character.id),
-        tool: character.tool.clone(),
         alias: String::from(&character.alias)
     }
 }

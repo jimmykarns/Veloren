@@ -22,8 +22,7 @@ pub const MAX_CHARACTERS_PER_PLAYER: usize = 8;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Character {
     pub id: Option<i32>,
-    pub alias: String,
-    pub tool: Option<String>,
+    pub alias: String
 }
 
 /// Data needed to render a single character item in the character list

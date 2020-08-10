@@ -393,8 +393,7 @@ fn create_character(
                 let new_character = NewCharacter {
                     id: character_id,
                     player_uuid: uuid,
-                    alias: &character_alias,
-                    tool: character_tool.as_deref(),
+                    alias: &character_alias
                 };
 
                 diesel::insert_into(character::table)
