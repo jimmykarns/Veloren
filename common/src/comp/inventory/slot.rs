@@ -87,7 +87,7 @@ impl ArmorSlot {
 // should no longer be needed
 
 /// Create an ItemConfig for an item. Apply abilties to item.
-fn item_config(item: item::Item) -> comp::ItemConfig {
+pub fn item_config(item: item::Item) -> comp::ItemConfig {
     let mut abilities = if let item::ItemKind::Tool(tool) = &item.kind {
         tool.get_abilities()
     } else {

@@ -21,11 +21,16 @@ use common::{
 use crossbeam::{channel, channel::TryIter};
 use diesel::prelude::*;
 use tracing::{error, info, warn};
-use crate::persistence::conversions::{convert_inventory_to_database_items, convert_character_from_database, convert_inventory_from_database_items, convert_stats_from_database};
+use crate::persistence::conversions::{convert_inventory_to_database_items, convert_character_from_database, convert_inventory_from_database_items, convert_stats_from_database, convert_loadout_to_database_items, convert_loadout_from_database_items};
 use std::sync::atomic::Ordering;
 use crate::persistence::error::Error::DatabaseError;
 
 type CharacterLoaderRequest = (specs::Entity, CharacterLoaderRequestKind);
+
+const CHARACTER_PSEUDO_CONTAINER_DEF_ID: &str = "veloren.core.pseudo_containers.character";
+const INVENTORY_PSEUDO_CONTAINER_DEF_ID: &str = "veloren.core.pseudo_containers.inventory";
+const LOADOUT_PSEUDO_CONTAINER_DEF_ID: &str = "veloren.core.pseudo_containers.loadout";
+const WORLD_PSEUDO_CONTAINER_ID: i32 = 1;
 
 /// Available database operations when modifying a player's character list
 enum CharacterLoaderRequestKind {
@@ -272,10 +277,17 @@ fn load_character_data(char_id: i32, db_dir: &str) -> CharacterDataResult {
     let connection = establish_connection(db_dir)?;
 
     // TODO: Store the character's pseudo-container IDs during login so we don't have to fetch them each save?
-    let inventory_container_id = get_inventory_container_id(&connection, char_id).expect(format!("Inventory container for character ID {} does not exist", char_id).as_str());
+    let inventory_container_id = get_pseudo_container_id(&connection, char_id, INVENTORY_PSEUDO_CONTAINER_DEF_ID)
+        .expect(format!("Inventory container for character ID {} does not exist", char_id).as_str());
 
-    let items = item.filter(parent_container_item_id.eq(inventory_container_id))
-        .load::<Item>(&connection).expect("failed to load items data"); // TODO: Replace expect with ?
+    let loadout_container_id = get_pseudo_container_id(&connection, char_id, LOADOUT_PSEUDO_CONTAINER_DEF_ID)
+        .expect(format!("Loadout container for character ID {} does not exist", char_id).as_str());
+
+    let inventory_items = item.filter(parent_container_item_id.eq(inventory_container_id))
+        .load::<Item>(&connection).expect("failed to load inventory data"); // TODO: Replace expect with ?
+
+    let loadout_items = item.filter(parent_container_item_id.eq(loadout_container_id))
+        .load::<Item>(&connection).expect("failed to load loadout data"); // TODO: Replace expect with ?
 
     let result = character.filter(character_id.eq(char_id))
         .inner_join(stats)
@@ -286,8 +298,8 @@ fn load_character_data(char_id: i32, db_dir: &str) -> CharacterDataResult {
             let body = comp::Body::Humanoid(comp::body::humanoid::Body::random()); // TODO: actual body
             Ok((body,
                 convert_stats_from_database(&stats_data, character_data.alias),
-                convert_inventory_from_database_items(&items),
-                comp::Loadout::default())) // TODO: Loadout
+                convert_inventory_from_database_items(&inventory_items),
+                convert_loadout_from_database_items(&loadout_items)))
         },
         Err(e) => {
             error!(?e, ?character_id, "Failed to load character data for character");
@@ -415,26 +427,36 @@ fn create_character(
                     .values(&new_character)
                     .execute(&connection)?;
 
-                // Create character pseudo-container item
-                diesel::insert_into(item)
-                    .values(NewItem {
+                let inventory_container_id = get_new_entity_id(&connection);
+                let loadout_container_id = get_new_entity_id(&connection);
+                // Create pseudo-container items for character
+                let pseudo_containers = vec![
+                    NewItem {
                         stack_size: None,
                         item_id: Some(character_id),
-                        parent_container_item_id: character_id,
-                        item_definition_id: "veloren.core.pseudo_containers.character".to_owned(),
+                        parent_container_item_id: WORLD_PSEUDO_CONTAINER_ID,
+                        item_definition_id: CHARACTER_PSEUDO_CONTAINER_DEF_ID.to_owned(),
                         position: None
-                    }).execute(&connection)?;
-
-                // Create inventory pseudo-container item
-                let inventory_container_id = get_new_entity_id(&connection);
-                diesel::insert_into(item)
-                    .values(NewItem {
+                    },
+                    NewItem {
                         stack_size: None,
                         item_id: Some(inventory_container_id),
                         parent_container_item_id: character_id,
-                        item_definition_id: "veloren.core.pseudo_containers.inventory".to_owned(),
+                        item_definition_id: INVENTORY_PSEUDO_CONTAINER_DEF_ID.to_owned(),
                         position: None
-                    }).execute(&connection)?;
+                    },
+                    NewItem {
+                        stack_size: None,
+                        item_id: Some(loadout_container_id),
+                        parent_container_item_id: character_id,
+                        item_definition_id: LOADOUT_PSEUDO_CONTAINER_DEF_ID.to_owned(),
+                        position: None
+                    }
+                ];
+
+                diesel::insert_into(item)
+                    .values(pseudo_containers)
+                    .execute(&connection)?;
 
                 let new_body = Body {
                     character_id: character_id as i32,
@@ -546,7 +568,7 @@ fn check_character_limit(uuid: &str, db_dir: &str) -> Result<(), Error> {
     }
 }
 
-type CharacterUpdateData = (StatsUpdate, comp::Inventory, LoadoutUpdate);
+type CharacterUpdateData = (StatsUpdate, comp::Inventory, comp::Loadout);
 
 /// A unidirectional messaging resource for saving characters in a
 /// background thread.
@@ -587,7 +609,7 @@ impl CharacterUpdater {
                     (
                         StatsUpdate::from(stats),
                         inventory.clone(),
-                        LoadoutUpdate::from((character_id, loadout)),
+                        loadout.clone(),
                     ),
                 )
             })
@@ -613,18 +635,19 @@ impl CharacterUpdater {
 fn batch_update(updates: impl Iterator<Item = (i32, CharacterUpdateData)>, db_dir: &str) {
     let connection = establish_connection(db_dir);
 
-    if let Err(e) = connection.transaction::<_, diesel::result::Error, _>(|| {
-        updates.for_each(
-            |(character_id, (stats_update, inventory, loadout_update))| {
-                update(
-                    character_id,
-                    &stats_update,
-                    inventory,
-                    &loadout_update,
-                    &connection,
-                )
-            },
-        );
+    if let Err(e) = connection.and_then(|connection| {
+        connection.transaction::<_, diesel::result::Error, _>(|| {
+            updates.for_each(
+                |(character_id, (stats_update, inventory, loadout))| {
+                    update(
+                        character_id,
+                        &stats_update,
+                        inventory,
+                        loadout,
+                        &connection,
+                    )
+                },
+            );
 
             Ok(())
         })
@@ -651,16 +674,16 @@ fn get_new_entity_id(conn: &SqliteConnection) -> i32 {
     new_entity_id
 }
 
-fn get_inventory_container_id(connection: &SqliteConnection, character_id: i32) -> Result<i32, Error> {
+fn get_pseudo_container_id(connection: &SqliteConnection, character_id: i32, pseudo_container_id: &str) -> Result<i32, Error> {
     use super::schema::item::dsl::*;
     match item
         .select(item_id)
         .filter(parent_container_item_id.eq(character_id)
-            .and(item_definition_id.eq("veloren.core.pseudo_containers.inventory")))
+            .and(item_definition_id.eq(pseudo_container_id)))
         .first::<i32>(connection) {
         Ok(id) => { Ok(id) },
         Err(e) => {
-            error!(?e, ?character_id, "Failed to retrieve inventory container ID");
+            error!(?e, ?character_id, ?pseudo_container_id, "Failed to retrieve psuedo container ID");
             Err(DatabaseError(e))
         }
     }
@@ -673,15 +696,20 @@ fn update(
     character_id: i32,
     _stats: &StatsUpdate,
     inventory: comp::Inventory,
-    _loadout: &LoadoutUpdate,
+    loadout: comp::Loadout,
     connection: &SqliteConnection,
 ) {
     use super::schema::item::dsl::*;
 
     // TODO: Store the character's pseudo-container IDs during login so we don't have to fetch them each save?
-    let inventory_container_id = get_inventory_container_id(connection, character_id).expect(format!("Inventory container for character ID {} does not exist", character_id).as_str());
+    let inventory_container_id = get_pseudo_container_id(connection, character_id, INVENTORY_PSEUDO_CONTAINER_DEF_ID)
+        .expect(format!("Inventory container for character ID {} does not exist", character_id).as_str());
 
-    let item_pairs = convert_inventory_to_database_items(inventory, inventory_container_id);
+    let loadout_container_id = get_pseudo_container_id(connection, character_id, LOADOUT_PSEUDO_CONTAINER_DEF_ID)
+        .expect(format!("Loadout container for character ID {} does not exist", character_id).as_str());
+
+    let mut item_pairs = convert_inventory_to_database_items(inventory, inventory_container_id);
+    item_pairs.extend(convert_loadout_to_database_items(loadout, loadout_container_id));
 
     // TODO: Refactor this, batch into multiple inserts/updates etc
     for mut item_pair in item_pairs.into_iter() {
@@ -706,8 +734,6 @@ fn update(
         }
     }
 
-
-
     // Update Stats
     // if let Err(e) =
     //     diesel::update(schema::stats::table.filter(schema::stats::character_id.eq(character_id)))
@@ -715,20 +741,6 @@ fn update(
     //         .execute(connection)
     // {
     //     error!(?e, ?character_id, "Failed to update stats for character",)
-    // }
-
-    // // Update Inventory
-    // if let Err(e) = diesel::update(
-    //     schema::inventory::table.filter(schema::inventory::character_id.eq(character_id)),
-    // )
-    // .set(inventory)
-    // .execute(connection)
-    // {
-    //     warn!(
-    //         ?e,
-    //         ?character_id,
-    //         "Failed to update inventory for character",
-    //     )
     // }
 
     // Update Loadout
