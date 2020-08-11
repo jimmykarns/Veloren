@@ -1,15 +1,15 @@
 ({
     (Ogre, Male): (
         head: (
-            offset: (-8.0, -5.0, -6.0),
+            offset: (-8.0, -6.0, -6.5),
             center: ("npc.ogre.male.head"),
         ),
         torso_upper: (
-            offset: (-8.0, -4.5, -5.0),
+            offset: (-8.0, -6.0, -8.0),
             center: ("npc.ogre.male.torso_upper"),
         ),
         torso_lower: (
-            offset: (-5.0, -4.5, -9.0),
+            offset: (-6.0, -5.5, -5.0),
             center: ("npc.ogre.male.torso_lower"),
         ),
         jaw: (
@@ -25,22 +25,22 @@
             center: ("armor.empty"),
         ),
         main: (
-            offset: (-8.0, -4.5, -5.0),
-            center: ("armor.empty"),
+            offset: (-5.0, -5.5, -10.0),
+            center: ("npc.ogre.male.main"),
         )
     ),
     (Ogre, Female): (
         head: (
-            offset: (-8.0, -5.0, -6.0),
-            center: ("npc.ogre.male.head"),
+            offset: (-9.0, -5.5, -6.0),
+            center: ("npc.ogre.female..head"),
         ),
         torso_upper: (
-            offset: (-8.0, -4.5, -5.0),
-            center: ("npc.ogre.male.torso_upper"),
+            offset: (-6.0, -5.0, -6.0),
+            center: ("npc.ogre.female.torso_upper"),
         ),
         torso_lower: (
-            offset: (-5.0, -4.5, -9.0),
-            center: ("npc.ogre.male.torso_lower"),
+            offset: (-6.0, -5.5, -5.0),
+            center: ("npc.ogre.female.torso_lower"),
         ),
         jaw: (
             offset: (0.0, 0.0, 0.0),
