@@ -158,16 +158,28 @@ impl Item {
 
         Ok(items.into_iter().map(|(mut item, identifier)| {
             item.item_definition_id = Some(identifier.to_string());
+            item.item_id  = Arc::new(AtomicU64::new(0));
             item
         }).collect::<Vec<_>>())
     }
 
     /// Creates a new instance of an `Item from the provided asset identifier if it exists
     pub fn new_from_asset(asset: &str) -> Result<Self, Error> {
-        let mut item = assets::load_cloned::<Item>(asset)?;
-        item.item_definition_id = Some(asset.to_owned());
+        // Some commands like /give_item provide the asset specifier separated with \ instead of .
+        let asset_specifier = asset.replace('\\', ".");
+
+        let mut item = assets::load_cloned::<Item>(&asset_specifier)?;
+        item.item_definition_id = Some(asset_specifier);
         item.item_id  = Arc::new(AtomicU64::new(0));
         Ok(item)
+    }
+
+    pub fn duplicate(&self) -> Self {
+        let mut item = self.clone();
+
+        // Duplicated item has a 0 item ID as it is a new item instance
+        item.item_id = Arc::new(AtomicU64::new(0));
+        item
     }
 
     pub fn set_amount(&mut self, give_amount: u32) -> Result<(), assets::Error> {

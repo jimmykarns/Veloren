@@ -383,7 +383,7 @@ impl Inventory {
     /// Remove just one item from the slot
     pub fn take(&mut self, cell: usize) -> Option<Item> {
         if let Some(Some(item)) = self.slots.get_mut(cell) {
-            let mut return_item = item.clone();
+            let mut return_item = item.duplicate();
             match &mut item.kind {
                 ItemKind::Tool(_) | ItemKind::Armor { .. } | ItemKind::Lantern(_) => {
                     self.remove(cell)
