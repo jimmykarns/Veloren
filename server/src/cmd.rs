@@ -1639,14 +1639,13 @@ fn handle_debug(
     _args: String,
     _action: &ChatCommand,
 ) {
-    if let Ok(items) = assets::load_glob::<Item>("common.items.debug.*") {
+    if let Ok(items) = comp::Item::new_from_asset_glob("common.items.debug.*") {
         server
             .state()
             .ecs()
             .write_storage::<comp::Inventory>()
             .get_mut(target)
-            // TODO: Consider writing a `load_glob_cloned` in `assets` and using that here
-            .map(|inv| inv.push_all_unique(items.iter().map(|item| item.as_ref().clone())));
+            .map(|inv| inv.push_all_unique(items.into_iter()));
         let _ = server
             .state
             .ecs()

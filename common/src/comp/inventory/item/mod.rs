@@ -15,7 +15,7 @@ use specs::{Component, FlaggedStorage};
 use specs_idvs::IdvStorage;
 use std::{fs::File, io::BufReader};
 use vek::Rgb;
-use tracing::{info, warn};
+use tracing::{warn};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use crate::assets::Error;
@@ -150,6 +150,15 @@ impl Item {
         item.item_definition_id = Some(asset.to_owned());
         item.item_id  = Arc::new(AtomicU64::new(0));
         item
+    }
+
+    pub fn new_from_asset_glob(asset_glob: &str) -> Result<Vec<Self>, Error> {
+        let items = assets::load_glob_cloned::<Item>(asset_glob)?;
+
+        Ok(items.into_iter().map(|(mut item, identifier)| {
+            item.item_definition_id = Some(identifier.to_string());
+            item
+        }).collect::<Vec<_>>())
     }
 
     /// Creates a new instance of an `Item from the provided asset identifier if it exists

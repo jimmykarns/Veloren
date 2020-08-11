@@ -2,25 +2,14 @@ extern crate serde_json;
 
 use super::schema::{body, character, entity, inventory, item, loadout, stats};
 use crate::comp;
-use common::character::Character as CharacterData;
 use diesel::sql_types::Text;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-/// The required elements to build comp::Stats from database data
-pub struct StatsJoinData<'a> {
-    pub alias: &'a str,
-    pub body: &'a comp::Body,
-    pub stats: &'a Stats,
-}
-
-/// `Character` represents a playable character belonging to a player
-#[derive(Identifiable, Queryable, Debug)]
-#[table_name = "character"]
-pub struct Character {
-    pub id: i32,
-    pub player_uuid: String,
-    pub alias: String
+#[derive(Debug, Insertable, PartialEq)]
+#[table_name = "entity"]
+pub struct Entity {
+    pub entity_id: i32
 }
 
 #[derive(Insertable)]
@@ -31,13 +20,52 @@ pub struct NewCharacter<'a> {
     pub alias: &'a str
 }
 
-impl From<&Character> for CharacterData {
-    fn from(character: &Character) -> CharacterData {
-        CharacterData {
-            id: Some(character.id),
-            alias: String::from(&character.alias)
-        }
-    }
+#[derive(Identifiable, Queryable, Debug)]
+#[table_name = "character"]
+pub struct Character {
+    pub id: i32,
+    pub player_uuid: String,
+    pub alias: String
+}
+
+#[derive(Debug, Insertable, PartialEq, Queryable, AsChangeset)]
+#[table_name = "item"]
+pub struct NewItem {
+    pub item_id: Option<i32>,
+    pub parent_container_item_id: i32,
+    pub item_definition_id: String,
+    pub stack_size: Option<i32>,
+    pub position: Option<String>
+}
+
+#[derive(Debug, Queryable)]
+pub struct Item {
+    pub item_id: i32,
+    pub parent_container_item_id: i32,
+    pub item_definition_id: String,
+    pub stack_size: Option<i32>,
+    pub position: Option<String>
+}
+
+#[derive(Associations, AsChangeset, Identifiable, Queryable, Debug, Insertable)]
+#[belongs_to(Character)]
+#[primary_key(character_id)]
+#[table_name = "stats"]
+pub struct Stats {
+    pub character_id: i32,
+    pub level: i32,
+    pub exp: i32,
+    pub endurance: i32,
+    pub fitness: i32,
+    pub willpower: i32,
+    pub skills: Option<String>
+}
+
+/// The required elements to build comp::Stats from database data
+pub struct StatsJoinData<'a> {
+    pub alias: &'a str,
+    pub body: &'a comp::Body,
+    pub stats: &'a Stats,
 }
 
 /// `Body` represents the body variety for a character, which has a one-to-one
@@ -74,46 +102,6 @@ impl From<&Body> for comp::Body {
             skin: body.skin as u8,
             eye_color: body.eye_color as u8,
         })
-    }
-}
-
-/// `Stats` represents the stats for a character, and have a one-to-one
-/// relationship with `Character`.
-#[derive(Associations, AsChangeset, Identifiable, Queryable, Debug, Insertable)]
-#[belongs_to(Character)]
-#[primary_key(character_id)]
-#[table_name = "stats"]
-pub struct Stats {
-    pub character_id: i32,
-    pub level: i32,
-    pub exp: i32,
-    pub endurance: i32,
-    pub fitness: i32,
-    pub willpower: i32,
-    pub skills: SkillSetData,
-}
-
-impl From<StatsJoinData<'_>> for comp::Stats {
-    fn from(data: StatsJoinData) -> comp::Stats {
-        let level = data.stats.level as u32;
-
-        let mut base_stats = comp::Stats::new(String::from(data.alias), *data.body);
-
-        base_stats.level.set_level(level);
-        base_stats.exp.update_maximum(level);
-
-        base_stats.exp.set_current(data.stats.exp as u32);
-
-        base_stats.update_max_hp(base_stats.body_type);
-        base_stats
-            .health
-            .set_to(base_stats.health.maximum(), comp::HealthSource::Revive);
-
-        base_stats.endurance = data.stats.endurance as u32;
-        base_stats.fitness = data.stats.fitness as u32;
-        base_stats.willpower = data.stats.willpower as u32;
-        base_stats.skill_set = data.stats.skills.0.clone();
-        base_stats
     }
 }
 
@@ -346,31 +334,6 @@ impl From<(i32, &comp::Loadout)> for LoadoutUpdate {
     }
 }
 
-#[derive(Debug, Insertable, PartialEq, Queryable, AsChangeset)]
-#[table_name = "item"]
-pub struct Item {
-    pub item_id: Option<i32>,
-    pub parent_container_item_id: i32,
-    pub item_definition_id: String,
-    pub stack_size: Option<i32>,
-    pub position: Option<String>
-}
-
-
-#[derive(Debug, Queryable)]
-pub struct ItemQuery {
-    pub item_id: i32,
-    pub parent_container_item_id: i32,
-    pub item_definition_id: String,
-    pub stack_size: Option<i32>,
-    pub position: Option<String>
-}
-
-#[derive(Debug, Insertable, PartialEq)]
-#[table_name = "entity"]
-pub struct Entity {
-    pub entity_id: i32
-}
 
 #[cfg(test)]
 mod tests {

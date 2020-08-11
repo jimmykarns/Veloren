@@ -150,6 +150,32 @@ impl Stats {
     }
 }
 
+impl Default for Stats {
+    fn default() -> Self {
+        Self {
+            name: "".to_owned(),
+            health: Health {
+                current: 0,
+                maximum: 0,
+                last_change: (0.0, HealthChange {
+                    amount: 0,
+                    cause: HealthSource::Revive,
+                }),
+            },
+            level: Level { amount: 1 },
+            exp: Exp {
+                current: 0,
+                maximum: 50,
+            },
+            skill_set: SkillSet::default(),
+            endurance: 0,
+            fitness: 0,
+            willpower: 0,
+            is_dead: false,
+            body_type: comp::Body::Humanoid(comp::body::humanoid::Body::random()),
+        }
+    }
+}
 impl Stats {
     pub fn new(name: String, body: Body) -> Self {
         let species = if let comp::Body::Humanoid(hbody) = body {

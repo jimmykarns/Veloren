@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use specs::{Component, FlaggedStorage, HashMapStorage};
 use specs_idvs::IdvStorage;
 use std::ops::Not;
-use tracing::info;
 
 // The limit on distance between the entity and a collectible (squared)
 pub const MAX_PICKUP_RANGE_SQR: f32 = 64.0;
@@ -29,11 +28,10 @@ pub enum Error {
 #[allow(clippy::len_without_is_empty)] // TODO: Pending review in #587
 impl Inventory {
     pub fn new_empty() -> Inventory {
-        let mut inventory = Inventory {
-                slots: vec![None; 36],
-                amount: 0,
-        };
-        inventory
+        Inventory {
+            slots: vec![None; 36],
+            amount: 0,
+        }
     }
 
     pub fn slots(&self) -> &[Option<Item>] { &self.slots }

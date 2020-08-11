@@ -21,7 +21,7 @@ use common::{
 use crossbeam::{channel, channel::TryIter};
 use diesel::prelude::*;
 use tracing::{error, info, warn};
-use crate::persistence::conversions::{convert_inventory_to_database_items, convert_character_from_database, convert_inventory_from_database_items};
+use crate::persistence::conversions::{convert_inventory_to_database_items, convert_character_from_database, convert_inventory_from_database_items, convert_stats_from_database};
 use std::sync::atomic::Ordering;
 use crate::persistence::error::Error::DatabaseError;
 
@@ -233,7 +233,7 @@ impl Drop for CharacterLoader {
 ///
 /// After first logging in, and after a character is selected, we fetch this
 /// data for the purpose of inserting their persisted data for the entity.
-fn load_character_data(character_id: i32, db_dir: &str) -> CharacterDataResult {
+fn load_character_data(char_id: i32, db_dir: &str) -> CharacterDataResult {
         //
     // let result = schema::character::dsl::character
     //     .filter(schema::character::id.eq(character_id))
@@ -267,18 +267,33 @@ fn load_character_data(character_id: i32, db_dir: &str) -> CharacterDataResult {
     // (comp::Body, comp::Stats, comp::Inventory, comp::Loadout);
 
     use schema::item::dsl::*;
+    use schema::character::dsl::*;
+    use schema::stats::dsl::*;
     let connection = establish_connection(db_dir)?;
 
     // TODO: Store the character's pseudo-container IDs during login so we don't have to fetch them each save?
-    let inventory_container_id = get_inventory_container_id(&connection, character_id).expect(format!("Inventory container for character ID {} does not exist", character_id).as_str());
+    let inventory_container_id = get_inventory_container_id(&connection, char_id).expect(format!("Inventory container for character ID {} does not exist", char_id).as_str());
 
     let items = item.filter(parent_container_item_id.eq(inventory_container_id))
-        .load::<ItemQuery>(&connection).expect("failed to load character data");
+        .load::<Item>(&connection).expect("failed to load items data"); // TODO: Replace expect with ?
 
+    let result = character.filter(character_id.eq(char_id))
+        .inner_join(stats)
+        .first::<(Character, Stats)>(&connection);// TODO: Replace expect with ?
 
-    // TODO: Redo character data loading
-    let body = comp::Body::Humanoid(comp::body::humanoid::Body::random());
-    Ok((body, comp::Stats::new("test name".to_owned(), body), convert_inventory_from_database_items(&items), comp::Loadout::default()))
+    match result {
+        Ok((character_data, stats_data)) => {
+            let body = comp::Body::Humanoid(comp::body::humanoid::Body::random()); // TODO: actual body
+            Ok((body,
+                convert_stats_from_database(&stats_data, character_data.alias),
+                convert_inventory_from_database_items(&items),
+                comp::Loadout::default())) // TODO: Loadout
+        },
+        Err(e) => {
+            error!(?e, ?character_id, "Failed to load character data for character");
+            Err(Error::CharacterDataError)
+        },
+    }
 }
 
 /// Loads a list of characters belonging to the player. This data is a small
@@ -299,13 +314,13 @@ fn load_character_list(player_uuid: &str, db_dir: &str) -> CharacterListResult {
             Ok(data) => Ok(data
                 .iter()
                 .map(|character_data| {
-                    let characterx = convert_character_from_database(character_data);
+                    let char = convert_character_from_database(character_data);
                     let body = comp::Body::Humanoid(comp::body::humanoid::Body::random());
                     let level = 999 as usize;
                     let loadout = comp::Loadout::default();
 
                     CharacterItem {
-                        character: characterx,
+                        character: char,
                         body,
                         level,
                         loadout,
@@ -383,7 +398,7 @@ fn create_character(
     let connection = establish_connection(db_dir)?;
 
     connection.transaction::<_, diesel::result::Error, _>(|| {
-        use schema::{body, character, character::dsl::*, inventory, loadout, stats};
+        use schema::{body, character, inventory, loadout, stats};
 
         match body {
             comp::Body::Humanoid(body_data) => {
@@ -402,7 +417,7 @@ fn create_character(
 
                 // Create character pseudo-container item
                 diesel::insert_into(item)
-                    .values(Item {
+                    .values(NewItem {
                         stack_size: None,
                         item_id: Some(character_id),
                         parent_container_item_id: character_id,
@@ -413,7 +428,7 @@ fn create_character(
                 // Create inventory pseudo-container item
                 let inventory_container_id = get_new_entity_id(&connection);
                 diesel::insert_into(item)
-                    .values(Item {
+                    .values(NewItem {
                         stack_size: None,
                         item_id: Some(inventory_container_id),
                         parent_container_item_id: character_id,
@@ -448,7 +463,7 @@ fn create_character(
                     endurance: default_stats.endurance as i32,
                     fitness: default_stats.fitness as i32,
                     willpower: default_stats.willpower as i32,
-                    skills: SkillSetData(default_stats.skill_set),
+                    skills: Some("".to_owned()), // TODO: actual skillset
                 };
 
                 diesel::insert_into(stats::table)
