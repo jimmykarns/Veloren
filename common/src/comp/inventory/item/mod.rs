@@ -152,6 +152,7 @@ impl Item {
         item
     }
 
+    /// Creates a Vec containing one of each item that matches the provided asset glob pattern
     pub fn new_from_asset_glob(asset_glob: &str) -> Result<Vec<Self>, Error> {
         let items = assets::load_glob_cloned::<Item>(asset_glob)?;
 
