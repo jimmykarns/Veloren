@@ -352,25 +352,28 @@ fn load_character_data(char_id: i32, db_dir: &str) -> CharacterDataResult {
 /// stats, body, etc...) the character is skipped, and no entry will be
 /// returned.
 fn load_character_list(player_uuid: &str, db_dir: &str) -> CharacterListResult {
+    use schema::body::dsl::*;
     use schema::character::dsl::*;
+    use schema::stats::dsl::*;
+
     let result = character
         .filter(player_uuid.eq(player_uuid))
+        .inner_join(stats)
         .order(id.desc())
-        .load::<Character>(&establish_connection(db_dir)?);
+        .load::<(Character, Stats)>(&establish_connection(db_dir)?);
 
     match result {
         Ok(data) => Ok(data
             .iter()
-            .map(|character_data| {
+            .map(|(character_data, char_stats)| {
                 let char = convert_character_from_database(character_data);
-                let body = comp::Body::Humanoid(comp::body::humanoid::Body::random());
-                let level = 999 as usize;
+                let char_body = comp::Body::Humanoid(comp::body::humanoid::Body::random());
                 let loadout = comp::Loadout::default();
 
                 CharacterItem {
                     character: char,
-                    body,
-                    level,
+                    body: char_body,
+                    level: char_stats.level as usize,
                     loadout,
                 }
             })
