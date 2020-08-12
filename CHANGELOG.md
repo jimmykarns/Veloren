@@ -55,7 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Training dummy items
 - Added spin attack for axe
 - Creature specific stats
-  <<<<<<< HEAD
 - Minimap compass
 - Initial crafting system implementation
 - Protection stat to armor that reduces incoming damage
