@@ -11,10 +11,11 @@ use common::{
     terrain::block::Block,
     vol::{ReadVol, Vox},
 };
+use comp::LightEmitter;
 use rand::Rng;
 use specs::{join::Join, world::WorldExt, Builder, Entity as EcsEntity, WriteStorage};
 use tracing::{debug, error};
-use vek::Vec3;
+use vek::{Rgb, Vec3};
 
 pub fn swap_lantern(
     storage: &mut WriteStorage<comp::LightEmitter>,
@@ -406,9 +407,9 @@ pub fn handle_inventory(server: &mut Server, entity: EcsEntity, manip: comp::Inv
     for (pos, vel, ori, kind) in thrown_items {
         let vel = match kind {
             item::Throwable::Firework(_) => Vec3::new(
-                rng.gen_range(-5.0, 5.0),
-                rng.gen_range(-5.0, 5.0),
-                rng.gen_range(90.0, 100.0),
+                rng.gen_range(-15.0, 15.0),
+                rng.gen_range(-15.0, 15.0),
+                rng.gen_range(80.0, 110.0),
             ),
             _ => {
                 vel.0
@@ -439,8 +440,18 @@ pub fn handle_inventory(server: &mut Server, entity: EcsEntity, manip: comp::Inv
             item::Throwable::Bomb => {
                 new_entity = new_entity.with(comp::Object::Bomb { owner: uid });
             },
-            item::Throwable::Firework(_) => {
-                new_entity = new_entity.with(comp::Object::Firework { owner: uid });
+            item::Throwable::Firework(reagent) => {
+                new_entity = new_entity
+                    .with(comp::Object::Firework {
+                        owner: uid,
+                        reagent,
+                    })
+                    .with(LightEmitter {
+                        animated: true,
+                        flicker: 2.0,
+                        strength: 2.0,
+                        col: Rgb::new(1.0, 1.0, 0.0),
+                    });
             },
             item::Throwable::TrainingDummy => {
                 new_entity = new_entity.with(comp::Stats::new(
