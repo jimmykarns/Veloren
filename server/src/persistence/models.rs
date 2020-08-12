@@ -9,7 +9,7 @@ use tracing::warn;
 #[derive(Debug, Insertable, PartialEq)]
 #[table_name = "entity"]
 pub struct Entity {
-    pub entity_id: i32
+    pub entity_id: i32,
 }
 
 #[derive(Insertable)]
@@ -17,7 +17,7 @@ pub struct Entity {
 pub struct NewCharacter<'a> {
     pub id: i32,
     pub player_uuid: &'a str,
-    pub alias: &'a str
+    pub alias: &'a str,
 }
 
 #[derive(Identifiable, Queryable, Debug)]
@@ -25,7 +25,7 @@ pub struct NewCharacter<'a> {
 pub struct Character {
     pub id: i32,
     pub player_uuid: String,
-    pub alias: String
+    pub alias: String,
 }
 
 #[derive(Debug, Insertable, PartialEq, Queryable, AsChangeset)]
@@ -35,7 +35,7 @@ pub struct NewItem {
     pub parent_container_item_id: i32,
     pub item_definition_id: String,
     pub stack_size: Option<i32>,
-    pub position: Option<String>
+    pub position: Option<String>,
 }
 
 #[derive(Debug, Queryable)]
@@ -44,7 +44,7 @@ pub struct Item {
     pub parent_container_item_id: i32,
     pub item_definition_id: String,
     pub stack_size: Option<i32>,
-    pub position: Option<String>
+    pub position: Option<String>,
 }
 
 #[derive(Associations, AsChangeset, Identifiable, Queryable, Debug, Insertable)]
@@ -58,7 +58,7 @@ pub struct Stats {
     pub endurance: i32,
     pub fitness: i32,
     pub willpower: i32,
-    pub skills: Option<String>
+    pub skills: Option<String>,
 }
 
 /// The required elements to build comp::Stats from database data
@@ -333,7 +333,6 @@ impl From<(i32, &comp::Loadout)> for LoadoutUpdate {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

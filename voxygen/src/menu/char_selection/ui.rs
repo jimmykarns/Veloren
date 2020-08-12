@@ -352,14 +352,14 @@ impl CharSelectionUi {
                 Some(vec![CharacterItem {
                     character: Character {
                         id: None,
-                        alias: name.clone()
+                        alias: name.clone(),
                     },
                     body,
                     level: 1,
                     loadout: LoadoutBuilder::new()
                         .defaults()
                         .active_item(LoadoutBuilder::default_item_config_from_str((*tool).unwrap())) // TODO: Remove tool/unwrap
-                        .build()
+                        .build(),
                 }])
             },
         }

@@ -1,7 +1,7 @@
 pub mod item;
 pub mod slot;
 
-use crate::{recipe::Recipe};
+use crate::recipe::Recipe;
 use item::{Consumable, Item, ItemKind};
 use serde::{Deserialize, Serialize};
 use specs::{Component, FlaggedStorage, HashMapStorage};
@@ -240,8 +240,7 @@ impl Inventory {
                 amount: new_amount, ..
             } => match self.slots.get_mut(cell) {
                 Some(Some(slot_item)) => {
-                    if slot_item.is_same_item_def_as(&item)
-                    {
+                    if slot_item.is_same_item_def_as(&item) {
                         if let Item {
                             kind: ItemKind::Utility { amount, .. },
                             ..
@@ -268,8 +267,7 @@ impl Inventory {
                 amount: new_amount, ..
             } => match self.slots.get_mut(cell) {
                 Some(Some(slot_item)) => {
-                    if slot_item.is_same_item_def_as(&item)
-                    {
+                    if slot_item.is_same_item_def_as(&item) {
                         if let Item {
                             kind: ItemKind::Ingredient { amount, .. },
                             ..
@@ -296,8 +294,7 @@ impl Inventory {
                 amount: new_amount, ..
             } => match self.slots.get_mut(cell) {
                 Some(Some(slot_item)) => {
-                    if slot_item.is_same_item_def_as(&item)
-                    {
+                    if slot_item.is_same_item_def_as(&item) {
                         if let Item {
                             kind: ItemKind::Consumable { amount, .. },
                             ..
@@ -324,8 +321,7 @@ impl Inventory {
                 amount: new_amount, ..
             } => match self.slots.get_mut(cell) {
                 Some(Some(slot_item)) => {
-                    if slot_item.is_same_item_def_as(&item)
-                    {
+                    if slot_item.is_same_item_def_as(&item) {
                         if let Item {
                             kind: ItemKind::Throwable { amount, .. },
                             ..

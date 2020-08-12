@@ -115,37 +115,38 @@ impl<'a> System<'a> for Sys {
                 // let damage = stats.level.level() as i32; TODO: Make NPC base damage
                 // non-linearly depend on their level
 
-                let active_item =
-                    if let Some(item::ItemKind::Tool(tool)) = main_tool.as_ref().map(|i| &i.kind) {
-                        let mut abilities = tool.get_abilities();
-                        let mut ability_drain = abilities.drain(..);
+                let active_item = if let Some(item::ItemKind::Tool(tool)) =
+                    main_tool.as_ref().map(|i| &i.kind)
+                {
+                    let mut abilities = tool.get_abilities();
+                    let mut ability_drain = abilities.drain(..);
 
-                        main_tool.map(|item| comp::ItemConfig {
-                            item,
-                            ability1: ability_drain.next(),
-                            ability2: ability_drain.next(),
-                            ability3: ability_drain.next(),
-                            block_ability: None,
-                            dodge_ability: Some(comp::CharacterAbility::Roll),
-                        })
-                    } else {
-                        Some(ItemConfig {
-                            // We need the empty item so npcs can attack
-                            item: comp::Item::new_from_asset_expect("common.items.weapons.empty.empty"),
-                            ability1: Some(CharacterAbility::BasicMelee {
-                                energy_cost: 0,
-                                buildup_duration: Duration::from_millis(0),
-                                recover_duration: Duration::from_millis(400),
-                                base_healthchange: -40,
-                                range: 3.5,
-                                max_angle: 15.0,
-                            }),
-                            ability2: None,
-                            ability3: None,
-                            block_ability: None,
-                            dodge_ability: None,
-                        })
-                    };
+                    main_tool.map(|item| comp::ItemConfig {
+                        item,
+                        ability1: ability_drain.next(),
+                        ability2: ability_drain.next(),
+                        ability3: ability_drain.next(),
+                        block_ability: None,
+                        dodge_ability: Some(comp::CharacterAbility::Roll),
+                    })
+                } else {
+                    Some(ItemConfig {
+                        // We need the empty item so npcs can attack
+                        item: comp::Item::new_from_asset_expect("common.items.weapons.empty.empty"),
+                        ability1: Some(CharacterAbility::BasicMelee {
+                            energy_cost: 0,
+                            buildup_duration: Duration::from_millis(0),
+                            recover_duration: Duration::from_millis(400),
+                            base_healthchange: -40,
+                            range: 3.5,
+                            max_angle: 15.0,
+                        }),
+                        ability2: None,
+                        ability3: None,
+                        block_ability: None,
+                        dodge_ability: None,
+                    })
+                };
 
                 let mut loadout = match alignment {
                     comp::Alignment::Npc => comp::Loadout {
@@ -212,7 +213,9 @@ impl<'a> System<'a> for Sys {
                         )),
                         ring: None,
                         neck: None,
-                        lantern: Some(comp::Item::new_from_asset_expect("common.items.lantern.black_0")),
+                        lantern: Some(comp::Item::new_from_asset_expect(
+                            "common.items.lantern.black_0",
+                        )),
                         head: None,
                         tabard: None,
                     },

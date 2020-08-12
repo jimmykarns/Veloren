@@ -1,43 +1,50 @@
-use crate::persistence::models::{NewItem, Character, Item, Stats};
+use crate::persistence::models::{Character, Item, NewItem, Stats};
 
-use common::comp::*;
-use common::comp::item::{ItemKind};
-use common::loadout_builder;
-use std::sync::atomic::{Ordering, AtomicU64};
-use std::sync::Arc;
-use tracing::{warn};
+use common::{
+    comp::{item::ItemKind, *},
+    loadout_builder,
+};
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
+};
+use tracing::warn;
 
 pub struct ItemModelPair {
     pub comp: common::comp::item::Item,
-    pub model: NewItem
+    pub model: NewItem,
 }
 
-pub fn convert_inventory_to_database_items(inventory: Inventory, inventory_container_id: i32) -> Vec<ItemModelPair> {
-    inventory.slots.into_iter().filter_map(|x| x).map(|item| {
-        ItemModelPair {
-            model: NewItem {
-                item_definition_id: item.item_definition_id().to_owned(),
-                position: None, // TODO
-                parent_container_item_id: inventory_container_id,
-                item_id: match item.item_id.load(Ordering::Relaxed) {
-                    x if x > 0 => Some(x as i32),
-                    _ => None
-                }, // TODO: Remove this downcast, change database type to BigInteger
-                stack_size: match item.kind {
-                    ItemKind::Consumable { kind: _, effect: _, amount } => Some(amount as i32),
-                    ItemKind::Throwable { kind: _, amount } => Some(amount as i32),
-                    ItemKind::Utility { kind: _, amount } => Some(amount as i32),
-                    ItemKind::Ingredient { kind: _, amount } => Some(amount as i32),
-                    _ => None
-                }
-            },
-            comp: item
-        }
-    }).collect()
+pub fn convert_inventory_to_database_items(
+    inventory: Inventory,
+    inventory_container_id: i32,
+) -> Vec<ItemModelPair> {
+    inventory
+        .slots
+        .into_iter()
+        .filter_map(|x| x)
+        .map(|item| {
+            ItemModelPair {
+                model: NewItem {
+                    item_definition_id: item.item_definition_id().to_owned(),
+                    position: None, // TODO
+                    parent_container_item_id: inventory_container_id,
+                    item_id: match item.item_id.load(Ordering::Relaxed) {
+                        x if x > 0 => Some(x as i32),
+                        _ => None,
+                    }, // TODO: Remove this downcast, change database type to BigInteger
+                    stack_size: item.kind.stack_size().map(|x| x as i32),
+                },
+                comp: item,
+            }
+        })
+        .collect()
 }
 
-pub fn convert_loadout_to_database_items(loadout: Loadout, loadout_container_id: i32) -> Vec<ItemModelPair>
-{
+pub fn convert_loadout_to_database_items(
+    loadout: Loadout,
+    loadout_container_id: i32,
+) -> Vec<ItemModelPair> {
     vec![
         loadout.active_item.map(|x| ("active_item", x.item)),
         loadout.second_item.map(|x| ("second_item", x.item)),
@@ -52,33 +59,34 @@ pub fn convert_loadout_to_database_items(loadout: Loadout, loadout_container_id:
         loadout.ring.map(|x| ("ring", x)),
         loadout.neck.map(|x| ("neck", x)),
         loadout.head.map(|x| ("head", x)),
-        loadout.tabard.map(|x| ("tabard", x))
-    ].iter()
-        .filter(|x| x.is_some())
-        .map(|x| {
-            let (slot, item) = x.as_ref().unwrap();
-            ItemModelPair {
-                model: NewItem {
-                    item_definition_id: item.item_definition_id().to_owned(),
-                    position: Some((*slot).to_owned()),
-                    parent_container_item_id: loadout_container_id,
-                    item_id: match item.item_id.load(Ordering::Relaxed) {
-                        x if x > 0 => Some(x as i32),
-                        _ => None
-                    }, // TODO: Remove this downcast, change database type to BigInteger
-                    stack_size: None // Armor/weapons cannot have stack sizes
-                },
-                comp: item.clone() // TODO don't clone?
-            }
-        })
-        .collect()
+        loadout.tabard.map(|x| ("tabard", x)),
+    ]
+    .iter()
+    .filter(|x| x.is_some())
+    .map(|x| {
+        let (slot, item) = x.as_ref().unwrap();
+        ItemModelPair {
+            model: NewItem {
+                item_definition_id: item.item_definition_id().to_owned(),
+                position: Some((*slot).to_owned()),
+                parent_container_item_id: loadout_container_id,
+                item_id: match item.item_id.load(Ordering::Relaxed) {
+                    x if x > 0 => Some(x as i32),
+                    _ => None,
+                }, // TODO: Remove this downcast, change database type to BigInteger
+                stack_size: None, // Armor/weapons cannot have stack sizes
+            },
+            comp: item.clone(), // TODO don't clone?
+        }
+    })
+    .collect()
 }
-
 
 pub fn convert_inventory_from_database_items(database_items: &Vec<Item>) -> Inventory {
     let mut inventory = Inventory::new_empty();
     let item_iter = database_items.iter().map(|db_item| {
-        let mut item = common::comp::Item::new_from_asset_expect(db_item.item_definition_id.as_str());
+        let mut item =
+            common::comp::Item::new_from_asset_expect(db_item.item_definition_id.as_str());
         item.item_id = Arc::new(AtomicU64::new(db_item.item_id as u64));
         if let Some(amount) = db_item.stack_size {
             item.set_amount(amount as u32);
@@ -92,13 +100,18 @@ pub fn convert_inventory_from_database_items(database_items: &Vec<Item>) -> Inve
 pub fn convert_loadout_from_database_items(database_items: &Vec<Item>) -> Loadout {
     let mut loadout = loadout_builder::LoadoutBuilder::new();
     for db_item in database_items.iter() {
-        let mut item = common::comp::Item::new_from_asset_expect(db_item.item_definition_id.as_str());
+        let mut item =
+            common::comp::Item::new_from_asset_expect(db_item.item_definition_id.as_str());
         item.item_id = Arc::new(AtomicU64::new(db_item.item_id as u64));
         let item_opt = Some(item);
         match &db_item.position {
             Some(position) => match position.as_str() {
-                "active_item" => loadout = loadout.active_item(Some(slot::item_config(item_opt.unwrap()))),
-                "second_item" => loadout = loadout.second_item(Some(slot::item_config(item_opt.unwrap()))),
+                "active_item" => {
+                    loadout = loadout.active_item(Some(slot::item_config(item_opt.unwrap())))
+                },
+                "second_item" => {
+                    loadout = loadout.second_item(Some(slot::item_config(item_opt.unwrap())))
+                },
                 "lantern" => loadout = loadout.lantern(item_opt),
                 "shoulder" => loadout = loadout.shoulder(item_opt),
                 "chest" => loadout = loadout.chest(item_opt),
@@ -111,9 +124,9 @@ pub fn convert_loadout_from_database_items(database_items: &Vec<Item>) -> Loadou
                 "neck" => loadout = loadout.neck(item_opt),
                 "head" => loadout = loadout.head(item_opt),
                 "tabard" => loadout = loadout.tabard(item_opt),
-                _ => warn!(?db_item.item_id, ?db_item.position, "Unknown loadout position on item")
+                _ => warn!(?db_item.item_id, ?db_item.position, "Unknown loadout position on item"),
             },
-            _ => { }
+            _ => {},
         }
     }
 
@@ -123,7 +136,7 @@ pub fn convert_loadout_from_database_items(database_items: &Vec<Item>) -> Loadou
 pub fn convert_character_from_database(character: &Character) -> common::character::Character {
     common::character::Character {
         id: Some(character.id),
-        alias: String::from(&character.alias)
+        alias: String::from(&character.alias),
     }
 }
 
@@ -133,7 +146,10 @@ pub fn convert_stats_from_database(stats: &Stats, alias: String) -> common::comp
     new_stats.level.set_level(stats.level as u32);
     new_stats.exp.set_current(stats.exp as u32);
     new_stats.update_max_hp(new_stats.body_type);
-    new_stats.health.set_to(new_stats.health.maximum(), common::comp::HealthSource::Revive);
+    new_stats.health.set_to(
+        new_stats.health.maximum(),
+        common::comp::HealthSource::Revive,
+    );
     new_stats.endurance = stats.endurance as u32;
     new_stats.fitness = stats.fitness as u32;
     new_stats.willpower = stats.willpower as u32;

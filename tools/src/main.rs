@@ -65,12 +65,7 @@ fn armor_stats() -> Result<(), Box<dyn Error>> {
                                 ArmorKind::Tabard(_) => "Tabard".to_string(),
                             };
 
-                            wtr.write_record(&[
-                                asset_identifier,
-                                &kind,
-                                item.name(),
-                                &protection,
-                            ])?;
+                            wtr.write_record(&[asset_identifier, &kind, item.name(), &protection])?;
                         },
                         // Skip non-armor
                         _ => println!("Skipping non-armor item: {:?}", item),

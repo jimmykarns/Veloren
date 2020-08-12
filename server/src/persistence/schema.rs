@@ -69,12 +69,4 @@ joinable!(inventory -> character (character_id));
 joinable!(loadout -> character (character_id));
 joinable!(stats -> character (character_id));
 
-allow_tables_to_appear_in_same_query!(
-    body,
-    character,
-    entity,
-    inventory,
-    item,
-    loadout,
-    stats,
-);
+allow_tables_to_appear_in_same_query!(body, character, entity, inventory, item, loadout, stats,);

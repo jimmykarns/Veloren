@@ -5,7 +5,7 @@ pub mod tool;
 pub use tool::{Hands, Tool, ToolCategory, ToolKind};
 
 use crate::{
-    assets::{self, Asset},
+    assets::{self, Asset, Error},
     effect::Effect,
     lottery::Lottery,
     terrain::{Block, BlockKind},
@@ -13,12 +13,16 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use specs::{Component, FlaggedStorage};
 use specs_idvs::IdvStorage;
-use std::{fs::File, io::BufReader};
+use std::{
+    fs::File,
+    io::BufReader,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+};
+use tracing::warn;
 use vek::Rgb;
-use tracing::{warn};
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
-use crate::assets::Error;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Throwable {
@@ -86,19 +90,31 @@ pub enum ItemKind {
     },
 }
 
+impl ItemKind {
+    pub fn stack_size(&self) -> Option<u32> {
+        match self {
+            ItemKind::Consumable {
+                kind: _,
+                effect: _,
+                amount,
+            } => Some(*amount),
+            ItemKind::Throwable { kind: _, amount } => Some(*amount),
+            ItemKind::Utility { kind: _, amount } => Some(*amount),
+            ItemKind::Ingredient { kind: _, amount } => Some(*amount),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct ItemId(AtomicU64);
 
 impl Default for ItemId {
-    fn default() -> Self {
-        ItemId(AtomicU64::new(0))
-    }
+    fn default() -> Self { ItemId(AtomicU64::new(0)) }
 }
 
 impl ItemId {
-    fn get(&self) -> Option<u64> {
-        Some(self.0.load(Ordering::Relaxed)).filter(|x| *x != 0)
-    }
+    fn get(&self) -> Option<u64> { Some(self.0.load(Ordering::Relaxed)).filter(|x| *x != 0) }
 
     pub fn set(&mut self, item_id: u64) {
         if self.0.load(Ordering::Relaxed) > 0 {
@@ -108,12 +124,11 @@ impl ItemId {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[derive(Derivative)]
+#[derive(Clone, Debug, Serialize, Deserialize, Derivative)]
 #[derivative(PartialEq)]
 pub struct Item {
     #[serde(skip)]
-    #[derivative(PartialEq="ignore")]
+    #[derivative(PartialEq = "ignore")]
     pub item_id: Arc<AtomicU64>,
     item_definition_id: Option<String>, //TODO: Intern these strings?
     name: String,
@@ -148,29 +163,35 @@ impl Item {
     pub fn new_from_asset_expect(asset: &str) -> Self {
         let mut item = assets::load_expect_cloned::<Item>(asset);
         item.item_definition_id = Some(asset.to_owned());
-        item.item_id  = Arc::new(AtomicU64::new(0));
+        item.item_id = Arc::new(AtomicU64::new(0));
         item
     }
 
-    /// Creates a Vec containing one of each item that matches the provided asset glob pattern
+    /// Creates a Vec containing one of each item that matches the provided
+    /// asset glob pattern
     pub fn new_from_asset_glob(asset_glob: &str) -> Result<Vec<Self>, Error> {
         let items = assets::load_glob_cloned::<Item>(asset_glob)?;
 
-        Ok(items.into_iter().map(|(mut item, identifier)| {
-            item.item_definition_id = Some(identifier.to_string());
-            item.item_id  = Arc::new(AtomicU64::new(0));
-            item
-        }).collect::<Vec<_>>())
+        Ok(items
+            .into_iter()
+            .map(|(mut item, identifier)| {
+                item.item_definition_id = Some(identifier.to_string());
+                item.item_id = Arc::new(AtomicU64::new(0));
+                item
+            })
+            .collect::<Vec<_>>())
     }
 
-    /// Creates a new instance of an `Item from the provided asset identifier if it exists
+    /// Creates a new instance of an `Item from the provided asset identifier if
+    /// it exists
     pub fn new_from_asset(asset: &str) -> Result<Self, Error> {
-        // Some commands like /give_item provide the asset specifier separated with \ instead of .
+        // Some commands like /give_item provide the asset specifier separated with \
+        // instead of .
         let asset_specifier = asset.replace('\\', ".");
 
         let mut item = assets::load_cloned::<Item>(&asset_specifier)?;
         item.item_definition_id = Some(asset_specifier);
-        item.item_id  = Arc::new(AtomicU64::new(0));
+        item.item_id = Arc::new(AtomicU64::new(0));
         Ok(item)
     }
 
@@ -207,7 +228,7 @@ impl Item {
             _ => {
                 warn!("Tried to get item_definition_id from item without one set.");
                 "null_item_definition"
-            }
+            },
         }
     }
 
@@ -256,7 +277,9 @@ impl Item {
             BlockKind::MediumGrass => {
                 Some(Item::new_from_asset_expect("common.items.grasses.medium"))
             },
-            BlockKind::ShortGrass => Some(Item::new_from_asset_expect("common.items.grasses.short")),
+            BlockKind::ShortGrass => {
+                Some(Item::new_from_asset_expect("common.items.grasses.short"))
+            },
             BlockKind::Coconut => Some(Item::new_from_asset_expect("common.items.food.coconut")),
             BlockKind::Chest => {
                 let chosen = assets::load_expect::<Lottery<String>>("common.loot_table");

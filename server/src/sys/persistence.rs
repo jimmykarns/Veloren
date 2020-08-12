@@ -4,6 +4,8 @@ use crate::{
 };
 use common::comp::{Inventory, Loadout, Player, Stats};
 use specs::{Join, ReadExpect, ReadStorage, System, Write};
+use std::sync::atomic::Ordering;
+use tracing::info;
 
 pub struct Sys;
 
@@ -42,6 +44,13 @@ impl<'a> System<'a> for Sys {
                 )
                     .join()
                     .filter_map(|(player, stats, inventory, loadout)| {
+                        for item in inventory.slots.iter().filter_map(|x| x.as_ref()) {
+                            info!(
+                                "Before channel, Item def: {}, Item ID: {}",
+                                item.item_definition_id(),
+                                item.item_id.load(Ordering::Relaxed)
+                            );
+                        }
                         player
                             .character_id
                             .map(|id| (id, stats, inventory, loadout))
