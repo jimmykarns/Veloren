@@ -17,8 +17,6 @@ pub const MAX_CHARACTERS_PER_PLAYER: usize = 8;
 // remove this from here, as well as in the DB schema and persistence code.
 
 /// The minimum character data we need to create a new character on the server.
-/// The `tool` field was historically used to persist the character's weapon
-/// before Loadouts were persisted, and will be removed in the future.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Character {
     pub id: Option<i32>,

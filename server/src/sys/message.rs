@@ -1,7 +1,7 @@
 use super::SysTimer;
 use crate::{
     alias_validator::AliasValidator, client::Client, login_provider::LoginProvider,
-    persistence::character::CharacterLoader, ServerSettings, CLIENT_TIMEOUT,
+    persistence::character::CharacterLoader, ServerSettings, CLIENT_TIMEOUT, character_creator
 };
 use common::{
     comp::{
@@ -358,12 +358,13 @@ impl Sys {
                         );
                         client.notify(ServerMsg::CharacterActionError(error.to_string()));
                     } else if let Some(player) = players.get(entity) {
-                        character_loader.create_character(
+                        character_creator::create_character(
                             entity,
                             player.uuid().to_string(),
                             alias,
                             tool,
                             body,
+                            character_loader
                         );
                     }
                 },

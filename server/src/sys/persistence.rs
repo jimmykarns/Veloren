@@ -44,13 +44,6 @@ impl<'a> System<'a> for Sys {
                 )
                     .join()
                     .filter_map(|(player, stats, inventory, loadout)| {
-                        for item in inventory.slots.iter().filter_map(|x| x.as_ref()) {
-                            info!(
-                                "Before channel, Item def: {}, Item ID: {}",
-                                item.item_definition_id(),
-                                item.item_id.load(Ordering::Relaxed)
-                            );
-                        }
                         player
                             .character_id
                             .map(|id| (id, stats, inventory, loadout))

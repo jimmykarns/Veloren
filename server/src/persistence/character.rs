@@ -41,7 +41,9 @@ enum CharacterLoaderRequestKind {
     CreateCharacter {
         player_uuid: String,
         character_alias: String,
-        character_tool: Option<String>,
+        stats: comp::Stats,
+        loadout: comp::Loadout,
+        inventory: comp::Inventory,
         body: comp::Body,
     },
     DeleteCharacter {
@@ -111,12 +113,16 @@ impl CharacterLoader {
                         CharacterLoaderRequestKind::CreateCharacter {
                             player_uuid,
                             character_alias,
-                            character_tool,
+                            stats,
+                            loadout,
+                            inventory,
                             body,
                         } => CharacterLoaderResponseType::CharacterList(create_character(
                             &player_uuid,
                             &character_alias,
-                            character_tool,
+                            &stats,
+                            loadout,
+                            inventory,
                             &body,
                             &db_dir,
                         )),
@@ -161,7 +167,9 @@ impl CharacterLoader {
         entity: specs::Entity,
         player_uuid: String,
         character_alias: String,
-        character_tool: Option<String>,
+        stats: comp::Stats,
+        loadout: comp::Loadout,
+        inventory: comp::Inventory,
         body: comp::Body,
     ) {
         if let Err(e) = self.update_tx.as_ref().unwrap().send((
@@ -169,7 +177,9 @@ impl CharacterLoader {
             CharacterLoaderRequestKind::CreateCharacter {
                 player_uuid,
                 character_alias,
-                character_tool, // TODO: Remove tool column from character table
+                stats,
+                loadout,
+                inventory,
                 body,
             },
         )) {
@@ -426,7 +436,9 @@ fn load_character_list(player_uuid: &str, db_dir: &str) -> CharacterListResult {
 fn create_character(
     uuid: &str,
     character_alias: &str,
-    character_tool: Option<String>,
+    stats: &comp::Stats,
+    loadout: comp::Loadout,
+    inventory: comp::Inventory,
     body: &comp::Body,
     db_dir: &str,
 ) -> CharacterListResult {
@@ -443,19 +455,19 @@ fn create_character(
             comp::Body::Humanoid(body_data) => {
                 let character_id = get_new_entity_id(&connection);
 
+                // Insert character record
                 let new_character = NewCharacter {
                     id: character_id,
                     player_uuid: uuid,
                     alias: &character_alias,
                 };
-
                 diesel::insert_into(character::table)
                     .values(&new_character)
                     .execute(&connection)?;
 
+                // Create pseudo-container items for character
                 let inventory_container_id = get_new_entity_id(&connection);
                 let loadout_container_id = get_new_entity_id(&connection);
-                // Create pseudo-container items for character
                 let pseudo_containers = vec![
                     NewItem {
                         stack_size: None,
@@ -479,11 +491,42 @@ fn create_character(
                         position: None,
                     },
                 ];
-
                 diesel::insert_into(item)
                     .values(pseudo_containers)
                     .execute(&connection)?;
 
+                // Insert stats record
+                // TODO: conversion
+//
+                let db_stats = Stats {
+                    character_id: character_id as i32,
+                    level: stats.level.level() as i32,
+                    exp: stats.exp.current() as i32,
+                    endurance: stats.endurance as i32,
+                    fitness: stats.fitness as i32,
+                    willpower: stats.willpower as i32,
+                    skills: Some("".to_owned()), // TODO: actual skillset
+                };
+                diesel::insert_into(stats::table)
+                    .values(&db_stats)
+                    .execute(&connection)?;
+
+                // Insert default inventory and loadout item records
+                let mut item_pairs = convert_inventory_to_database_items(inventory, inventory_container_id);
+                item_pairs.extend(convert_loadout_to_database_items(
+                    loadout,
+                    loadout_container_id,
+                ));
+
+                for mut item_pair in item_pairs.into_iter() {
+                    let id = get_new_entity_id(&connection);
+                    item_pair.model.item_id = Some(id);
+                    diesel::insert_into(item)
+                        .values(item_pair.model)
+                        .execute(&connection)?;
+                }
+
+                // Insert body record
                 let new_body = Body {
                     character_id: character_id as i32,
                     species: body_data.species as i16,
@@ -496,47 +539,8 @@ fn create_character(
                     skin: body_data.skin as i16,
                     eye_color: body_data.eye_color as i16,
                 };
-
                 diesel::insert_into(body::table)
                     .values(&new_body)
-                    .execute(&connection)?;
-
-                let default_stats = comp::Stats::new(String::from(new_character.alias), *body);
-
-                // Insert some default stats
-                let new_stats = Stats {
-                    character_id: character_id as i32,
-                    level: default_stats.level.level() as i32,
-                    exp: default_stats.exp.current() as i32,
-                    endurance: default_stats.endurance as i32,
-                    fitness: default_stats.fitness as i32,
-                    willpower: default_stats.willpower as i32,
-                    skills: Some("".to_owned()), // TODO: actual skillset
-                };
-
-                diesel::insert_into(stats::table)
-                    .values(&new_stats)
-                    .execute(&connection)?;
-
-                // Default inventory
-                let inventory = Inventory::from((character_id, comp::Inventory::default()));
-
-                diesel::insert_into(inventory::table)
-                    .values(&inventory)
-                    .execute(&connection)?;
-
-                // Insert a loadout with defaults and the chosen active weapon
-                let loadout = LoadoutBuilder::new()
-                    .defaults()
-                    .active_item(LoadoutBuilder::default_item_config_from_str(
-                        character_tool.as_deref().unwrap(), // TODO: remove tool/unwrap
-                    ))
-                    .build();
-
-                let new_loadout = NewLoadout::from((character_id, &loadout));
-
-                diesel::insert_into(loadout::table)
-                    .values(&new_loadout)
                     .execute(&connection)?;
             },
             _ => warn!("Creating non-humanoid characters is not supported."),

@@ -87,6 +87,7 @@ impl ArmorSlot {
 // should no longer be needed
 
 /// Create an ItemConfig for an item. Apply abilties to item.
+// TODO: Duplicate of loadout_builder::default_item_config_from_item
 pub fn item_config(item: item::Item) -> comp::ItemConfig {
     let mut abilities = if let item::ItemKind::Tool(tool) = &item.kind {
         tool.get_abilities()

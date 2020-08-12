@@ -3,6 +3,7 @@
 #![feature(bool_to_option, drain_filter, option_zip)]
 
 pub mod alias_validator;
+mod character_creator;
 pub mod chunk_generator;
 pub mod client;
 pub mod cmd;
