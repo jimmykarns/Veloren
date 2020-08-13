@@ -30,7 +30,7 @@ impl Recipe {
             });
 
         for i in 0..self.output.1 {
-            if let Some(item) = inv.push(self.output.0.clone()) {
+            if let Some(item) = inv.push(self.output.0.duplicate()) {
                 return Ok(Some((item, self.output.1 - i)));
             }
         }
@@ -78,12 +78,12 @@ impl Asset for RecipeBook {
                     .map::<Result<(String, Recipe), assets::Error>, _>(
                         |(name, ((output, amount), inputs))| {
                             Ok((name, Recipe {
-                                output: ((&*assets::load::<Item>(&output)?).clone(), amount),
+                                output: (Item::new_from_asset(&output)?, amount), // (&*assets::load::<Item>(&output)?).clone()
                                 inputs: inputs
                                     .into_iter()
                                     .map::<Result<(Item, usize), assets::Error>, _>(
                                         |(name, amount)| {
-                                            Ok(((&*assets::load::<Item>(&name)?).clone(), amount))
+                                            Ok((Item::new_from_asset(&name)?, amount)) //(&*assets::load::<Item>(&name)?).clone()
                                         },
                                     )
                                     .collect::<Result<_, _>>()?,

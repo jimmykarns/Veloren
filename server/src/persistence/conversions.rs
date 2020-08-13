@@ -105,7 +105,7 @@ pub fn convert_inventory_from_database_items(database_items: &Vec<Item>) -> Inve
         }
         item
     });
-    
+
     match inventory.push_all(item_iter) {
         Err(e) => match e {
             common::comp::inventory::Error::Full(_) => {
