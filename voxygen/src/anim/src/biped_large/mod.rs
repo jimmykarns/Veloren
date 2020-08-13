@@ -149,11 +149,12 @@ impl Default for SkeletonAttr {
 
 impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
     fn from(body: &'a comp::biped_large::Body) -> Self {
-        use comp::biped_large::Species::*;
+        use comp::biped_large::BodyType::*;
+        use comp::biped_large::Species::*;    
         Self {
             head: match (body.species, body.body_type) {
-                (Ogre, Male) => (3.0, 10.0),
-                (Ogre, Female) => (3.0, 10.0),
+                (Ogre, Male) => (3.0, 9.0),
+                (Ogre, Female) => (1.0, 7.5),
                 (Cyclops, _) => (4.5, 7.5),
                 (Wendigo, _) => (3.0, 13.5),
                 (Troll, _) => (6.0, 10.0),
@@ -176,7 +177,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
             },
             lower_torso: match (body.species, body.body_type) {
                 (Ogre, Male) => (1.0, -11.0),
-                (Ogre, Female) => (1.0, 0.0),
+                (Ogre, Female) => (0.0, -10.0),
                 (Cyclops, _) => (1.0, -4.5),
                 (Wendigo, _) => (-1.5, -6.0),
                 (Troll, _) => (1.0, -10.5),
@@ -191,7 +192,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
             },
             shoulder: match (body.species, body.body_type) {
                 (Ogre, Male) => (12.0, 0.5, 0.0),
-                (Ogre, Female) => (12.0, 0.5, 0.0),
+                (Ogre, Female) => (8.0, 0.5, -1.0),
                 (Cyclops, _) => (9.5, 2.5, 2.5),
                 (Wendigo, _) => (9.0, 0.5, -0.5),
                 (Troll, _) => (11.0, 0.5, -1.5),
@@ -199,7 +200,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
             },
             hand: match (body.species, body.body_type) {
                 (Ogre, Male) => (14.5, 0.0, -4.0),
-                (Ogre, Female) => (14.5, 0.0, -4.0),
+                (Ogre, Female) => (9.0, 0.5, -3.5),
                 (Cyclops, _) => (10.0, 2.0, -0.5),
                 (Wendigo, _) => (12.0, 0.0, -0.5),
                 (Troll, _) => (11.5, 0.0, -1.5),
@@ -207,7 +208,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
             },
             leg: match (body.species, body.body_type) {
                 (Ogre, Male) => (0.0, 0.0, 0.0),
-                (Ogre, Female) => (0.0, 0.0, 0.0),
+                (Ogre, Female) => (0.0, 0.0, 2.0),
                 (Cyclops, _) => (0.0, 0.0, -5.0),
                 (Wendigo, _) => (2.0, 2.0, -2.5),
                 (Troll, _) => (5.0, 0.0, -6.0),
@@ -215,7 +216,7 @@ impl<'a> From<&'a comp::biped_large::Body> for SkeletonAttr {
             },
             foot: match (body.species, body.body_type) {
                 (Ogre, Male) => (4.0, 2.5, 8.0),
-                (Ogre, Female) => (4.0, 2.5, 8.0),
+                (Ogre, Female) => (4.0, 0.5, 8.0),
                 (Cyclops, _) => (4.0, 0.5, 5.0),
                 (Wendigo, _) => (5.0, 0.5, 6.0),
                 (Troll, _) => (6.0, 0.5, 4.0),
