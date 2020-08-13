@@ -1,7 +1,7 @@
 use crate::persistence::models::{Character, Item, NewItem, Stats};
 
 use common::{
-    comp::{item::ItemKind, *},
+    comp::*,
     loadout_builder,
 };
 use std::sync::{
@@ -105,7 +105,15 @@ pub fn convert_inventory_from_database_items(database_items: &Vec<Item>) -> Inve
         }
         item
     });
-    inventory.push_all(item_iter);
+    
+    match inventory.push_all(item_iter) {
+        Err(e) => match e {
+            common::comp::inventory::Error::Full(_) => {
+                warn!("Unable to push items to inventory during database load, inventory full");
+            }
+        }
+        _ => { }
+    };
     inventory
 }
 

@@ -4,8 +4,6 @@ use crate::{
 };
 use common::comp::{Inventory, Loadout, Player, Stats};
 use specs::{Join, ReadExpect, ReadStorage, System, Write};
-use std::sync::atomic::Ordering;
-use tracing::info;
 
 pub struct Sys;
 

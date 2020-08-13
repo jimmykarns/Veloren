@@ -61,13 +61,6 @@ pub struct Stats {
     pub skills: Option<String>,
 }
 
-/// The required elements to build comp::Stats from database data
-pub struct StatsJoinData<'a> {
-    pub alias: &'a str,
-    pub body: &'a comp::Body,
-    pub stats: &'a Stats,
-}
-
 /// `Body` represents the body variety for a character, which has a one-to-one
 /// relationship with Characters. This data is set during player creation, and
 /// while there is currently no in-game functionality to modify it, it will

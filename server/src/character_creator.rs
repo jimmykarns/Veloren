@@ -1,5 +1,4 @@
 use specs::{Entity, ReadExpect};
-use crate::persistence;
 use crate::persistence::character::CharacterLoader;
 use common::loadout_builder::LoadoutBuilder;
 use common::comp::{Body, Inventory, Stats};

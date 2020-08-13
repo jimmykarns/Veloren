@@ -5,7 +5,6 @@
 use crate::{client::Client, Server, StateExt};
 use chrono::{NaiveTime, Timelike};
 use common::{
-    assets,
     cmd::{ChatCommand, CHAT_COMMANDS, CHAT_SHORTCUTS},
     comp::{self, ChatType, Item, LightEmitter, WaypointArea},
     event::{EventBus, ServerEvent},

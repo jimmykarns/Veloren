@@ -17,7 +17,7 @@ use std::{
     fs::File,
     io::BufReader,
     sync::{
-        atomic::{AtomicU64, Ordering},
+        atomic::{AtomicU64},
         Arc,
     },
 };
@@ -106,24 +106,6 @@ impl ItemKind {
     }
 }
 
-#[derive(Debug)]
-pub struct ItemId(AtomicU64);
-
-impl Default for ItemId {
-    fn default() -> Self { ItemId(AtomicU64::new(0)) }
-}
-
-impl ItemId {
-    fn get(&self) -> Option<u64> { Some(self.0.load(Ordering::Relaxed)).filter(|x| *x != 0) }
-
-    pub fn set(&mut self, item_id: u64) {
-        if self.0.load(Ordering::Relaxed) > 0 {
-            panic!("Cannot set an item_id twice");
-        }
-        self.0.store(item_id, Ordering::Relaxed);
-    }
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize, Derivative)]
 #[derivative(PartialEq)]
 pub struct Item {
@@ -195,12 +177,17 @@ impl Item {
         Ok(item)
     }
 
+    /// Duplicates an item, creating an exact copy but with a new item ID
     pub fn duplicate(&self) -> Self {
         let mut item = self.clone();
-
-        // Duplicated item has a 0 item ID as it is a new item instance
-        item.item_id = Arc::new(AtomicU64::new(0));
+        item.reset_item_id();
         item
+    }
+
+    /// Resets the item's item ID to 0, giving it a new identity. Used when dropping items into the
+    /// world so that a new database record is created when they are picked up again.
+    pub fn reset_item_id(&mut self) {
+        self.item_id = Arc::new(AtomicU64::new(0));
     }
 
     pub fn set_amount(&mut self, give_amount: u32) -> Result<(), assets::Error> {
