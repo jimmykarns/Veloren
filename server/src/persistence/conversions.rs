@@ -82,6 +82,18 @@ pub fn convert_loadout_to_database_items(
     .collect()
 }
 
+pub fn convert_stats_to_database(character_id: i32, stats: &common::comp::Stats) -> Stats {
+    Stats {
+        character_id: character_id as i32,
+        level: stats.level.level() as i32,
+        exp: stats.exp.current() as i32,
+        endurance: stats.endurance as i32,
+        fitness: stats.fitness as i32,
+        willpower: stats.willpower as i32,
+        skills: Some("".to_owned()), // TODO: actual skillset
+    }
+}
+
 pub fn convert_inventory_from_database_items(database_items: &Vec<Item>) -> Inventory {
     let mut inventory = Inventory::new_empty();
     let item_iter = database_items.iter().map(|db_item| {

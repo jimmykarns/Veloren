@@ -28,6 +28,7 @@ use crossbeam::{channel, channel::TryIter};
 use diesel::prelude::*;
 use std::sync::atomic::Ordering;
 use tracing::{error, info, warn};
+use crate::persistence::conversions::convert_stats_to_database;
 
 type CharacterLoaderRequest = (specs::Entity, CharacterLoaderRequestKind);
 
@@ -499,17 +500,7 @@ fn create_character(
                     .execute(&connection)?;
 
                 // Insert stats record
-                // TODO: conversion
-//
-                let db_stats = Stats {
-                    character_id: character_id as i32,
-                    level: stats.level.level() as i32,
-                    exp: stats.exp.current() as i32,
-                    endurance: stats.endurance as i32,
-                    fitness: stats.fitness as i32,
-                    willpower: stats.willpower as i32,
-                    skills: Some("".to_owned()), // TODO: actual skillset
-                };
+                let db_stats = convert_stats_to_database(character_id, stats);
                 diesel::insert_into(stats::table)
                     .values(&db_stats)
                     .execute(&connection)?;
@@ -600,7 +591,7 @@ fn check_character_limit(uuid: &str, db_dir: &str) -> Result<(), Error> {
     }
 }
 
-type CharacterUpdateData = (StatsUpdate, comp::Inventory, comp::Loadout);
+type CharacterUpdateData = (comp::Stats, comp::Inventory, comp::Loadout);
 
 /// A unidirectional messaging resource for saving characters in a
 /// background thread.
@@ -638,10 +629,10 @@ impl CharacterUpdater {
             .map(|(character_id, stats, inventory, loadout)| {
                 (
                     character_id,
-                    (StatsUpdate::from(stats), inventory.clone(), loadout.clone()),
+                    (stats.clone(), inventory.clone(), loadout.clone()),
                 )
             })
-            .collect();
+            .collect::<Vec<(i32, (comp::Stats, comp::Inventory, comp::Loadout))>>();
 
         if let Err(e) = self.update_tx.as_ref().unwrap().send(updates) {
             error!(?e, "Could not send stats updates");
@@ -665,8 +656,8 @@ fn batch_update(updates: impl Iterator<Item = (i32, CharacterUpdateData)>, db_di
 
     if let Err(e) = connection.and_then(|connection| {
         connection.transaction::<_, diesel::result::Error, _>(|| {
-            updates.for_each(|(character_id, (stats_update, inventory, loadout))| {
-                update(character_id, &stats_update, inventory, loadout, &connection)
+            updates.for_each(|(character_id, (stats, inventory, loadout))| {
+                update(character_id, stats, inventory, loadout, &connection)
             });
 
             Ok(())
@@ -726,31 +717,32 @@ fn get_pseudo_container_id(
 // TODO: Make this return result and use a sub-transaction instead of expects
 // and error! everywhere
 fn update(
-    character_id: i32,
-    _stats: &StatsUpdate,
+    char_id: i32,
+    char_stats: comp::Stats,
     inventory: comp::Inventory,
     loadout: comp::Loadout,
     connection: &SqliteConnection,
 ) {
     use super::schema::item::dsl::*;
+    use super::schema::stats::dsl::*;
 
     // TODO: Store the character's pseudo-container IDs during login so we don't
     // have to fetch them each save?
     let inventory_container_id =
-        get_pseudo_container_id(connection, character_id, INVENTORY_PSEUDO_CONTAINER_DEF_ID)
+        get_pseudo_container_id(connection, char_id, INVENTORY_PSEUDO_CONTAINER_DEF_ID)
             .expect(
                 format!(
                     "Inventory container for character ID {} does not exist",
-                    character_id
+                    char_id
                 )
                 .as_str(),
             );
 
     let loadout_container_id =
-        get_pseudo_container_id(connection, character_id, LOADOUT_PSEUDO_CONTAINER_DEF_ID).expect(
+        get_pseudo_container_id(connection, char_id, LOADOUT_PSEUDO_CONTAINER_DEF_ID).expect(
             format!(
                 "Loadout container for character ID {} does not exist",
-                character_id
+                char_id
             )
             .as_str(),
         );
@@ -785,14 +777,10 @@ fn update(
         }
     }
 
-    // TODO Update Stats
-    // if let Err(e) =
-    //     diesel::update(schema::stats::table.filter(schema::stats::
-    // character_id.eq(character_id)))         .set(stats)
-    //         .execute(connection)
-    // {
-    //     error!(?e, ?character_id, "Failed to update stats for character",)
-    // }
+    let db_stats = convert_stats_to_database(char_id, &char_stats);
+    diesel::update(stats.filter(character_id.eq(char_id)))
+        .set(db_stats)
+        .execute(connection);
 }
 
 impl Drop for CharacterUpdater {
