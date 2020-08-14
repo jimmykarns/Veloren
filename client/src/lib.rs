@@ -738,28 +738,38 @@ impl Client {
         // 1) Handle input from frontend.
         // Pass character actions from frontend input to the player's entity.
         if let ClientState::Character = self.client_state {
-            if let Err(e) = self
+            // Only override Controller if agent isn't on
+            if self
                 .state
                 .ecs()
-                .write_storage::<Controller>()
-                .entry(self.entity)
-                .map(|entry| {
-                    entry
-                        .or_insert_with(|| Controller {
-                            inputs: inputs.clone(),
-                            events: Vec::new(),
-                            actions: Vec::new(),
-                        })
-                        .inputs = inputs.clone();
-                })
+                .read_storage::<comp::Agent>()
+                .get(self.entity)
+                .is_none()
             {
-                let entry = self.entity;
-                error!(
-                    ?e,
-                    ?entry,
-                    "Couldn't access controller component on client entity"
-                );
+                if let Err(e) = self
+                    .state
+                    .ecs()
+                    .write_storage::<Controller>()
+                    .entry(self.entity)
+                    .map(|entry| {
+                        entry
+                            .or_insert_with(|| Controller {
+                                inputs: inputs.clone(),
+                                events: Vec::new(),
+                                actions: Vec::new(),
+                            })
+                            .inputs = inputs.clone();
+                    })
+                {
+                    let entry = self.entity;
+                    error!(
+                        ?e,
+                        ?entry,
+                        "Couldn't access controller component on client entity"
+                    );
+                }
             }
+
             self.singleton_stream
                 .send(ClientMsg::ControllerInputs(inputs))?;
         }

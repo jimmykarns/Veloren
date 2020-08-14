@@ -26,6 +26,7 @@ use common::{
     util::Dir,
     vol::ReadVol,
 };
+use comp::agent::Psyche;
 use specs::{Join, WorldExt};
 use std::{cell::RefCell, rc::Rc, time::Duration};
 use tracing::{error, info};
@@ -264,6 +265,48 @@ impl PlayState for SessionState {
                     .unwrap_or(false)
             }));
 
+            // Agent
+            if self
+                .client
+                .borrow()
+                .state()
+                .read_storage::<comp::Agent>()
+                .get(self.client.borrow().entity())
+                .is_some()
+            {
+                {
+                    let client = self.client.borrow();
+                    let state = client.state();
+                    let storage = state.read_storage::<comp::Controller>();
+                    let controller = storage.get(self.client.borrow().entity()).expect(":/");
+
+                    // Pass agent commands through if enabled.
+                    self.inputs = controller.inputs.clone();
+                }
+
+                // Fix wielding
+                if !self
+                    .client
+                    .borrow()
+                    .state()
+                    .read_storage::<comp::Agent>()
+                    .get(self.client.borrow().entity())
+                    .expect(":/")
+                    .activity
+                    .is_attack()
+                    && self
+                        .client
+                        .borrow()
+                        .state()
+                        .read_storage::<comp::CharacterState>()
+                        .get(self.client.borrow().entity())
+                        .expect(":/")
+                        .is_wield()
+                {
+                    self.client.borrow_mut().toggle_wield();
+                }
+            }
+
             // Handle window events.
             for event in events {
                 // Pass all events to the ui first.
@@ -286,7 +329,6 @@ impl PlayState for SessionState {
                             self.inputs.primary.set_state(state);
                         }
                     },
-
                     Event::InputUpdate(GameInput::Secondary, state) => {
                         self.inputs.secondary.set_state(false); // To be changed later on
 
@@ -582,11 +624,28 @@ impl PlayState for SessionState {
                                     .remove(client.entity())
                                     .expect(":/");
                             } else {
+                                let mut agent = comp::Agent::new(
+                                    client
+                                        .state()
+                                        .read_storage::<comp::Pos>()
+                                        .get(client.entity())
+                                        .expect(":/")
+                                        .0,
+                                    false,
+                                    client
+                                        .state()
+                                        .read_storage::<comp::Body>()
+                                        .get(client.entity())
+                                        .expect(":/"),
+                                );
+
+                                agent.psyche = Psyche { aggro: 1.0 };
+
                                 client
                                     .state()
                                     .ecs()
                                     .write_storage::<comp::Agent>()
-                                    .insert(client.entity(), comp::Agent::default())
+                                    .insert(client.entity(), agent)
                                     .expect(":/");
                             }
                         }
@@ -1195,7 +1254,7 @@ fn under_cursor(
     let cam_dist = cam_ray.0;
 
     // The ray hit something, is it within range?
-    let (build_pos, select_pos) = if matches!(cam_ray.1, Ok(Some(_)) if 
+    let (build_pos, select_pos) = if matches!(cam_ray.1, Ok(Some(_)) if
         player_pos.distance_squared(cam_pos + cam_dir * cam_dist)
         <= MAX_PICKUP_RANGE_SQR)
     {
