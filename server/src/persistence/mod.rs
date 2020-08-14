@@ -50,15 +50,19 @@ fn establish_connection(db_dir: &str) -> QueryResult<SqliteConnection> {
 
     // Use Write-Ahead-Logging for improved concurrency: https://sqlite.org/wal.html
     // Set a busy timeout (in ms): https://sqlite.org/c3ref/busy_timeout.html
-    connection.batch_execute(
-        "
+    connection
+        .batch_execute(
+            "
         PRAGMA foreign_keys = ON;
         PRAGMA journal_mode = WAL;
         PRAGMA busy_timeout = 250;
         ",
-    ).expect("Failed adding PRAGMA statements while establishing sqlite connection, including \
+        )
+        .expect(
+            "Failed adding PRAGMA statements while establishing sqlite connection, including \
              enabling foreign key constraints.  We will not allow connecting to the server under \
-             these conditions.");
+             these conditions.",
+        );
 
     Ok(connection)
 }

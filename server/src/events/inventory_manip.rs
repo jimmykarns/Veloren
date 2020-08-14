@@ -14,9 +14,8 @@ use common::{
 use comp::LightEmitter;
 use rand::Rng;
 use specs::{join::Join, world::WorldExt, Builder, Entity as EcsEntity, WriteStorage};
+use std::sync::{atomic::AtomicU64, Arc};
 use tracing::{debug, error};
-use std::sync::Arc;
-use std::sync::atomic::AtomicU64;
 use vek::{Rgb, Vec3};
 
 pub fn swap_lantern(

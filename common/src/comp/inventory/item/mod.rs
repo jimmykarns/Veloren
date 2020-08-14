@@ -16,10 +16,7 @@ use specs_idvs::IdvStorage;
 use std::{
     fs::File,
     io::BufReader,
-    sync::{
-        atomic::{AtomicU64},
-        Arc,
-    },
+    sync::{atomic::AtomicU64, Arc},
 };
 use tracing::warn;
 use vek::Rgb;
@@ -130,7 +127,6 @@ impl Item {
     // TODO: consider alternatives such as default abilities that can be added to a
     // loadout when no weapon is present
     pub fn empty() -> Self {
-        info!("Created empty item");
         Self {
             item_id: Arc::new(AtomicU64::new(0)),
             item_definition_id: None,
@@ -184,11 +180,10 @@ impl Item {
         item
     }
 
-    /// Resets the item's item ID to 0, giving it a new identity. Used when dropping items into the
-    /// world so that a new database record is created when they are picked up again.
-    pub fn reset_item_id(&mut self) {
-        self.item_id = Arc::new(AtomicU64::new(0));
-    }
+    /// Resets the item's item ID to 0, giving it a new identity. Used when
+    /// dropping items into the world so that a new database record is
+    /// created when they are picked up again.
+    pub fn reset_item_id(&mut self) { self.item_id = Arc::new(AtomicU64::new(0)); }
 
     pub fn set_amount(&mut self, give_amount: u32) -> Result<(), assets::Error> {
         use ItemKind::*;

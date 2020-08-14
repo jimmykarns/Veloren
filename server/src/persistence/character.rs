@@ -15,18 +15,16 @@ use crate::{
             convert_character_from_database, convert_inventory_from_database_items,
             convert_inventory_to_database_items, convert_loadout_from_database_items,
             convert_loadout_to_database_items, convert_stats_from_database,
+            convert_stats_to_database,
         },
-        error::Error::DatabaseError
+        error::Error::DatabaseError,
     },
 };
-use common::{
-    character::{CharacterItem, MAX_CHARACTERS_PER_PLAYER}
-};
+use common::character::{CharacterItem, MAX_CHARACTERS_PER_PLAYER};
 use crossbeam::{channel, channel::TryIter};
 use diesel::prelude::*;
 use std::sync::atomic::Ordering;
 use tracing::{error, info, warn};
-use crate::persistence::conversions::convert_stats_to_database;
 
 type CharacterLoaderRequest = (specs::Entity, CharacterLoaderRequestKind);
 
@@ -251,7 +249,11 @@ impl Drop for CharacterLoader {
 ///
 /// After first logging in, and after a character is selected, we fetch this
 /// data for the purpose of inserting their persisted data for the entity.
-fn load_character_data(requesting_player_uuid: String, char_id: i32, db_dir: &str) -> CharacterDataResult {
+fn load_character_data(
+    requesting_player_uuid: String,
+    char_id: i32,
+    db_dir: &str,
+) -> CharacterDataResult {
     use schema::{character::dsl::*, item::dsl::*, stats::dsl::*};
     let connection = establish_connection(db_dir)?;
 
@@ -286,7 +288,11 @@ fn load_character_data(requesting_player_uuid: String, char_id: i32, db_dir: &st
         .expect("failed to load loadout data"); // TODO: Replace expect with ?
 
     let result = character
-        .filter(character_id.eq(char_id).and(player_uuid.eq(requesting_player_uuid)))
+        .filter(
+            character_id
+                .eq(char_id)
+                .and(player_uuid.eq(requesting_player_uuid)),
+        )
         .inner_join(stats)
         .first::<(Character, Stats)>(&connection); // TODO: Replace expect with ?
 
@@ -319,8 +325,7 @@ fn load_character_data(requesting_player_uuid: String, char_id: i32, db_dir: &st
 /// stats, body, etc...) the character is skipped, and no entry will be
 /// returned.
 fn load_character_list(player_uuidx: &str, db_dir: &str) -> CharacterListResult {
-    use schema::character::dsl::*;
-    use schema::stats::dsl::*;
+    use schema::{character::dsl::*, stats::dsl::*};
 
     let result = character
         .filter(player_uuid.eq(player_uuidx))
@@ -471,7 +476,8 @@ fn create_character(
                     .execute(&connection)?;
 
                 // Insert default inventory and loadout item records
-                let mut item_pairs = convert_inventory_to_database_items(inventory, inventory_container_id);
+                let mut item_pairs =
+                    convert_inventory_to_database_items(inventory, inventory_container_id);
                 item_pairs.extend(convert_loadout_to_database_items(
                     loadout,
                     loadout_container_id,
@@ -688,20 +694,18 @@ fn update(
     loadout: comp::Loadout,
     connection: &SqliteConnection,
 ) {
-    use super::schema::item::dsl::*;
-    use super::schema::stats::dsl::*;
+    use super::schema::{item::dsl::*, stats::dsl::*};
 
     // TODO: Store the character's pseudo-container IDs during login so we don't
     // have to fetch them each save?
     let inventory_container_id =
-        get_pseudo_container_id(connection, char_id, INVENTORY_PSEUDO_CONTAINER_DEF_ID)
-            .expect(
-                format!(
-                    "Inventory container for character ID {} does not exist",
-                    char_id
-                )
-                .as_str(),
-            );
+        get_pseudo_container_id(connection, char_id, INVENTORY_PSEUDO_CONTAINER_DEF_ID).expect(
+            format!(
+                "Inventory container for character ID {} does not exist",
+                char_id
+            )
+            .as_str(),
+        );
 
     let loadout_container_id =
         get_pseudo_container_id(connection, char_id, LOADOUT_PSEUDO_CONTAINER_DEF_ID).expect(
@@ -719,7 +723,11 @@ fn update(
     ));
 
     let mut existing_items = item
-        .filter(parent_container_item_id.eq(inventory_container_id).or(parent_container_item_id.eq(loadout_container_id)))
+        .filter(
+            parent_container_item_id
+                .eq(inventory_container_id)
+                .or(parent_container_item_id.eq(loadout_container_id)),
+        )
         .load::<Item>(connection)
         .expect("failed to load existing items"); // TODO: Replace expect with ?
 
@@ -751,8 +759,7 @@ fn update(
 
     // TODO: Single delete statement using all item IDs in existing_items
     for existing_item in existing_items {
-        diesel::delete(item.filter(item_id.eq(existing_item.item_id)))
-            .execute(connection);
+        diesel::delete(item.filter(item_id.eq(existing_item.item_id))).execute(connection);
     }
 
     let db_stats = convert_stats_to_database(char_id, &char_stats);

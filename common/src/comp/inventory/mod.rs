@@ -2,7 +2,7 @@ pub mod item;
 pub mod slot;
 
 use crate::recipe::Recipe;
-use item::{Consumable, Item, ItemKind};
+use item::{Item, ItemKind};
 use serde::{Deserialize, Serialize};
 use specs::{Component, FlaggedStorage, HashMapStorage};
 use specs_idvs::IdvStorage;
