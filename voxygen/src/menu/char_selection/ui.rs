@@ -447,6 +447,7 @@ impl CharSelectionUi {
         })
         .title_font_size(self.fonts.cyri.scale(15))
         .desc_font_size(self.fonts.cyri.scale(10))
+        .parent(ui_widgets.window)
         .font_id(self.fonts.cyri.conrod_id)
         .title_text_color(TEXT_COLOR)
         .desc_text_color(TEXT_COLOR_2);

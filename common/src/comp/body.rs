@@ -184,7 +184,7 @@ impl Body {
                 bird_medium::Species::Duck => 50,
                 bird_medium::Species::Goose => 60,
                 bird_medium::Species::Parrot => 60,
-                bird_medium::Species::Peacock => 55,
+                bird_medium::Species::Peacock => 60,
                 bird_medium::Species::Cockatrice => 110,
                 bird_medium::Species::Eagle => 110,
                 _ => 100,

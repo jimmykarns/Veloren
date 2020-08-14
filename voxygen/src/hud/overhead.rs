@@ -7,7 +7,7 @@ use crate::{
     settings::GameplaySettings,
     ui::{fonts::ConrodVoxygenFonts, Ingameable},
 };
-use common::comp::{Energy, SpeechBubble, SpeechBubbleType, Stats};
+use common::comp::{humanoid, Energy, SpeechBubble, SpeechBubbleType, Stats};
 use conrod_core::{
     position::Align,
     widget::{self, Image, Rectangle, Text},
