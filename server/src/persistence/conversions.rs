@@ -98,7 +98,9 @@ pub fn convert_inventory_from_database_items(database_items: &Vec<Item>) -> Inve
             common::comp::Item::new_from_asset_expect(db_item.item_definition_id.as_str());
         item.item_id = Arc::new(AtomicU64::new(db_item.item_id as u64));
         if let Some(amount) = db_item.stack_size {
-            item.set_amount(amount as u32);
+            if item.set_amount(amount as u32).is_err() {
+                warn!(?item, "Error setting amount for item");
+            };
         }
         item
     });

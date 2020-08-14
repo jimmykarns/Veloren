@@ -427,7 +427,7 @@ fn create_character(
 
         match body {
             comp::Body::Humanoid(body_data) => {
-                let character_id = get_new_entity_id(&connection);
+                let character_id = get_new_entity_id(&connection)?;
 
                 // Insert character record
                 let new_character = NewCharacter {
@@ -440,8 +440,8 @@ fn create_character(
                     .execute(&connection)?;
 
                 // Create pseudo-container items for character
-                let inventory_container_id = get_new_entity_id(&connection);
-                let loadout_container_id = get_new_entity_id(&connection);
+                let inventory_container_id = get_new_entity_id(&connection)?;
+                let loadout_container_id = get_new_entity_id(&connection)?;
                 let pseudo_containers = vec![
                     NewItem {
                         stack_size: None,
@@ -484,7 +484,7 @@ fn create_character(
                 ));
 
                 for mut item_pair in item_pairs.into_iter() {
-                    let id = get_new_entity_id(&connection);
+                    let id = get_new_entity_id(&connection)?;
                     item_pair.model.item_id = Some(id);
                     diesel::insert_into(item)
                         .values(item_pair.model)
@@ -628,7 +628,14 @@ fn batch_update(updates: impl Iterator<Item = (i32, CharacterUpdateData)>, db_di
     if let Err(e) = connection.and_then(|connection| {
         connection.transaction::<_, diesel::result::Error, _>(|| {
             updates.for_each(|(character_id, (stats, inventory, loadout))| {
-                update(character_id, stats, inventory, loadout, &connection)
+                // Create a nested transaction (savepoint) per character update so that a single
+                // error for a particular character doesn't prevent all other characters being saved
+                match connection.transaction::<_, Error, _>(|| {
+                    update(character_id, stats, inventory, loadout, &connection)
+                }) {
+                    Err(e) => error!(?character_id, ?e, "Persistence update failed for character"),
+                    _ => { }
+                }
             });
 
             Ok(())
@@ -638,22 +645,20 @@ fn batch_update(updates: impl Iterator<Item = (i32, CharacterUpdateData)>, db_di
     }
 }
 
-fn get_new_entity_id(conn: &SqliteConnection) -> i32 {
+fn get_new_entity_id(conn: &SqliteConnection) -> Result<i32, diesel::result::Error> {
     use super::schema::entity::dsl::*;
 
     diesel::insert_into(entity)
         .default_values()
-        .execute(conn)
-        .expect("Failed to create new entity record");
+        .execute(conn)?;
 
     let new_entity_id = entity
         .order(entity_id.desc())
         .select(entity_id)
-        .first::<i32>(conn)
-        .expect("new entity ID was null?");
+        .first::<i32>(conn)?;
 
-    info!("Got new entity_id: {}", new_entity_id);
-    new_entity_id
+    info!("Created new persistence entity_id: {}", new_entity_id);
+    Ok(new_entity_id)
 }
 
 fn get_pseudo_container_id(
@@ -677,7 +682,7 @@ fn get_pseudo_container_id(
                 ?e,
                 ?character_id,
                 ?pseudo_container_id,
-                "Failed to retrieve psuedo container ID"
+                "Failed to retrieve pseudo container ID"
             );
             Err(DatabaseError(e))
         },
@@ -693,28 +698,16 @@ fn update(
     inventory: comp::Inventory,
     loadout: comp::Loadout,
     connection: &SqliteConnection,
-) {
+) -> Result<(), Error> {
     use super::schema::{item::dsl::*, stats::dsl::*};
 
     // TODO: Store the character's pseudo-container IDs during login so we don't
     // have to fetch them each save?
     let inventory_container_id =
-        get_pseudo_container_id(connection, char_id, INVENTORY_PSEUDO_CONTAINER_DEF_ID).expect(
-            format!(
-                "Inventory container for character ID {} does not exist",
-                char_id
-            )
-            .as_str(),
-        );
+        get_pseudo_container_id(connection, char_id, INVENTORY_PSEUDO_CONTAINER_DEF_ID)?;
 
     let loadout_container_id =
-        get_pseudo_container_id(connection, char_id, LOADOUT_PSEUDO_CONTAINER_DEF_ID).expect(
-            format!(
-                "Loadout container for character ID {} does not exist",
-                char_id
-            )
-            .as_str(),
-        );
+        get_pseudo_container_id(connection, char_id, LOADOUT_PSEUDO_CONTAINER_DEF_ID)?;
 
     let mut item_pairs = convert_inventory_to_database_items(inventory, inventory_container_id);
     item_pairs.extend(convert_loadout_to_database_items(
@@ -728,8 +721,7 @@ fn update(
                 .eq(inventory_container_id)
                 .or(parent_container_item_id.eq(loadout_container_id)),
         )
-        .load::<Item>(connection)
-        .expect("failed to load existing items"); // TODO: Replace expect with ?
+        .load::<Item>(connection)?;
 
     // TODO: Refactor this, batch into multiple inserts/updates etc
     for mut item_pair in item_pairs.into_iter() {
@@ -737,9 +729,9 @@ fn update(
             existing_items.retain(|x| x.item_id != model_item_id);
             diesel::update(item.filter(item_id.eq(model_item_id)))
                 .set(item_pair.model)
-                .execute(connection);
+                .execute(connection)?;
         } else {
-            let id = get_new_entity_id(connection);
+            let id = get_new_entity_id(connection)?;
             item_pair.model.item_id = Some(id);
 
             // TODO: Fix this cast.
@@ -752,20 +744,22 @@ fn update(
 
             diesel::insert_into(item)
                 .values(item_pair.model)
-                .execute(connection)
-                .expect("Failed to insert items");
+                .execute(connection)?;
         }
     }
 
     // TODO: Single delete statement using all item IDs in existing_items
     for existing_item in existing_items {
-        diesel::delete(item.filter(item_id.eq(existing_item.item_id))).execute(connection);
+        diesel::delete(item.filter(item_id.eq(existing_item.item_id)))
+            .execute(connection)?;
     }
 
     let db_stats = convert_stats_to_database(char_id, &char_stats);
     diesel::update(stats.filter(character_id.eq(char_id)))
         .set(db_stats)
-        .execute(connection);
+        .execute(connection)?;
+
+    Ok(())
 }
 
 impl Drop for CharacterUpdater {
