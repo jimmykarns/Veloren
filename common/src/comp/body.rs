@@ -196,10 +196,10 @@ impl Body {
             Body::BirdSmall(_) => 50,
             Body::FishSmall(_) => 20,
             Body::BipedLarge(biped_large) => match biped_large.species {
-                biped_large::Species::Ogre => 800,
-                biped_large::Species::Cyclops => 1000,
-                biped_large::Species::Wendigo => 1000,
-                biped_large::Species::Troll => 800,
+                biped_large::Species::Ogre => 2500,
+                biped_large::Species::Cyclops => 2000,
+                biped_large::Species::Wendigo => 2000,
+                biped_large::Species::Troll => 1500,
                 biped_large::Species::Dullahan => 2000,
                 _ => 1000,
             },
@@ -260,7 +260,7 @@ impl Body {
                 bird_medium::Species::Peacock => 10,
                 bird_medium::Species::Cockatrice => 10,
                 bird_medium::Species::Eagle => 10,
-                _ => 10,
+                _ => 20,
             },
             Body::FishMedium(_) => 10,
             Body::Dragon(dragon) => match dragon.species {
@@ -281,7 +281,7 @@ impl Body {
                 _ => 150,
             },
             Body::Critter(critter) => match critter.species {
-                _ => 10,
+                _ => 20,
             },
             Body::QuadrupedLow(quadruped_low) => match quadruped_low.species {
                 quadruped_low::Species::Crocodile => 20,
@@ -304,7 +304,7 @@ impl Body {
             Body::Humanoid(_) => 5,
             Body::QuadrupedSmall(quadruped_small) => match quadruped_small.species {
                 quadruped_small::Species::Boar => 6,
-                quadruped_small::Species::Batfox => 6,
+                quadruped_small::Species::Batfox => 2,
                 quadruped_small::Species::Dodarock => 6,
                 quadruped_small::Species::Holladon => 8,
                 quadruped_small::Species::Hyena => 6,
@@ -389,11 +389,11 @@ impl Body {
             Body::BirdSmall(_) => 1,
             Body::FishSmall(_) => 1,
             Body::BipedLarge(biped_large) => match biped_large.species {
-                _ => 5,
+                _ => 2,
             },
             Body::Object(_) => 0,
             Body::Golem(golem) => match golem.species {
-                _ => 10,
+                _ => 5,
             },
             Body::Critter(critter) => match critter.species {
                 _ => 1,

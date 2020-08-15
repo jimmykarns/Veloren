@@ -1187,7 +1187,7 @@ impl<V: RectRasterableVol> Terrain<V> {
                     (BlockKind::Velorite, 0),
                     make_models(
                         "voxygen.voxel.sprite.velorite.velorite_ore",
-                        Vec3::new(-5.0, -5.0, -5.0),
+                        Vec3::new(-5.0, -5.0, -4.9),
                         Vec3::one(),
                     ),
                 ),

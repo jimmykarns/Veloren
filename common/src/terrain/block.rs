@@ -500,6 +500,7 @@ impl Block {
             | BlockKind::WardrobeSingle
             | BlockKind::WardrobeDouble
             | BlockKind::Pot
+            | BlockKind::Chest
             | BlockKind::DropGate
             | BlockKind::DropGateBottom
             | BlockKind::Door => Some(self.color[0] & 0b111),
