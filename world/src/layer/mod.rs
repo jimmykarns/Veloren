@@ -145,30 +145,53 @@ pub fn apply_scatter_to<'a>(
         // Grass
         (ShortGrass, false, |c| {
             (
-                close(c.temp, 0.0, 0.6).min(close(c.humidity, CONFIG.forest_hum, 0.35)) * 0.05,
+                close(c.temp, CONFIG.temperate_temp, 0.4).min(close(
+                    c.humidity,
+                    CONFIG.forest_hum,
+                    0.35,
+                )) * 0.05,
                 Some((48.0, 0.7)),
             )
         }),
         (MediumGrass, false, |c| {
             (
-                close(c.temp, 0.0, 0.5).min(close(c.humidity, CONFIG.forest_hum, 0.35)) * 0.05,
+                close(c.temp, CONFIG.temperate_temp, 0.4).min(close(
+                    c.humidity,
+                    CONFIG.forest_hum,
+                    0.35,
+                )) * 0.05,
                 Some((48.0, 0.4)),
             )
         }),
         (LongGrass, false, |c| {
             (
-                close(c.temp, 0.4, 0.5).min(close(c.humidity, CONFIG.forest_hum, 0.2)) * 0.05,
+                close(c.temp, CONFIG.temperate_temp, 0.4).min(close(
+                    c.humidity,
+                    CONFIG.forest_hum,
+                    0.2,
+                )) * 0.05,
                 Some((48.0, 0.5)),
             )
         }),
-        (WheatGreen, false, |c| {
+        // Jungle Sprites
+        (LongGrass, false, |c| {
+            (
+                close(c.temp, CONFIG.tropical_temp, 0.4).min(close(
+                    c.humidity,
+                    CONFIG.jungle_hum,
+                    0.5,
+                )) * 0.1,
+                Some((60.0, 5.0)),
+            )
+        }),
+        /*(WheatGreen, false, |c| {
             (
                 close(c.temp, 0.4, 0.2).min(close(c.humidity, CONFIG.forest_hum, 0.1))
                     * MUSH_FACT
                     * 0.001,
                 None,
             )
-        }),
+        }),*/
         (GrassSnow, false, |c| {
             (
                 close(c.temp, CONFIG.snow_temp - 0.2, 0.4).min(close(
