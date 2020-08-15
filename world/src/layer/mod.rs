@@ -29,7 +29,7 @@ pub struct Colors {
 fn close(x: f32, tgt: f32, falloff: f32) -> f32 {
     (1.0 - (x - tgt).abs() / falloff).max(0.0).powf(0.5)
 }
-const MUSH_FACT: f32 = 0.001; // To balance everything around the mushroom spawning rate
+const MUSH_FACT: f32 = 0.0001; // To balance everything around the mushroom spawning rate
 pub fn apply_scatter_to<'a>(
     wpos2d: Vec2<i32>,
     mut get_column: impl FnMut(Vec2<i32>) -> Option<&'a ColumnSample<'a>>,
