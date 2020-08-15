@@ -1,5 +1,8 @@
 use crate::{comp, sync::Uid, util::Dir};
-use comp::{item::{Item, Reagent}, Ori, Pos};
+use comp::{
+    item::{Item, Reagent},
+    Ori, Pos,
+};
 use parking_lot::Mutex;
 use specs::Entity as EcsEntity;
 use std::{collections::VecDeque, ops::DerefMut};
