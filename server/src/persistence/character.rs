@@ -260,61 +260,35 @@ fn load_character_data(
     // TODO: Store the character's pseudo-container IDs during login so we don't
     // have to fetch them each save?
     let inventory_container_id =
-        get_pseudo_container_id(&connection, char_id, INVENTORY_PSEUDO_CONTAINER_DEF_ID).expect(
-            format!(
-                "Inventory container for character ID {} does not exist",
-                char_id
-            )
-            .as_str(),
-        );
+        get_pseudo_container_id(&connection, char_id, INVENTORY_PSEUDO_CONTAINER_DEF_ID)?;
 
     let loadout_container_id =
-        get_pseudo_container_id(&connection, char_id, LOADOUT_PSEUDO_CONTAINER_DEF_ID).expect(
-            format!(
-                "Loadout container for character ID {} does not exist",
-                char_id
-            )
-            .as_str(),
-        );
+        get_pseudo_container_id(&connection, char_id, LOADOUT_PSEUDO_CONTAINER_DEF_ID)?;
 
     let inventory_items = item
         .filter(parent_container_item_id.eq(inventory_container_id))
-        .load::<Item>(&connection)
-        .expect("failed to load inventory data"); // TODO: Replace expect with ?
+        .load::<Item>(&connection)?;
 
     let loadout_items = item
         .filter(parent_container_item_id.eq(loadout_container_id))
-        .load::<Item>(&connection)
-        .expect("failed to load loadout data"); // TODO: Replace expect with ?
+        .load::<Item>(&connection)?;
 
-    let result = character
+    let (character_data, stats_data) = character
         .filter(
             character_id
                 .eq(char_id)
                 .and(player_uuid.eq(requesting_player_uuid)),
         )
         .inner_join(stats)
-        .first::<(Character, Stats)>(&connection); // TODO: Replace expect with ?
+        .first::<(Character, Stats)>(&connection)?;
 
-    match result {
-        Ok((character_data, stats_data)) => {
-            let body = comp::Body::Humanoid(comp::body::humanoid::Body::random()); // TODO: actual body
-            Ok((
-                body,
-                convert_stats_from_database(&stats_data, character_data.alias),
-                convert_inventory_from_database_items(&inventory_items),
-                convert_loadout_from_database_items(&loadout_items),
-            ))
-        },
-        Err(e) => {
-            error!(
-                ?e,
-                ?character_id,
-                "Failed to load character data for character"
-            );
-            Err(Error::CharacterDataError)
-        },
-    }
+    let body = comp::Body::Humanoid(comp::body::humanoid::Body::random()); // TODO: actual body
+    Ok((
+        body,
+        convert_stats_from_database(&stats_data, character_data.alias),
+        convert_inventory_from_database_items(&inventory_items),
+        convert_loadout_from_database_items(&loadout_items),
+    ))
 }
 
 /// Loads a list of characters belonging to the player. This data is a small
@@ -354,58 +328,13 @@ fn load_character_list(player_uuidx: &str, db_dir: &str) -> CharacterListResult 
             Err(Error::CharacterDataError)
         },
     }
-
-    // let result = schema::character::dsl::character
-    //     .filter(schema::character::player_uuid.eq(player_uuid))
-    //     .order(schema::character::id.desc())
-    //     .inner_join(schema::body::table)
-    //     .inner_join(schema::stats::table)
-    //     .inner_join(schema::loadout::table)
-    //     .load::<(Character, Body, Stats,
-    // Loadout)>(&establish_connection(db_dir)?);
-    //
-    // match result {
-    //     Ok(data) => Ok(data
-    //         .iter()
-    //         .map(|(character_data, body_data, stats_data, loadout)| {
-    //             let character = CharacterData::from(character_data);
-    //             let body = comp::Body::from(body_data);
-    //             let level = stats_data.level as usize;
-    //             let loadout = comp::Loadout::from(loadout);
-    //
-    //             CharacterItem {
-    //                 character,
-    //                 body,
-    //                 level,
-    //                 loadout,
-    //             }
-    //         })
-    //         .collect()),
-    //     Err(e) => {
-    //         error!(?e, ?player_uuid, "Failed to load character list for
-    // player");         Err(Error::CharacterDataError)
-    //     },
-    // }
-
-    // let mut result = Vec::<CharacterItem>::new();
-    // result.push(CharacterItem {
-    //     body: comp::Body::Humanoid(comp::body::humanoid::Body::random()),
-    //     character: common::character::Character {
-    //         id: Some(2),
-    //         alias: "Test Alias".to_owned(),
-    //         tool: None
-    //     },
-    //     level: 999,
-    //     loadout: comp::Loadout::default()
-    // });
-    // Ok(result)
 }
 
 /// Create a new character with provided comp::Character and comp::Body data.
 ///
 /// Note that sqlite does not support returning the inserted data after a
 /// successful insert. To workaround, we wrap this in a transaction which
-/// inserts, queries for the newly created chaacter id, then uses the character
+/// inserts, queries for the newly created character id, then uses the character
 /// id for subsequent insertions
 fn create_character(
     uuid: &str,
@@ -522,8 +451,7 @@ fn delete_character(uuid: &str, character_id: i32, db_dir: &str) -> CharacterLis
     use schema::character::dsl::*;
 
     let connection = establish_connection(db_dir)?;
-
-    if let Err(e) = connection.transaction::<_, diesel::result::Error, _>(|| {
+    connection.transaction::<_, diesel::result::Error, _>(|| {
         diesel::delete(
             character
                 .filter(id.eq(character_id))
@@ -532,9 +460,7 @@ fn delete_character(uuid: &str, character_id: i32, db_dir: &str) -> CharacterLis
         .execute(&connection)?;
 
         Ok(())
-    }) {
-        error!(?e, "Error during stats batch update transaction");
-    }
+    })?;
 
     load_character_list(uuid, db_dir)
 }
@@ -629,12 +555,12 @@ fn batch_update(updates: impl Iterator<Item = (i32, CharacterUpdateData)>, db_di
         connection.transaction::<_, diesel::result::Error, _>(|| {
             updates.for_each(|(character_id, (stats, inventory, loadout))| {
                 // Create a nested transaction (savepoint) per character update so that a single
-                // error for a particular character doesn't prevent all other characters being saved
-                match connection.transaction::<_, Error, _>(|| {
+                // error for a particular character doesn't prevent all other characters being
+                // saved
+                if let Err(e) = connection.transaction::<_, Error, _>(|| {
                     update(character_id, stats, inventory, loadout, &connection)
                 }) {
-                    Err(e) => error!(?character_id, ?e, "Persistence update failed for character"),
-                    _ => { }
+                    error!(?character_id, ?e, "Persistence update failed for character");
                 }
             });
 
@@ -648,9 +574,7 @@ fn batch_update(updates: impl Iterator<Item = (i32, CharacterUpdateData)>, db_di
 fn get_new_entity_id(conn: &SqliteConnection) -> Result<i32, diesel::result::Error> {
     use super::schema::entity::dsl::*;
 
-    diesel::insert_into(entity)
-        .default_values()
-        .execute(conn)?;
+    diesel::insert_into(entity).default_values().execute(conn)?;
 
     let new_entity_id = entity
         .order(entity_id.desc())
@@ -690,8 +614,6 @@ fn get_pseudo_container_id(
 }
 
 /// NOTE: Only call while a transaction is held!
-// TODO: Make this return result and use a sub-transaction instead of expects
-// and error! everywhere
 fn update(
     char_id: i32,
     char_stats: comp::Stats,
@@ -750,8 +672,7 @@ fn update(
 
     // TODO: Single delete statement using all item IDs in existing_items
     for existing_item in existing_items {
-        diesel::delete(item.filter(item_id.eq(existing_item.item_id)))
-            .execute(connection)?;
+        diesel::delete(item.filter(item_id.eq(existing_item.item_id))).execute(connection)?;
     }
 
     let db_stats = convert_stats_to_database(char_id, &char_stats);

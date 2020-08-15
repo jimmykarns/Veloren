@@ -91,7 +91,7 @@ pub fn convert_stats_to_database(character_id: i32, stats: &common::comp::Stats)
     }
 }
 
-pub fn convert_inventory_from_database_items(database_items: &Vec<Item>) -> Inventory {
+pub fn convert_inventory_from_database_items(database_items: &[Item]) -> Inventory {
     let mut inventory = Inventory::new_empty();
     let item_iter = database_items.iter().map(|db_item| {
         let mut item =
@@ -105,26 +105,25 @@ pub fn convert_inventory_from_database_items(database_items: &Vec<Item>) -> Inve
         item
     });
 
-    match inventory.push_all(item_iter) {
-        Err(e) => match e {
+    if let Err(e) = inventory.push_all(item_iter) {
+        match e {
             common::comp::inventory::Error::Full(_) => {
                 warn!("Unable to push items to inventory during database load, inventory full");
             },
-        },
-        _ => {},
+        }
     };
     inventory
 }
 
-pub fn convert_loadout_from_database_items(database_items: &Vec<Item>) -> Loadout {
+pub fn convert_loadout_from_database_items(database_items: &[Item]) -> Loadout {
     let mut loadout = loadout_builder::LoadoutBuilder::new();
     for db_item in database_items.iter() {
         let mut item =
             common::comp::Item::new_from_asset_expect(db_item.item_definition_id.as_str());
         item.item_id = Arc::new(AtomicU64::new(db_item.item_id as u64));
         let item_opt = Some(item);
-        match &db_item.position {
-            Some(position) => match position.as_str() {
+        if let Some(position) = &db_item.position {
+            match position.as_str() {
                 "active_item" => {
                     loadout = loadout.active_item(Some(slot::item_config(item_opt.unwrap())))
                 },
@@ -144,8 +143,7 @@ pub fn convert_loadout_from_database_items(database_items: &Vec<Item>) -> Loadou
                 "head" => loadout = loadout.head(item_opt),
                 "tabard" => loadout = loadout.tabard(item_opt),
                 _ => warn!(?db_item.item_id, ?db_item.position, "Unknown loadout position on item"),
-            },
-            _ => {},
+            }
         }
     }
 
@@ -161,7 +159,7 @@ pub fn convert_character_from_database(character: &Character) -> common::charact
 
 pub fn convert_stats_from_database(stats: &Stats, alias: String) -> common::comp::Stats {
     let mut new_stats = common::comp::Stats::default();
-    new_stats.name = alias.to_string();
+    new_stats.name = alias;
     new_stats.level.set_level(stats.level as u32);
     new_stats.exp.set_current(stats.exp as u32);
     new_stats.update_max_hp(new_stats.body_type);

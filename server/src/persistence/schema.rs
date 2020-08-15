@@ -28,27 +28,12 @@ table! {
 }
 
 table! {
-    inventory (character_id) {
-        character_id -> Integer,
-        items -> Text,
-    }
-}
-
-table! {
     item (item_id) {
         item_id -> Integer,
         parent_container_item_id -> Integer,
         item_definition_id -> Text,
         stack_size -> Nullable<Integer>,
         position -> Nullable<Text>,
-    }
-}
-
-table! {
-    loadout (id) {
-        id -> Integer,
-        character_id -> Integer,
-        items -> Text,
     }
 }
 
@@ -65,8 +50,6 @@ table! {
 }
 
 joinable!(body -> character (character_id));
-joinable!(inventory -> character (character_id));
-joinable!(loadout -> character (character_id));
 joinable!(stats -> character (character_id));
 
-allow_tables_to_appear_in_same_query!(body, character, entity, inventory, item, loadout, stats,);
+allow_tables_to_appear_in_same_query!(body, character, entity, item, stats,);
