@@ -2,7 +2,7 @@ use super::SysTimer;
 use crate::{chunk_generator::ChunkGenerator, client::Client, Tick};
 use common::{
     assets,
-    comp::{self, item, Alignment, CharacterAbility, ItemConfig, Player, Pos},
+    comp::{self, bird_medium, item, Alignment, CharacterAbility, ItemConfig, Player, Pos},
     event::{EventBus, ServerEvent},
     generation::get_npc_name,
     msg::ServerMsg,
@@ -309,7 +309,15 @@ impl<'a> System<'a> for Sys {
                     .health
                     .set_to(stats.health.maximum(), comp::HealthSource::Revive);
 
-                let can_speak = alignment == comp::Alignment::Npc;
+                let can_speak = match body {
+                    comp::Body::Humanoid(_) => alignment == comp::Alignment::Npc,
+                    comp::Body::BirdMedium(bird_medium) => match bird_medium.species {
+                        // Parrots like to have a word in this, too...
+                        bird_medium::Species::Parrot => alignment == comp::Alignment::Npc,
+                        _ => false,
+                    },
+                    _ => false,
+                };
 
                 // TODO: This code sets an appropriate base_damage for the enemy. This doesn't
                 // work because the damage is now saved in an ability
