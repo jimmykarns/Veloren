@@ -20,47 +20,45 @@ use crate::{
         error::Error::DatabaseError,
     },
 };
-use common::character::{CharacterItem, MAX_CHARACTERS_PER_PLAYER};
+use common::character::{CharacterId, CharacterItem, MAX_CHARACTERS_PER_PLAYER};
 use crossbeam::{channel, channel::TryIter};
 use diesel::prelude::*;
 use std::sync::atomic::Ordering;
 use tracing::{error, info, warn};
 
-type CharacterLoaderRequest = (specs::Entity, CharacterLoaderRequestKind);
-
-const CHARACTER_PSEUDO_CONTAINER_DEF_ID: &str = "veloren.core.pseudo_containers.character";
-const INVENTORY_PSEUDO_CONTAINER_DEF_ID: &str = "veloren.core.pseudo_containers.inventory";
-const LOADOUT_PSEUDO_CONTAINER_DEF_ID: &str = "veloren.core.pseudo_containers.loadout";
-const WORLD_PSEUDO_CONTAINER_ID: i32 = 1;
-
-/// Available database operations when modifying a player's character list
-enum CharacterLoaderRequestKind {
-    CreateCharacter {
-        player_uuid: String,
-        character_alias: String,
-        stats: comp::Stats,
-        loadout: comp::Loadout,
-        inventory: comp::Inventory,
-        body: comp::Body,
-    },
-    DeleteCharacter {
-        player_uuid: String,
-        character_id: i32,
-    },
-    LoadCharacterList {
-        player_uuid: String,
-    },
-    LoadCharacterData {
-        player_uuid: String,
-        character_id: i32,
-    },
-}
+pub(crate) type EntityId = i64;
 
 /// A tuple of the components that are persisted to the DB for each character
 pub type PersistedComponents = (comp::Body, comp::Stats, comp::Inventory, comp::Loadout);
 
 type CharacterListResult = Result<Vec<CharacterItem>, Error>;
 type CharacterDataResult = Result<PersistedComponents, Error>;
+type CharacterLoaderRequest = (specs::Entity, CharacterLoaderRequestKind);
+
+const CHARACTER_PSEUDO_CONTAINER_DEF_ID: &str = "veloren.core.pseudo_containers.character";
+const INVENTORY_PSEUDO_CONTAINER_DEF_ID: &str = "veloren.core.pseudo_containers.inventory";
+const LOADOUT_PSEUDO_CONTAINER_DEF_ID: &str = "veloren.core.pseudo_containers.loadout";
+const WORLD_PSEUDO_CONTAINER_ID: EntityId = 1;
+
+/// Available database operations when modifying a player's character list
+enum CharacterLoaderRequestKind {
+    CreateCharacter {
+        player_uuid: String,
+        character_alias: String,
+        persisted_components: PersistedComponents
+    },
+    DeleteCharacter {
+        player_uuid: String,
+        character_id: CharacterId,
+    },
+    LoadCharacterList {
+        player_uuid: String,
+    },
+    LoadCharacterData {
+        player_uuid: String,
+        character_id: CharacterId,
+    },
+}
 
 /// Wrapper for results for character actions. Can be a list of
 /// characters, or component data belonging to an individual character
@@ -110,17 +108,11 @@ impl CharacterLoader {
                         CharacterLoaderRequestKind::CreateCharacter {
                             player_uuid,
                             character_alias,
-                            stats,
-                            loadout,
-                            inventory,
-                            body,
+                            persisted_components
                         } => CharacterLoaderResponseType::CharacterList(create_character(
                             &player_uuid,
                             &character_alias,
-                            &stats,
-                            loadout,
-                            inventory,
-                            &body,
+                            persisted_components,
                             &db_dir,
                         )),
                         CharacterLoaderRequestKind::DeleteCharacter {
@@ -174,10 +166,7 @@ impl CharacterLoader {
             CharacterLoaderRequestKind::CreateCharacter {
                 player_uuid,
                 character_alias,
-                stats,
-                loadout,
-                inventory,
-                body,
+                persisted_components: (body, stats, inventory, loadout),
             },
         )) {
             error!(?e, "Could not send character creation request");
@@ -185,7 +174,7 @@ impl CharacterLoader {
     }
 
     /// Delete a character by `id` and `player_uuid`
-    pub fn delete_character(&self, entity: specs::Entity, player_uuid: String, character_id: i32) {
+    pub fn delete_character(&self, entity: specs::Entity, player_uuid: String, character_id: CharacterId) {
         if let Err(e) = self.update_tx.as_ref().unwrap().send((
             entity,
             CharacterLoaderRequestKind::DeleteCharacter {
@@ -217,7 +206,7 @@ impl CharacterLoader {
         &self,
         entity: specs::Entity,
         player_uuid: String,
-        character_id: i32,
+        character_id: CharacterId,
     ) {
         if let Err(e) = self.update_tx.as_ref().unwrap().send((
             entity,
@@ -251,7 +240,7 @@ impl Drop for CharacterLoader {
 /// data for the purpose of inserting their persisted data for the entity.
 fn load_character_data(
     requesting_player_uuid: String,
-    char_id: i32,
+    char_id: CharacterId,
     db_dir: &str,
 ) -> CharacterDataResult {
     use schema::{character::dsl::*, item::dsl::*, stats::dsl::*};
@@ -339,10 +328,7 @@ fn load_character_list(player_uuidx: &str, db_dir: &str) -> CharacterListResult 
 fn create_character(
     uuid: &str,
     character_alias: &str,
-    stats: &comp::Stats,
-    loadout: comp::Loadout,
-    inventory: comp::Inventory,
-    body: &comp::Body,
+    persisted_components: PersistedComponents,
     db_dir: &str,
 ) -> CharacterListResult {
     use schema::item::dsl::*;
@@ -354,6 +340,7 @@ fn create_character(
     connection.transaction::<_, diesel::result::Error, _>(|| {
         use schema::{body, character, stats};
 
+        let (body, stats, inventory, loadout) = persisted_components;
         match body {
             comp::Body::Humanoid(body_data) => {
                 let character_id = get_new_entity_id(&connection)?;
@@ -399,7 +386,7 @@ fn create_character(
                     .execute(&connection)?;
 
                 // Insert stats record
-                let db_stats = convert_stats_to_database(character_id, stats);
+                let db_stats = convert_stats_to_database(character_id, &stats);
                 diesel::insert_into(stats::table)
                     .values(&db_stats)
                     .execute(&connection)?;
@@ -422,7 +409,7 @@ fn create_character(
 
                 // Insert body record
                 let new_body = Body {
-                    character_id: character_id as i32,
+                    character_id,
                     species: body_data.species as i16,
                     body_type: body_data.body_type as i16,
                     hair_style: body_data.hair_style as i16,
@@ -447,7 +434,7 @@ fn create_character(
 }
 
 /// Delete a character. Returns the updated character list.
-fn delete_character(uuid: &str, character_id: i32, db_dir: &str) -> CharacterListResult {
+fn delete_character(uuid: &str, character_id: CharacterId, db_dir: &str) -> CharacterListResult {
     use schema::character::dsl::*;
 
     let connection = establish_connection(db_dir)?;
@@ -496,13 +483,13 @@ type CharacterUpdateData = (comp::Stats, comp::Inventory, comp::Loadout);
 /// This is used to make updates to a character and their persisted components,
 /// such as inventory, loadout, etc...
 pub struct CharacterUpdater {
-    update_tx: Option<channel::Sender<Vec<(i32, CharacterUpdateData)>>>,
+    update_tx: Option<channel::Sender<Vec<(CharacterId, CharacterUpdateData)>>>,
     handle: Option<std::thread::JoinHandle<()>>,
 }
 
 impl CharacterUpdater {
     pub fn new(db_dir: String) -> Self {
-        let (update_tx, update_rx) = channel::unbounded::<Vec<(i32, CharacterUpdateData)>>();
+        let (update_tx, update_rx) = channel::unbounded::<Vec<(CharacterId, CharacterUpdateData)>>();
         let handle = std::thread::spawn(move || {
             while let Ok(updates) = update_rx.recv() {
                 info!("Persistence batch update starting");
@@ -520,7 +507,7 @@ impl CharacterUpdater {
     /// Updates a collection of characters based on their id and components
     pub fn batch_update<'a>(
         &self,
-        updates: impl Iterator<Item = (i32, &'a comp::Stats, &'a comp::Inventory, &'a comp::Loadout)>,
+        updates: impl Iterator<Item = (CharacterId, &'a comp::Stats, &'a comp::Inventory, &'a comp::Loadout)>,
     ) {
         let updates = updates
             .map(|(character_id, stats, inventory, loadout)| {
@@ -529,7 +516,7 @@ impl CharacterUpdater {
                     (stats.clone(), inventory.clone(), loadout.clone()),
                 )
             })
-            .collect::<Vec<(i32, (comp::Stats, comp::Inventory, comp::Loadout))>>();
+            .collect::<Vec<(CharacterId, (comp::Stats, comp::Inventory, comp::Loadout))>>();
 
         if let Err(e) = self.update_tx.as_ref().unwrap().send(updates) {
             error!(?e, "Could not send stats updates");
@@ -539,7 +526,7 @@ impl CharacterUpdater {
     /// Updates a single character based on their id and components
     pub fn update(
         &self,
-        character_id: i32,
+        character_id: CharacterId,
         stats: &comp::Stats,
         inventory: &comp::Inventory,
         loadout: &comp::Loadout,
@@ -548,7 +535,7 @@ impl CharacterUpdater {
     }
 }
 
-fn batch_update(updates: impl Iterator<Item = (i32, CharacterUpdateData)>, db_dir: &str) {
+fn batch_update(updates: impl Iterator<Item = (CharacterId, CharacterUpdateData)>, db_dir: &str) {
     let connection = establish_connection(db_dir);
 
     if let Err(e) = connection.and_then(|connection| {
@@ -571,7 +558,7 @@ fn batch_update(updates: impl Iterator<Item = (i32, CharacterUpdateData)>, db_di
     }
 }
 
-fn get_new_entity_id(conn: &SqliteConnection) -> Result<i32, diesel::result::Error> {
+fn get_new_entity_id(conn: &SqliteConnection) -> Result<EntityId, diesel::result::Error> {
     use super::schema::entity::dsl::*;
 
     diesel::insert_into(entity).default_values().execute(conn)?;
@@ -579,7 +566,7 @@ fn get_new_entity_id(conn: &SqliteConnection) -> Result<i32, diesel::result::Err
     let new_entity_id = entity
         .order(entity_id.desc())
         .select(entity_id)
-        .first::<i32>(conn)?;
+        .first::<EntityId>(conn)?;
 
     info!("Created new persistence entity_id: {}", new_entity_id);
     Ok(new_entity_id)
@@ -587,9 +574,9 @@ fn get_new_entity_id(conn: &SqliteConnection) -> Result<i32, diesel::result::Err
 
 fn get_pseudo_container_id(
     connection: &SqliteConnection,
-    character_id: i32,
+    character_id: CharacterId,
     pseudo_container_id: &str,
-) -> Result<i32, Error> {
+) -> Result<EntityId, Error> {
     use super::schema::item::dsl::*;
     match item
         .select(item_id)
@@ -598,7 +585,7 @@ fn get_pseudo_container_id(
                 .eq(character_id)
                 .and(item_definition_id.eq(pseudo_container_id)),
         )
-        .first::<i32>(connection)
+        .first::<EntityId>(connection)
     {
         Ok(id) => Ok(id),
         Err(e) => {
@@ -615,7 +602,7 @@ fn get_pseudo_container_id(
 
 /// NOTE: Only call while a transaction is held!
 fn update(
-    char_id: i32,
+    char_id: CharacterId,
     char_stats: comp::Stats,
     inventory: comp::Inventory,
     loadout: comp::Loadout,

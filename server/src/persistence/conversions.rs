@@ -1,6 +1,7 @@
 use crate::persistence::models::{Character, Item, NewItem, Stats};
+use crate::persistence::character::EntityId;
 
-use common::{comp::*, loadout_builder};
+use common::{character::CharacterId, comp::*, loadout_builder};
 use std::sync::{
     atomic::{AtomicU64, Ordering},
     Arc,
@@ -14,7 +15,7 @@ pub struct ItemModelPair {
 
 pub fn convert_inventory_to_database_items(
     inventory: Inventory,
-    inventory_container_id: i32,
+    inventory_container_id: EntityId,
 ) -> Vec<ItemModelPair> {
     inventory
         .slots
@@ -27,9 +28,9 @@ pub fn convert_inventory_to_database_items(
                     position: None, // TODO
                     parent_container_item_id: inventory_container_id,
                     item_id: match item.item_id.load(Ordering::Relaxed) {
-                        x if x > 0 => Some(x as i32),
+                        x if x > 0 => Some(x as EntityId),
                         _ => None,
-                    }, // TODO: Remove this downcast, change database type to BigInteger
+                    },
                     stack_size: item.kind.stack_size().map(|x| x as i32),
                 },
                 comp: item,
@@ -40,7 +41,7 @@ pub fn convert_inventory_to_database_items(
 
 pub fn convert_loadout_to_database_items(
     loadout: Loadout,
-    loadout_container_id: i32,
+    loadout_container_id: EntityId,
 ) -> Vec<ItemModelPair> {
     vec![
         loadout.active_item.map(|x| ("active_item", x.item)),
@@ -68,9 +69,9 @@ pub fn convert_loadout_to_database_items(
                 position: Some((*slot).to_owned()),
                 parent_container_item_id: loadout_container_id,
                 item_id: match item.item_id.load(Ordering::Relaxed) {
-                    x if x > 0 => Some(x as i32),
+                    x if x > 0 => Some(x as EntityId),
                     _ => None,
-                }, // TODO: Remove this downcast, change database type to BigInteger
+                },
                 stack_size: None, // Armor/weapons cannot have stack sizes
             },
             comp: item.clone(), // TODO don't clone?
@@ -79,9 +80,9 @@ pub fn convert_loadout_to_database_items(
     .collect()
 }
 
-pub fn convert_stats_to_database(character_id: i32, stats: &common::comp::Stats) -> Stats {
+pub fn convert_stats_to_database(character_id: CharacterId, stats: &common::comp::Stats) -> Stats {
     Stats {
-        character_id: character_id as i32,
+        character_id,
         level: stats.level.level() as i32,
         exp: stats.exp.current() as i32,
         endurance: stats.endurance as i32,

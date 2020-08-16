@@ -15,7 +15,7 @@ pub use specs::{
 
 use byteorder::{ByteOrder, LittleEndian};
 use common::{
-    character::CharacterItem,
+    character::{CharacterId, CharacterItem},
     comp::{
         self, group, ControlAction, ControlEvent, Controller, ControllerInputs, GroupManip,
         InventoryManip, InventoryUpdateEvent,
@@ -77,7 +77,7 @@ pub struct Client {
     pub world_map: (Arc<DynamicImage>, Vec2<u32>),
     pub player_list: HashMap<Uid, PlayerInfo>,
     pub character_list: CharacterList,
-    pub active_character_id: Option<i32>,
+    pub active_character_id: Option<CharacterId>,
     recipe_book: RecipeBook,
     available_recipes: HashSet<String>,
 
@@ -312,7 +312,7 @@ impl Client {
     }
 
     /// Request a state transition to `ClientState::Character`.
-    pub fn request_character(&mut self, character_id: i32) {
+    pub fn request_character(&mut self, character_id: CharacterId) {
         self.singleton_stream
             .send(ClientMsg::Character(character_id))
             .unwrap();
@@ -338,7 +338,7 @@ impl Client {
     }
 
     /// Character deletion
-    pub fn delete_character(&mut self, character_id: i32) {
+    pub fn delete_character(&mut self, character_id: CharacterId) {
         self.character_list.loading = true;
         self.singleton_stream
             .send(ClientMsg::DeleteCharacter(character_id))

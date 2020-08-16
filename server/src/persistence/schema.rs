@@ -1,6 +1,6 @@
 table! {
     body (character_id) {
-        character_id -> Integer,
+        character_id -> BigInt,
         species -> SmallInt,
         body_type -> SmallInt,
         hair_style -> SmallInt,
@@ -15,7 +15,7 @@ table! {
 
 table! {
     character (id) {
-        id -> Integer,
+        id -> BigInt,
         player_uuid -> Text,
         alias -> Text,
     }
@@ -23,14 +23,14 @@ table! {
 
 table! {
     entity (entity_id) {
-        entity_id -> Integer,
+        entity_id -> BigInt,
     }
 }
 
 table! {
     item (item_id) {
-        item_id -> Integer,
-        parent_container_item_id -> Integer,
+        item_id -> BigInt,
+        parent_container_item_id -> BigInt,
         item_definition_id -> Text,
         stack_size -> Nullable<Integer>,
         position -> Nullable<Text>,
@@ -39,7 +39,7 @@ table! {
 
 table! {
     stats (character_id) {
-        character_id -> Integer,
+        character_id -> BigInt,
         level -> Integer,
         exp -> Integer,
         endurance -> Integer,

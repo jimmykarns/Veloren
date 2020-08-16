@@ -1,4 +1,5 @@
 use crate::hud;
+use common::character::CharacterId;
 use directories_next::ProjectDirs;
 use hashbrown::HashMap;
 use serde_derive::{Deserialize, Serialize};
@@ -26,7 +27,7 @@ impl Default for CharacterProfile {
 #[serde(default)]
 pub struct ServerProfile {
     /// A map of character's by id to their CharacterProfile.
-    pub characters: HashMap<i32, CharacterProfile>,
+    pub characters: HashMap<CharacterId, CharacterProfile>,
 }
 
 impl Default for ServerProfile {
@@ -40,7 +41,7 @@ impl Default for ServerProfile {
 /// `Profile` contains everything that can be configured in the profile.ron
 ///
 /// Initially it is just for persisting things that don't belong in
-/// setttings.ron - like the state of hotbar and any other character level
+/// settings.ron - like the state of hotbar and any other character level
 /// configuration.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
@@ -105,7 +106,7 @@ impl Profile {
     pub fn get_hotbar_slots(
         &mut self,
         server: &str,
-        character_id: i32,
+        character_id: CharacterId,
     ) -> [Option<hud::HotbarSlotContents>; 10] {
         self.servers
             .entry(server.to_string())
@@ -130,7 +131,7 @@ impl Profile {
     pub fn set_hotbar_slots(
         &mut self,
         server: &str,
-        character_id: i32,
+        character_id: CharacterId,
         slots: [Option<hud::HotbarSlotContents>; 10],
     ) {
         self.servers

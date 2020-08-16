@@ -2,6 +2,7 @@ use authc::Uuid;
 use serde::{Deserialize, Serialize};
 use specs::{Component, FlaggedStorage, NullStorage};
 use specs_idvs::IdvStorage;
+use crate::character::CharacterId;
 
 const MAX_ALIAS_LEN: usize = 32;
 pub const MAX_MOUNT_RANGE_SQR: i32 = 20000;
@@ -9,7 +10,7 @@ pub const MAX_MOUNT_RANGE_SQR: i32 = 20000;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Player {
     pub alias: String,
-    pub character_id: Option<i32>,
+    pub character_id: Option<CharacterId>,
     pub view_distance: Option<u32>,
     uuid: Uuid,
 }
@@ -17,7 +18,7 @@ pub struct Player {
 impl Player {
     pub fn new(
         alias: String,
-        character_id: Option<i32>,
+        character_id: Option<CharacterId>,
         view_distance: Option<u32>,
         uuid: Uuid,
     ) -> Self {

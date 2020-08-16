@@ -5,6 +5,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use vek::*;
+use crate::character::CharacterId;
 
 /// Messages sent from the client to the server
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,8 +20,8 @@ pub enum ClientMsg {
         tool: Option<String>,
         body: comp::Body,
     },
-    DeleteCharacter(i32),
-    Character(i32),
+    DeleteCharacter(CharacterId),
+    Character(CharacterId),
     /// Request `ClientState::Registered` from an ingame state
     ExitIngame,
     /// Request `ClientState::Spectator` from a registered or ingame state

@@ -78,12 +78,12 @@ impl Asset for RecipeBook {
                     .map::<Result<(String, Recipe), assets::Error>, _>(
                         |(name, ((output, amount), inputs))| {
                             Ok((name, Recipe {
-                                output: (Item::new_from_asset(&output)?, amount), // (&*assets::load::<Item>(&output)?).clone()
+                                output: (Item::new_from_asset(&output)?, amount),
                                 inputs: inputs
                                     .into_iter()
                                     .map::<Result<(Item, usize), assets::Error>, _>(
                                         |(name, amount)| {
-                                            Ok((Item::new_from_asset(&name)?, amount)) //(&*assets::load::<Item>(&name)?).clone()
+                                            Ok((Item::new_from_asset(&name)?, amount))
                                         },
                                     )
                                     .collect::<Result<_, _>>()?,

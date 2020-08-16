@@ -12,7 +12,7 @@ use crate::{
 use client::Client;
 use common::{
     assets::load_expect,
-    character::{Character, CharacterItem, MAX_CHARACTERS_PER_PLAYER},
+    character::{Character, CharacterId, CharacterItem, MAX_CHARACTERS_PER_PLAYER},
     comp::{self, humanoid},
     LoadoutBuilder,
 };
@@ -255,7 +255,7 @@ pub enum Event {
         tool: Option<String>,
         body: comp::Body,
     },
-    DeleteCharacter(i32),
+    DeleteCharacter(CharacterId),
 }
 
 const TEXT_COLOR: Color = Color::Rgba(1.0, 1.0, 1.0, 1.0);
@@ -358,7 +358,8 @@ impl CharSelectionUi {
                     level: 1,
                     loadout: LoadoutBuilder::new()
                         .defaults()
-                        .active_item(LoadoutBuilder::default_item_config_from_str((*tool).unwrap())) // TODO: Remove tool/unwrap
+                        .active_item(LoadoutBuilder::default_item_config_from_str((*tool)
+                            .expect("Attempted to create character with non-existent item_definition_id for tool")))
                         .build(),
                 }])
             },

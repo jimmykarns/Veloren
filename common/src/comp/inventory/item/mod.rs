@@ -138,10 +138,10 @@ impl Item {
 
     /// Creates a new instance of an `Item` from the provided asset identifier
     /// Panics if the asset does not exist.
-    pub fn new_from_asset_expect(asset: &str) -> Self {
-        let mut item = assets::load_expect_cloned::<Item>(asset);
-        item.item_definition_id = Some(asset.to_owned());
-        item.item_id = Arc::new(AtomicU64::new(0));
+    pub fn new_from_asset_expect(asset_specifier: &str) -> Self {
+        let mut item = assets::load_expect_cloned::<Item>(asset_specifier);
+        item.item_definition_id = Some(asset_specifier.to_owned());
+        item.reset_item_id();
         item
     }
 
@@ -152,9 +152,9 @@ impl Item {
 
         Ok(items
             .into_iter()
-            .map(|(mut item, identifier)| {
-                item.item_definition_id = Some(identifier.to_string());
-                item.item_id = Arc::new(AtomicU64::new(0));
+            .map(|(mut item, asset_specifier)| {
+                item.item_definition_id = Some(asset_specifier);
+                item.reset_item_id();
                 item
             })
             .collect::<Vec<_>>())
@@ -169,7 +169,7 @@ impl Item {
 
         let mut item = assets::load_cloned::<Item>(&asset_specifier)?;
         item.item_definition_id = Some(asset_specifier);
-        item.item_id = Arc::new(AtomicU64::new(0));
+        item.reset_item_id();
         Ok(item)
     }
 
@@ -201,8 +201,6 @@ impl Item {
             },
         }
     }
-
-    //pub fn item_id(&self) -> Option<u64> { self.item_id.get() }
 
     pub fn item_definition_id(&self) -> &str {
         match &self.item_definition_id {

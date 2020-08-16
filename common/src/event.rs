@@ -4,6 +4,7 @@ use parking_lot::Mutex;
 use specs::Entity as EcsEntity;
 use std::{collections::VecDeque, ops::DerefMut};
 use vek::*;
+use crate::character::CharacterId;
 
 pub enum LocalEvent {
     /// Applies upward force to entity's `Vel`
@@ -59,7 +60,7 @@ pub enum ServerEvent {
     /// Inserts default components for a character when loading into the game
     InitCharacterData {
         entity: EcsEntity,
-        character_id: i32,
+        character_id: CharacterId,
     },
     UpdateCharacterData {
         entity: EcsEntity,

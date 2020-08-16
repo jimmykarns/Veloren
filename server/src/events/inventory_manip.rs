@@ -14,7 +14,6 @@ use common::{
 use comp::LightEmitter;
 use rand::Rng;
 use specs::{join::Join, world::WorldExt, Builder, Entity as EcsEntity, WriteStorage};
-use std::sync::{atomic::AtomicU64, Arc};
 use tracing::{debug, error};
 use vek::{Rgb, Vec3};
 
@@ -341,7 +340,7 @@ pub fn handle_inventory(server: &mut Server, entity: EcsEntity, manip: comp::Inv
             if let (Some(mut item), Some(pos)) =
                 (item, state.ecs().read_storage::<comp::Pos>().get(entity))
             {
-                item.item_id = Arc::new(AtomicU64::new(0));
+                item.reset_item_id();
                 dropped_items.push((
                     *pos,
                     state

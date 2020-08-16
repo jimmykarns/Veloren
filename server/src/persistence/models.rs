@@ -9,13 +9,13 @@ use tracing::warn;
 #[derive(Debug, Insertable, PartialEq)]
 #[table_name = "entity"]
 pub struct Entity {
-    pub entity_id: i32,
+    pub entity_id: i64,
 }
 
 #[derive(Insertable)]
 #[table_name = "character"]
 pub struct NewCharacter<'a> {
-    pub id: i32,
+    pub id: i64,
     pub player_uuid: &'a str,
     pub alias: &'a str,
 }
@@ -23,7 +23,7 @@ pub struct NewCharacter<'a> {
 #[derive(Identifiable, Queryable, Debug)]
 #[table_name = "character"]
 pub struct Character {
-    pub id: i32,
+    pub id: i64,
     pub player_uuid: String,
     pub alias: String,
 }
@@ -31,8 +31,8 @@ pub struct Character {
 #[derive(Debug, Insertable, PartialEq, Queryable, AsChangeset)]
 #[table_name = "item"]
 pub struct NewItem {
-    pub item_id: Option<i32>,
-    pub parent_container_item_id: i32,
+    pub item_id: Option<i64>,
+    pub parent_container_item_id: i64,
     pub item_definition_id: String,
     pub stack_size: Option<i32>,
     pub position: Option<String>,
@@ -40,8 +40,8 @@ pub struct NewItem {
 
 #[derive(Debug, Queryable)]
 pub struct Item {
-    pub item_id: i32,
-    pub parent_container_item_id: i32,
+    pub item_id: i64,
+    pub parent_container_item_id: i64,
     pub item_definition_id: String,
     pub stack_size: Option<i32>,
     pub position: Option<String>,
@@ -52,7 +52,7 @@ pub struct Item {
 #[primary_key(character_id)]
 #[table_name = "stats"]
 pub struct Stats {
-    pub character_id: i32,
+    pub character_id: i64,
     pub level: i32,
     pub exp: i32,
     pub endurance: i32,
@@ -70,7 +70,7 @@ pub struct Stats {
 #[primary_key(character_id)]
 #[table_name = "body"]
 pub struct Body {
-    pub character_id: i32,
+    pub character_id: i64,
     pub species: i16,
     pub body_type: i16,
     pub hair_style: i16,
