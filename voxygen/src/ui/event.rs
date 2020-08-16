@@ -1,4 +1,5 @@
 use conrod_core::{event::Input, input::Button};
+use conrod_winit::convert_event;
 use vek::*;
 
 #[derive(Clone, Debug)]
