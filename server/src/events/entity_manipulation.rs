@@ -15,6 +15,7 @@ use common::{
     vol::{ReadVol, Vox},
 };
 use comp::item::Reagent;
+use rand::prelude::*;
 use specs::{join::Join, saveload::MarkerAllocator, Entity as EcsEntity, WorldExt};
 use tracing::error;
 use vek::Vec3;
@@ -189,11 +190,49 @@ pub fn handle_destroy(server: &mut Server, entity: EcsEntity, cause: HealthSourc
             .insert(entity, Body::Object(object::Body::Pouch));
 
         let mut item_drops = state.ecs().write_storage::<comp::ItemDrop>();
+        let bodies = state.ecs().read_storage::<common::comp::Body>();
         let item = if let Some(item_drop) = item_drops.get(entity).cloned() {
             item_drops.remove(entity);
             item_drop.0
         } else {
-            let chosen = assets::load_expect::<Lottery<String>>("common.loot_table");
+            let mut rng = rand::thread_rng();
+            let chosen = match bodies.get(entity) {
+                Some(common::comp::Body::Humanoid(_)) => match rng.gen_range(0, 2) {
+                    0 => assets::load_expect::<Lottery<String>>("common.loot_table"),
+                    _ => assets::load_expect::<Lottery<String>>("common.loot_table"),
+                },
+                Some(common::comp::Body::QuadrupedSmall(quadruped_small)) => {
+                    match quadruped_small.species {
+                        _ => match rng.gen_range(0, 2) {
+                            0 => assets::load_expect::<Lottery<String>>("common.loot_table"),
+                            _ => assets::load_expect::<Lottery<String>>("common.loot_table"),
+                        },
+                    }
+                },
+                Some(common::comp::Body::QuadrupedMedium(_)) => {
+                    assets::load_expect::<Lottery<String>>("common.loot_table")
+                },
+                Some(common::comp::Body::BirdMedium(_)) => {
+                    assets::load_expect::<Lottery<String>>("common.loot_table")
+                },
+                Some(common::comp::Body::BipedLarge(_)) => {
+                    assets::load_expect::<Lottery<String>>("common.loot_table")
+                },
+                Some(common::comp::Body::Golem(_)) => {
+                    assets::load_expect::<Lottery<String>>("common.loot_table")
+                },
+                Some(common::comp::Body::Critter(_)) => {
+                    assets::load_expect::<Lottery<String>>("common.loot_table")
+                },
+                Some(common::comp::Body::Dragon(_)) => {
+                    assets::load_expect::<Lottery<String>>("common.loot_table")
+                },
+                Some(common::comp::Body::QuadrupedLow(_)) => {
+                    assets::load_expect::<Lottery<String>>("common.loot_table")
+                },
+                _ => assets::load_expect::<Lottery<String>>("common.loot_table"),
+            };
+
             let chosen = chosen.choose();
 
             assets::load_expect_cloned(chosen)
