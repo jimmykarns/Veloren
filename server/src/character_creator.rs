@@ -28,9 +28,9 @@ pub fn create_character(
         entity,
         player_uuid,
         character_alias,
+        (body,
         stats,
-        loadout,
         inventory,
-        body,
+        loadout)
     );
 }

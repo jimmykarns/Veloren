@@ -156,17 +156,14 @@ impl CharacterLoader {
         entity: specs::Entity,
         player_uuid: String,
         character_alias: String,
-        stats: comp::Stats,
-        loadout: comp::Loadout,
-        inventory: comp::Inventory,
-        body: comp::Body,
+        persisted_components: PersistedComponents,
     ) {
         if let Err(e) = self.update_tx.as_ref().unwrap().send((
             entity,
             CharacterLoaderRequestKind::CreateCharacter {
                 player_uuid,
                 character_alias,
-                persisted_components: (body, stats, inventory, loadout),
+                persisted_components,
             },
         )) {
             error!(?e, "Could not send character creation request");
@@ -292,22 +289,34 @@ fn load_character_data(
 /// In the event that a join fails, for a character (i.e. they lack an entry for
 /// stats, body, etc...) the character is skipped, and no entry will be
 /// returned.
-fn load_character_list(player_uuidx: &str, db_dir: &str) -> CharacterListResult {
-    use schema::{character::dsl::*, stats::dsl::*};
+fn load_character_list(player_uuid_: &str, db_dir: &str) -> CharacterListResult {
+    use schema::{character::dsl::*, item::dsl::*, stats::dsl::*};
+
+    let connection = establish_connection(db_dir)?;
 
     let result = character
-        .filter(player_uuid.eq(player_uuidx))
+        .filter(player_uuid.eq(player_uuid_))
         .inner_join(stats)
         .order(id.desc())
-        .load::<(Character, Stats)>(&establish_connection(db_dir)?);
+        .load::<(Character, Stats)>(&connection);
 
     match result {
         Ok(data) => Ok(data
             .iter()
             .map(|(character_data, char_stats)| {
+                // TODO: Database failures here should skip the character, not crash the server
                 let char = convert_character_from_database(character_data);
                 let char_body = comp::Body::Humanoid(comp::body::humanoid::Body::random());
-                let loadout = comp::Loadout::default();
+
+                let loadout_container_id =
+                    get_pseudo_container_id(&connection, char.id.unwrap(), LOADOUT_PSEUDO_CONTAINER_DEF_ID)
+                        .expect("failed to get loadout container for character");
+                let loadout_items = item
+                    .filter(parent_container_item_id.eq(loadout_container_id))
+                    .load::<Item>(&connection)
+                    .expect("failed to fetch loadout items for character");
+
+                let loadout = convert_loadout_from_database_items(&loadout_items);
 
                 CharacterItem {
                     character: char,
@@ -637,6 +646,8 @@ fn update(
         loadout_container_id,
     ));
 
+    // Fetch all existing items from the database for the character so that we can use it to keep
+    // track of which items still exist and which don't and should be deleted from the database.
     let mut existing_items = item
         .filter(
             parent_container_item_id
@@ -648,7 +659,9 @@ fn update(
     // TODO: Refactor this, batch into multiple inserts/updates etc
     for mut item_pair in item_pairs.into_iter() {
         if let Some(model_item_id) = item_pair.model.item_id {
+            // Remove each item that is saved from the list of items to delete
             existing_items.retain(|x| x.item_id != model_item_id);
+
             diesel::update(item.filter(item_id.eq(model_item_id)))
                 .set(item_pair.model)
                 .execute(connection)?;
@@ -670,8 +683,10 @@ fn update(
         }
     }
 
-    // TODO: Single delete statement using all item IDs in existing_items
+    // Any items left in existing_items after saving the character's inventory and loadout must
+    // no longer exist (consumed, dropped, etc) so should be deleted from the database.
     for existing_item in existing_items {
+        // TODO: Single delete statement using all item IDs in existing_items
         diesel::delete(item.filter(item_id.eq(existing_item.item_id))).execute(connection)?;
     }
 
