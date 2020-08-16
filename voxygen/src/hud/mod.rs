@@ -457,10 +457,20 @@ impl Show {
         }
     }
 
-    fn toggle_settings(&mut self) {
+    fn toggle_settings(&mut self, global_state: &mut GlobalState) {
         match self.open_windows {
-            Windows::Settings => self.settings(false),
-            _ => self.settings(true),
+            Windows::Settings => {
+                #[cfg(feature = "singleplayer")]
+                global_state.unpause();
+
+                self.settings(false);
+            },
+            _ => {
+                #[cfg(feature = "singleplayer")]
+                global_state.pause();
+
+                self.settings(true);
+            },
         };
     }
 
@@ -662,7 +672,7 @@ impl Hud {
     fn update_layout(
         &mut self,
         client: &Client,
-        global_state: &GlobalState,
+        global_state: &mut GlobalState,
         debug_info: DebugInfo,
         dt: Duration,
         info: HudInfo,
@@ -1618,7 +1628,7 @@ impl Hud {
             .set(self.ids.buttons, ui_widgets)
             {
                 Some(buttons::Event::ToggleBag) => self.show.toggle_bag(),
-                Some(buttons::Event::ToggleSettings) => self.show.toggle_settings(),
+                Some(buttons::Event::ToggleSettings) => self.show.toggle_settings(global_state),
                 Some(buttons::Event::ToggleSocial) => self.show.toggle_social(),
                 Some(buttons::Event::ToggleSpell) => self.show.toggle_spell(),
                 Some(buttons::Event::ToggleMap) => self.show.toggle_map(),
@@ -2297,7 +2307,7 @@ impl Hud {
                     true
                 },
                 GameInput::Settings if state => {
-                    self.show.toggle_settings();
+                    self.show.toggle_settings(global_state);
                     true
                 },
                 GameInput::Help if state => {
