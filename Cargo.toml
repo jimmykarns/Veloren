@@ -76,4 +76,8 @@ debug = 1
 
 # cpal conflict fix isn't released yet
 [patch.crates-io]
-winit = { git = "https://github.com/Imberflur/winit.git", branch = "macos-test" }
+# winit = { git = "https://github.com/DoctaRay/winit.git", branch = "alt_tab_fix" }
+# winit = { git = "https://github.com/Imberflur/winit.git", branch = "macos-test" }
+# winit = { git = "https://github.com/antonmarsden/winit.git", branch = "alt_tab_fix" }
+winit = { git = "https://github.com/DoctaRay/winit-veloren.git", branch = "macos-test" }
+
