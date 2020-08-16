@@ -31,6 +31,7 @@ const int FIREWORK_GREEN = 5;
 const int FIREWORK_PURPLE = 6;
 const int FIREWORK_RED = 7;
 const int FIREWORK_YELLOW = 8;
+const int GROUND_SHOCKWAVE = 9;
 
 // meters per second squared (acceleration)
 const float earth_gravity = 9.807;
@@ -39,6 +40,7 @@ struct Attr {
 	vec3 offs;
 	float scale;
 	vec3 col;
+	mat3 rot;
 };
 
 float lifetime = tick.x - inst_time;
@@ -59,6 +61,18 @@ float linear_scale(float factor) {
 	return lifetime * factor;
 }
 
+mat3 rotationMatrix(vec3 axis, float angle)
+{
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+    
+    return mat3(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,
+                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,
+                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c);
+}
+
 void main() {
 	float rand0 = hash(vec4(inst_entropy + 0));
 	float rand1 = hash(vec4(inst_entropy + 1));
@@ -68,6 +82,8 @@ void main() {
 	float rand5 = hash(vec4(inst_entropy + 5));
 	float rand6 = hash(vec4(inst_entropy + 6));
 	float rand7 = hash(vec4(inst_entropy + 7));
+	float rand8 = hash(vec4(inst_entropy + 8));
+	float rand9 = hash(vec4(inst_entropy + 9));
 
 	Attr attr;
 
@@ -78,7 +94,8 @@ void main() {
 				vec3(rand2 * 0.1, rand3 * 0.1, 1.0 + rand4 * 0.1)// + vec3(sin(lifetime), sin(lifetime + 1.5), sin(lifetime * 4) * 0.25)
 			),
 			linear_scale(0.5),
-			vec3(1)
+			vec3(1),
+			rotationMatrix(vec3(1,0,0),0)
 		);
 	} else if (inst_mode == FIRE) {
 		attr = Attr(
@@ -87,7 +104,8 @@ void main() {
 				vec3(rand2 * 0.1, rand3 * 0.1, 2.0 + rand4 * 1.0)
 			),
 			1.0,
-			vec3(2, rand5 + 2, 0)
+			vec3(2, rand5 + 2, 0),
+			rotationMatrix(vec3(1,0,0),0)
 		);
 	} else if (inst_mode == GUN_POWDER_SPARK) {
 		attr = Attr(
@@ -96,7 +114,8 @@ void main() {
 				vec3(rand4, rand5, rand6) * 2.0 + grav_vel(earth_gravity)
 			),
 			1.0,
-			vec3(3.5, 3 + rand7, 0)
+			vec3(3.5, 3 + rand7, 0),
+			rotationMatrix(vec3(1,0,0),0)
 		);
 	} else if (inst_mode == SHRAPNEL) {
 		attr = Attr(
@@ -105,7 +124,8 @@ void main() {
 				vec3(rand4, rand5, rand6) * 40.0 + grav_vel(earth_gravity)
 			),
 			3.0 + rand0,
-			vec3(0.6 + rand7 * 0.4)
+			vec3(0.6 + rand7 * 0.4),
+			rotationMatrix(vec3(1,0,0),0)
 		);
 	} else if (inst_mode == FIREWORK_BLUE) {
 		attr = Attr(
@@ -114,7 +134,8 @@ void main() {
 				vec3(rand4, rand5, rand6) * 40.0 + grav_vel(earth_gravity)
 			),
 			3.0 + rand0,
-			vec3(0.6 + rand7 * 0.4)
+			vec3(0.6 + rand7 * 0.4),
+			rotationMatrix(vec3(1,0,0),0)
 		);
 	} else if (inst_mode == FIREWORK_GREEN) {
 		attr = Attr(
@@ -123,7 +144,8 @@ void main() {
 				vec3(rand4, rand5, rand6) * 40.0 + grav_vel(earth_gravity)
 			),
 			3.0 + rand0,
-			vec3(0.6 + rand7 * 0.4)
+			vec3(0.6 + rand7 * 0.4),
+			rotationMatrix(vec3(1,0,0),0)
 		);
 	} else if (inst_mode == FIREWORK_PURPLE) {
 		attr = Attr(
@@ -132,7 +154,8 @@ void main() {
 				vec3(rand4, rand5, rand6) * 40.0 + grav_vel(earth_gravity)
 			),
 			3.0 + rand0,
-			vec3(0.6 + rand7 * 0.4)
+			vec3(0.6 + rand7 * 0.4),
+			rotationMatrix(vec3(1,0,0),0)
 		);
 	} else if (inst_mode == FIREWORK_RED) {
 		attr = Attr(
@@ -141,7 +164,8 @@ void main() {
 				vec3(rand4, rand5, rand6) * 40.0 + grav_vel(earth_gravity)
 			),
 			3.0 + rand0,
-			vec3(0.6 + rand7 * 0.4)
+			vec3(0.6 + rand7 * 0.4),
+			rotationMatrix(vec3(1,0,0),0)
 		);
 	} else if (inst_mode == FIREWORK_YELLOW) {
 		attr = Attr(
@@ -150,7 +174,18 @@ void main() {
 				vec3(rand4, rand5, rand6) * 40.0 + grav_vel(earth_gravity)
 			),
 			3.0 + rand0,
-			vec3(0.6 + rand7 * 0.4)
+			vec3(0.6 + rand7 * 0.4),
+			rotationMatrix(vec3(1,0,0),0)
+		);
+	} else if (inst_mode == GROUND_SHOCKWAVE) {
+		attr = Attr(
+			linear_motion(
+				vec3(rand0 * 0.25, rand1 * 0.25, 0.0),
+				vec3(rand2 * 0.1, rand3 * 0.1, 0.0)
+			),
+			3.0 + 5.0 * rand5,
+			vec3(0.42, 0.32, 0.1),
+			rotationMatrix(vec3(rand6, rand7, rand8), rand9 * 3 + lifetime * 5)
 		);
 	} else {
 		attr = Attr(
@@ -159,11 +194,12 @@ void main() {
 				vec3(rand2 * 0.1, rand3 * 0.1, 1.0 + rand4 * 0.5)
 			),
 			exp_scale(-0.2),
-			vec3(1)
+			vec3(1),
+			rotationMatrix(vec3(1,0,0),0)
 		);
 	}
 
-	f_pos = inst_pos + (v_pos * attr.scale * SCALE + attr.offs);
+	f_pos = inst_pos + (v_pos * attr.scale * SCALE + attr.offs) * attr.rot;
 
 	// First 3 normals are negative, next 3 are positive
 	vec3 normals[6] = vec3[](vec3(-1,0,0), vec3(1,0,0), vec3(0,-1,0), vec3(0,1,0), vec3(0,0,-1), vec3(0,0,1));

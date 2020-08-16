@@ -92,6 +92,7 @@ pub enum ParticleMode {
     FireworkPurple = 6,
     FireworkRed = 7,
     FireworkYellow = 8,
+    GroundShockwave = 9,
 }
 
 impl ParticleMode {
