@@ -8,7 +8,7 @@ use crate::{
     sys::{character_behavior::JoinData, phys::GRAVITY},
     util::Dir,
 };
-use vek::vec::Vec2;
+use vek::*;
 
 pub const MOVEMENT_THRESHOLD_VEL: f32 = 3.0;
 const BASE_HUMANOID_AIR_ACCEL: f32 = 8.0;
@@ -67,8 +67,8 @@ impl Body {
 
 /// Handles updating `Components` to move player based on state of `JoinData`
 pub fn handle_move(data: &JoinData, update: &mut StateUpdate, efficiency: f32) {
-    if data.physics.in_fluid {
-        swim_move(data, update, efficiency);
+    if let Some(depth) = data.physics.in_fluid {
+        swim_move(data, update, efficiency, depth);
     } else {
         basic_move(data, update, efficiency);
     }
@@ -104,7 +104,7 @@ pub fn handle_orientation(data: &JoinData, update: &mut StateUpdate, rate: f32) 
 }
 
 /// Updates components to move player as if theyre swimming
-fn swim_move(data: &JoinData, update: &mut StateUpdate, efficiency: f32) {
+fn swim_move(data: &JoinData, update: &mut StateUpdate, efficiency: f32, depth: f32) {
     // Update velocity
     update.vel.0 += Vec2::broadcast(data.dt.0)
         * data.inputs.move_dir
@@ -118,9 +118,15 @@ fn swim_move(data: &JoinData, update: &mut StateUpdate, efficiency: f32) {
     handle_orientation(data, update, if data.physics.on_ground { 9.0 } else { 2.0 });
 
     // Swim
-    if data.inputs.swim.is_pressed() {
+    if data.inputs.swimup.is_pressed() {
+        update.vel.0.z = (update.vel.0.z
+            + data.dt.0 * GRAVITY * 4.0 * depth.clamped(0.0, 1.0).powf(3.0))
+        .min(BASE_HUMANOID_WATER_SPEED);
+    }
+    // Swim
+    if data.inputs.swimdown.is_pressed() {
         update.vel.0.z =
-            (update.vel.0.z + data.dt.0 * GRAVITY * 2.25).min(BASE_HUMANOID_WATER_SPEED);
+            (update.vel.0.z + data.dt.0 * GRAVITY * -3.5).min(BASE_HUMANOID_WATER_SPEED);
     }
 }
 
@@ -159,6 +165,12 @@ pub fn attempt_dance(data: &JoinData, update: &mut StateUpdate) {
     }
 }
 
+pub fn attempt_sneak(data: &JoinData, update: &mut StateUpdate) {
+    if data.physics.on_ground && data.body.is_humanoid() {
+        update.character = CharacterState::Sneak;
+    }
+}
+
 /// Checks that player can `Climb` and updates `CharacterState` if so
 pub fn handle_climb(data: &JoinData, update: &mut StateUpdate) {
     if data.inputs.climb.is_some()
@@ -181,14 +193,28 @@ pub fn attempt_swap_loadout(data: &JoinData, update: &mut StateUpdate) {
 
 /// Checks that player can wield the glider and updates `CharacterState` if so
 pub fn attempt_glide_wield(data: &JoinData, update: &mut StateUpdate) {
-    if data.physics.on_ground && !data.physics.in_fluid && data.body.is_humanoid() {
+    if data.physics.on_ground
+        && !data
+            .physics
+            .in_fluid
+            .map(|depth| depth > 1.0)
+            .unwrap_or(false)
+        && data.body.is_humanoid()
+    {
         update.character = CharacterState::GlideWield;
     }
 }
 
 /// Checks that player can jump and sends jump event if so
 pub fn handle_jump(data: &JoinData, update: &mut StateUpdate) {
-    if data.inputs.jump.is_pressed() && data.physics.on_ground && !data.physics.in_fluid {
+    if data.inputs.jump.is_pressed()
+        && data.physics.on_ground
+        && !data
+            .physics
+            .in_fluid
+            .map(|depth| depth > 1.0)
+            .unwrap_or(false)
+    {
         update
             .local_events
             .push_front(LocalEvent::Jump(data.entity));

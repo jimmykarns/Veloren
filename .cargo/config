@@ -5,3 +5,7 @@ rustflags = [
 
 [alias]
 generate = "run --package tools --"
+test-server = "-Zpackage-features run --bin veloren-server-cli --no-default-features" 
+test-voxygen = "-Zpackage-features run --bin veloren-voxygen --no-default-features --features gl"
+server = "run --bin veloren-server-cli"
+

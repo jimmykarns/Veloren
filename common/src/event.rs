@@ -1,5 +1,5 @@
 use crate::{comp, sync::Uid, util::Dir};
-use comp::item::Item;
+use comp::item::{Item, Reagent};
 use parking_lot::Mutex;
 use specs::Entity as EcsEntity;
 use std::{collections::VecDeque, ops::DerefMut};
@@ -25,6 +25,8 @@ pub enum ServerEvent {
         pos: Vec3<f32>,
         power: f32,
         owner: Option<Uid>,
+        friendly_damage: bool,
+        reagent: Option<Reagent>,
     },
     Damage {
         uid: Uid,
@@ -35,6 +37,7 @@ pub enum ServerEvent {
         cause: comp::HealthSource,
     },
     InventoryManip(EcsEntity, comp::InventoryManip),
+    GroupManip(EcsEntity, comp::GroupManip),
     Respawn(EcsEntity),
     Shoot {
         entity: EcsEntity,
@@ -80,7 +83,7 @@ pub enum ServerEvent {
     ChunkRequest(EcsEntity, Vec2<i32>),
     ChatCmd(EcsEntity, String),
     /// Send a chat message to the player from an npc or other player
-    Chat(comp::ChatMsg),
+    Chat(comp::UnresolvedChatMsg),
 }
 
 pub struct EventBus<E> {

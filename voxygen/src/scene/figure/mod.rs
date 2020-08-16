@@ -22,8 +22,8 @@ use anim::{
 };
 use common::{
     comp::{
-        item::ItemKind, Body, CharacterState, Last, LightAnimation, LightEmitter, Loadout, Ori,
-        PhysicsState, Pos, Scale, Stats, Vel,
+        item::ItemKind, Body, CharacterState, Item, Last, LightAnimation, LightEmitter, Loadout,
+        Ori, PhysicsState, Pos, Scale, Stats, Vel,
     },
     state::{DeltaTime, State},
     states::triple_strike,
@@ -192,7 +192,6 @@ impl FigureMgr {
             .read_storage::<Pos>()
             .get(scene_data.player_entity)
             .map_or(Vec3::zero(), |pos| pos.0);
-
         for (
             i,
             (
@@ -207,6 +206,7 @@ impl FigureMgr {
                 physics,
                 stats,
                 loadout,
+                item,
             ),
         ) in (
             &ecs.entities(),
@@ -220,6 +220,7 @@ impl FigureMgr {
             &ecs.read_storage::<PhysicsState>(),
             ecs.read_storage::<Stats>().maybe(),
             ecs.read_storage::<Loadout>().maybe(),
+            ecs.read_storage::<Item>().maybe(),
         )
             .join()
             .enumerate()
@@ -519,7 +520,13 @@ impl FigureMgr {
                             (c / (1.0 + DAMAGE_FADE_COEFFICIENT * s.health.last_change.0)) as f32
                         })
                 })
-                .unwrap_or(Rgba::broadcast(1.0));
+            .unwrap_or(Rgba::broadcast(1.0))
+            // Highlight targeted collectible entities
+            * if item.is_some() && scene_data.target_entity.map_or(false, |e| e == entity) {
+                Rgba::new(2.0, 2.0, 2.0, 1.0)
+            } else {
+                Rgba::one()
+            };
 
             let scale = scale.map(|s| s.0).unwrap_or(1.0);
 
@@ -574,10 +581,10 @@ impl FigureMgr {
                     let target_base = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
-                        physics.in_fluid,                                 // In water
+                        physics.in_fluid.is_some(),                       // In water
                     ) {
                         // Standing
-                        (true, false, _) => anim::character::StandAnimation::update_skeleton(
+                        (true, false, false) => anim::character::StandAnimation::update_skeleton(
                             &CharacterSkeleton::new(),
                             (
                                 active_tool_kind.clone(),
@@ -590,7 +597,7 @@ impl FigureMgr {
                             skeleton_attr,
                         ),
                         // Running
-                        (true, true, _) => anim::character::RunAnimation::update_skeleton(
+                        (true, true, false) => anim::character::RunAnimation::update_skeleton(
                             &CharacterSkeleton::new(),
                             (
                                 active_tool_kind.clone(),
@@ -620,7 +627,7 @@ impl FigureMgr {
                             skeleton_attr,
                         ),
                         // Swim
-                        (false, _, true) => anim::character::SwimAnimation::update_skeleton(
+                        (_, _, true) => anim::character::SwimAnimation::update_skeleton(
                             &CharacterSkeleton::new(),
                             (
                                 active_tool_kind.clone(),
@@ -629,6 +636,7 @@ impl FigureMgr {
                                 ori,
                                 state.last_ori,
                                 time,
+                                state.avg_vel,
                             ),
                             state.state_time,
                             &mut state_animation_rate,
@@ -711,6 +719,15 @@ impl FigureMgr {
                                     skeleton_attr,
                                 )
                             }
+                        },
+                        CharacterState::Sneak { .. } => {
+                            anim::character::SneakAnimation::update_skeleton(
+                                &CharacterSkeleton::new(),
+                                (active_tool_kind, vel.0, ori, state.last_ori, time),
+                                state.state_time,
+                                &mut state_animation_rate,
+                                skeleton_attr,
+                            )
                         },
                         CharacterState::Boost(_) => {
                             anim::character::AlphaAnimation::update_skeleton(
@@ -806,13 +823,23 @@ impl FigureMgr {
                             )
                         },
                         CharacterState::Wielding { .. } => {
-                            anim::character::WieldAnimation::update_skeleton(
-                                &target_base,
-                                (active_tool_kind, second_tool_kind, vel.0.magnitude(), time),
-                                state.state_time,
-                                &mut state_animation_rate,
-                                skeleton_attr,
-                            )
+                            if physics.in_fluid.is_some() {
+                                anim::character::SwimWieldAnimation::update_skeleton(
+                                    &target_base,
+                                    (active_tool_kind, second_tool_kind, vel.0.magnitude(), time),
+                                    state.state_time,
+                                    &mut state_animation_rate,
+                                    skeleton_attr,
+                                )
+                            } else {
+                                anim::character::WieldAnimation::update_skeleton(
+                                    &target_base,
+                                    (active_tool_kind, second_tool_kind, vel.0.magnitude(), time),
+                                    state.state_time,
+                                    &mut state_animation_rate,
+                                    skeleton_attr,
+                                )
+                            }
                         },
                         CharacterState::Glide { .. } => {
                             anim::character::GlidingAnimation::update_skeleton(
@@ -922,7 +949,7 @@ impl FigureMgr {
                     let target_base = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
-                        physics.in_fluid,                                 // In water
+                        physics.in_fluid.is_some(),                       // In water
                     ) {
                         // Standing
                         (true, false, false) => {
@@ -1020,7 +1047,7 @@ impl FigureMgr {
                     let target_base = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
-                        physics.in_fluid,                                 // In water
+                        physics.in_fluid.is_some(),                       // In water
                     ) {
                         // Standing
                         (true, false, false) => {
@@ -1116,7 +1143,7 @@ impl FigureMgr {
                     let target_base = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
-                        physics.in_fluid,                                 // In water
+                        physics.in_fluid.is_some(),                       // In water
                     ) {
                         // Standing
                         (true, false, false) => {
@@ -1210,7 +1237,7 @@ impl FigureMgr {
                     let target_base = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
-                        physics.in_fluid,                                 // In water
+                        physics.in_fluid.is_some(),                       // In water
                     ) {
                         // Standing
                         (true, false, false) => anim::bird_medium::IdleAnimation::update_skeleton(
@@ -1302,7 +1329,7 @@ impl FigureMgr {
                     let target_base = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
-                        physics.in_fluid,                                 // In water
+                        physics.in_fluid.is_some(),                       // In water
                     ) {
                         // Standing
                         (true, false, false) => anim::fish_medium::IdleAnimation::update_skeleton(
@@ -1377,7 +1404,7 @@ impl FigureMgr {
                     let target_base = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
-                        physics.in_fluid,                                 // In water
+                        physics.in_fluid.is_some(),                       // In water
                     ) {
                         // Standing
                         (true, false, false) => anim::dragon::IdleAnimation::update_skeleton(
@@ -1451,7 +1478,7 @@ impl FigureMgr {
                     let target_base = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
-                        physics.in_fluid,                                 // In water
+                        physics.in_fluid.is_some(),                       // In water
                     ) {
                         // Standing
                         (true, false, false) => anim::critter::IdleAnimation::update_skeleton(
@@ -1526,7 +1553,7 @@ impl FigureMgr {
                     let target_base = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
-                        physics.in_fluid,                                 // In water
+                        physics.in_fluid.is_some(),                       // In water
                     ) {
                         // Standing
                         (true, false, false) => anim::bird_small::IdleAnimation::update_skeleton(
@@ -1601,7 +1628,7 @@ impl FigureMgr {
                     let target_base = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
-                        physics.in_fluid,                                 // In water
+                        physics.in_fluid.is_some(),                       // In water
                     ) {
                         // Standing
                         (true, false, false) => anim::fish_small::IdleAnimation::update_skeleton(
@@ -1676,7 +1703,7 @@ impl FigureMgr {
                     let target_base = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
-                        physics.in_fluid,                                 // In water
+                        physics.in_fluid.is_some(),                       // In water
                     ) {
                         // Standing
                         (true, false, false) => anim::biped_large::IdleAnimation::update_skeleton(
@@ -1697,7 +1724,7 @@ impl FigureMgr {
                         // In air
                         (false, _, false) => anim::biped_large::JumpAnimation::update_skeleton(
                             &BipedLargeSkeleton::new(),
-                            (vel.0.magnitude(), time),
+                            time,
                             state.state_time,
                             &mut state_animation_rate,
                             skeleton_attr,
@@ -1713,6 +1740,15 @@ impl FigureMgr {
                     let target_bones = match &character {
                         CharacterState::Wielding { .. } => {
                             anim::biped_large::WieldAnimation::update_skeleton(
+                                &target_base,
+                                (vel.0.magnitude(), time),
+                                state.state_time,
+                                &mut state_animation_rate,
+                                skeleton_attr,
+                            )
+                        },
+                        CharacterState::BasicMelee(_) => {
+                            anim::biped_large::AlphaAnimation::update_skeleton(
                                 &target_base,
                                 (vel.0.magnitude(), time),
                                 state.state_time,
@@ -1768,7 +1804,7 @@ impl FigureMgr {
                     let target_base = match (
                         physics.on_ground,
                         vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
-                        physics.in_fluid,                                 // In water
+                        physics.in_fluid.is_some(),                       // In water
                     ) {
                         // Standing
                         (true, false, false) => anim::golem::IdleAnimation::update_skeleton(

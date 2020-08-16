@@ -374,7 +374,7 @@ impl<'a> Widget for Chat<'a> {
                 .w_h(20.0, 20.0)
                 .hover_image(self.imgs.chat_arrow_mo)
                 .press_image(self.imgs.chat_arrow_press)
-                .bottom_right_with_margins_on(state.ids.message_box_bg, 0.0, -22.0)
+                .top_right_with_margins_on(state.ids.message_box_bg, 0.0, -22.0)
                 .parent(id)
                 .set(state.ids.chat_arrow, ui)
                 .was_clicked()
@@ -475,7 +475,7 @@ fn cursor_offset_to_index(
 }
 
 /// Get the color and icon for the current line in the chat box
-fn render_chat_line(chat_type: &ChatType, imgs: &Imgs) -> (Color, conrod_core::image::Id) {
+fn render_chat_line(chat_type: &ChatType<String>, imgs: &Imgs) -> (Color, conrod_core::image::Id) {
     match chat_type {
         ChatType::Online => (ONLINE_COLOR, imgs.chat_online_small),
         ChatType::Offline => (OFFLINE_COLOR, imgs.chat_offline_small),
