@@ -1,10 +1,9 @@
-use crate::{comp, sync::Uid, util::Dir};
+use crate::{character::CharacterId, comp, sync::Uid, util::Dir};
 use comp::item::{Item, Reagent};
 use parking_lot::Mutex;
 use specs::Entity as EcsEntity;
 use std::{collections::VecDeque, ops::DerefMut};
 use vek::*;
-use crate::character::CharacterId;
 
 pub enum LocalEvent {
     /// Applies upward force to entity's `Vel`

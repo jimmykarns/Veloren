@@ -1,5 +1,7 @@
-use crate::persistence::models::{Character, Item, NewItem, Stats};
-use crate::persistence::character::EntityId;
+use crate::persistence::{
+    character::EntityId,
+    models::{Character, Item, NewItem, Stats},
+};
 
 use common::{character::CharacterId, comp::*, loadout_builder};
 use std::sync::{

@@ -45,7 +45,7 @@ enum CharacterLoaderRequestKind {
     CreateCharacter {
         player_uuid: String,
         character_alias: String,
-        persisted_components: PersistedComponents
+        persisted_components: PersistedComponents,
     },
     DeleteCharacter {
         player_uuid: String,
@@ -108,7 +108,7 @@ impl CharacterLoader {
                         CharacterLoaderRequestKind::CreateCharacter {
                             player_uuid,
                             character_alias,
-                            persisted_components
+                            persisted_components,
                         } => CharacterLoaderResponseType::CharacterList(create_character(
                             &player_uuid,
                             &character_alias,
@@ -174,7 +174,12 @@ impl CharacterLoader {
     }
 
     /// Delete a character by `id` and `player_uuid`
-    pub fn delete_character(&self, entity: specs::Entity, player_uuid: String, character_id: CharacterId) {
+    pub fn delete_character(
+        &self,
+        entity: specs::Entity,
+        player_uuid: String,
+        character_id: CharacterId,
+    ) {
         if let Err(e) = self.update_tx.as_ref().unwrap().send((
             entity,
             CharacterLoaderRequestKind::DeleteCharacter {
@@ -489,7 +494,8 @@ pub struct CharacterUpdater {
 
 impl CharacterUpdater {
     pub fn new(db_dir: String) -> Self {
-        let (update_tx, update_rx) = channel::unbounded::<Vec<(CharacterId, CharacterUpdateData)>>();
+        let (update_tx, update_rx) =
+            channel::unbounded::<Vec<(CharacterId, CharacterUpdateData)>>();
         let handle = std::thread::spawn(move || {
             while let Ok(updates) = update_rx.recv() {
                 info!("Persistence batch update starting");
@@ -507,7 +513,14 @@ impl CharacterUpdater {
     /// Updates a collection of characters based on their id and components
     pub fn batch_update<'a>(
         &self,
-        updates: impl Iterator<Item = (CharacterId, &'a comp::Stats, &'a comp::Inventory, &'a comp::Loadout)>,
+        updates: impl Iterator<
+            Item = (
+                CharacterId,
+                &'a comp::Stats,
+                &'a comp::Inventory,
+                &'a comp::Loadout,
+            ),
+        >,
     ) {
         let updates = updates
             .map(|(character_id, stats, inventory, loadout)| {

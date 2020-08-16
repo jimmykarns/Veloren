@@ -82,9 +82,7 @@ impl Asset for RecipeBook {
                                 inputs: inputs
                                     .into_iter()
                                     .map::<Result<(Item, usize), assets::Error>, _>(
-                                        |(name, amount)| {
-                                            Ok((Item::new_from_asset(&name)?, amount))
-                                        },
+                                        |(name, amount)| Ok((Item::new_from_asset(&name)?, amount)),
                                     )
                                     .collect::<Result<_, _>>()?,
                             }))

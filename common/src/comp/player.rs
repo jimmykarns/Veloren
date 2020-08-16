@@ -1,8 +1,8 @@
+use crate::character::CharacterId;
 use authc::Uuid;
 use serde::{Deserialize, Serialize};
 use specs::{Component, FlaggedStorage, NullStorage};
 use specs_idvs::IdvStorage;
-use crate::character::CharacterId;
 
 const MAX_ALIAS_LEN: usize = 32;
 pub const MAX_MOUNT_RANGE_SQR: i32 = 20000;

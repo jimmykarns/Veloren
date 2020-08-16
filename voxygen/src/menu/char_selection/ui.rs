@@ -358,8 +358,12 @@ impl CharSelectionUi {
                     level: 1,
                     loadout: LoadoutBuilder::new()
                         .defaults()
-                        .active_item(LoadoutBuilder::default_item_config_from_str((*tool)
-                            .expect("Attempted to create character with non-existent item_definition_id for tool")))
+                        .active_item(LoadoutBuilder::default_item_config_from_str(
+                            (*tool).expect(
+                                "Attempted to create character with non-existent \
+                                 item_definition_id for tool",
+                            ),
+                        ))
                         .build(),
                 }])
             },

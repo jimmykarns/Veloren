@@ -12,7 +12,11 @@ use comp::group;
 use specs::{Builder, Entity as EcsEntity, WorldExt};
 use vek::{Rgb, Vec3};
 
-pub fn handle_initialize_character(server: &mut Server, entity: EcsEntity, character_id: CharacterId) {
+pub fn handle_initialize_character(
+    server: &mut Server,
+    entity: EcsEntity,
+    character_id: CharacterId,
+) {
     server.state.initialize_character_data(entity, character_id);
 }
 

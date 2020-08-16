@@ -1,11 +1,11 @@
 use crate::{
+    character::CharacterId,
     comp,
     comp::{Skill, SkillGroupType},
     terrain::block::Block,
 };
 use serde::{Deserialize, Serialize};
 use vek::*;
-use crate::character::CharacterId;
 
 /// Messages sent from the client to the server
 #[derive(Debug, Clone, Serialize, Deserialize)]
