@@ -308,9 +308,12 @@ fn load_character_list(player_uuid_: &str, db_dir: &str) -> CharacterListResult 
                 let char = convert_character_from_database(character_data);
                 let char_body = comp::Body::Humanoid(comp::body::humanoid::Body::random());
 
-                let loadout_container_id =
-                    get_pseudo_container_id(&connection, char.id.unwrap(), LOADOUT_PSEUDO_CONTAINER_DEF_ID)
-                        .expect("failed to get loadout container for character");
+                let loadout_container_id = get_pseudo_container_id(
+                    &connection,
+                    char.id.unwrap(),
+                    LOADOUT_PSEUDO_CONTAINER_DEF_ID,
+                )
+                .expect("failed to get loadout container for character");
                 let loadout_items = item
                     .filter(parent_container_item_id.eq(loadout_container_id))
                     .load::<Item>(&connection)
@@ -646,8 +649,9 @@ fn update(
         loadout_container_id,
     ));
 
-    // Fetch all existing items from the database for the character so that we can use it to keep
-    // track of which items still exist and which don't and should be deleted from the database.
+    // Fetch all existing items from the database for the character so that we can
+    // use it to keep track of which items still exist and which don't and
+    // should be deleted from the database.
     let mut existing_items = item
         .filter(
             parent_container_item_id
@@ -683,8 +687,9 @@ fn update(
         }
     }
 
-    // Any items left in existing_items after saving the character's inventory and loadout must
-    // no longer exist (consumed, dropped, etc) so should be deleted from the database.
+    // Any items left in existing_items after saving the character's inventory and
+    // loadout must no longer exist (consumed, dropped, etc) so should be
+    // deleted from the database.
     for existing_item in existing_items {
         // TODO: Single delete statement using all item IDs in existing_items
         diesel::delete(item.filter(item_id.eq(existing_item.item_id))).execute(connection)?;

@@ -28,9 +28,6 @@ pub fn create_character(
         entity,
         player_uuid,
         character_alias,
-        (body,
-        stats,
-        inventory,
-        loadout)
+        (body, stats, inventory, loadout),
     );
 }

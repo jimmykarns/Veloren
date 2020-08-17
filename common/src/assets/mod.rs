@@ -93,17 +93,36 @@ pub fn load_map<A: Asset + 'static, F: FnOnce(A) -> A>(
     }
 }
 
+// Finds all files matching the provided glob specifier - includes files from
+// subdirectories
 fn get_glob_matches(specifier: &str) -> Result<Vec<String>, Error> {
-    read_dir(specifier.trim_end_matches(".*")).map(|dir| {
+    let specifier = specifier.trim_end_matches(".*");
+    read_dir(specifier).map(|dir| {
         dir.filter_map(|direntry| {
-            direntry.ok().and_then(|file| {
-                file.file_name()
-                    .to_string_lossy()
-                    .rsplitn(2, '.')
-                    .last()
-                    .map(|s| s.to_owned())
+            direntry.ok().and_then(|dir_entry| {
+                if dir_entry.path().is_dir() {
+                    let sub_dir_glob = format!(
+                        "{}.{}.*",
+                        specifier.to_string(),
+                        dir_entry.file_name().to_string_lossy()
+                    );
+                    Some(get_glob_matches(&sub_dir_glob).ok()?)
+                } else {
+                    Some(vec![format!(
+                        "{}.{}",
+                        specifier,
+                        dir_entry
+                            .file_name()
+                            .to_string_lossy()
+                            .rsplitn(2, '.')
+                            .last()
+                            .map(|s| s.to_owned())
+                            .unwrap()
+                    )])
+                }
             })
         })
+        .flat_map(|x| x)
         .collect::<Vec<_>>()
     })
 }
@@ -119,7 +138,7 @@ pub fn load_glob<A: Asset + 'static>(specifier: &str) -> Result<Arc<Vec<Arc<A>>>
                 glob_matches
                     .into_iter()
                     .filter_map(|name| {
-                        load(&specifier.replace("*", &name))
+                        load(&name)
                             .map_err(|e| {
                                 error!(
                                     ?e,
@@ -146,13 +165,7 @@ pub fn load_glob_cloned<A: Asset + Clone + 'static>(
     match get_glob_matches(specifier) {
         Ok(glob_matches) => Ok(glob_matches
             .into_iter()
-            .map(|name| {
-                let full_specifier = &specifier.replace("*", &name);
-                (
-                    load_expect_cloned::<A>(full_specifier),
-                    full_specifier.to_string(),
-                )
-            })
+            .map(|name| (load_expect_cloned::<A>(name.as_str()), name))
             .collect::<Vec<_>>()),
         Err(error) => Err(error),
     }

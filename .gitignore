@@ -32,6 +32,7 @@ screenshots
 todo.txt
 armorstats.csv
 weaponstats.csv
+items.csv
 
 # Game data
 *.sqlite

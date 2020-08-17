@@ -10,6 +10,7 @@ pub mod character;
 
 mod conversions;
 mod error;
+mod json_models;
 mod models;
 mod schema;
 
