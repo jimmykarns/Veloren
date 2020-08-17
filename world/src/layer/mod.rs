@@ -145,32 +145,20 @@ pub fn apply_scatter_to<'a>(
         // Grass
         (ShortGrass, false, |c| {
             (
-                close(c.temp, CONFIG.temperate_temp, 0.4).min(close(
-                    c.humidity,
-                    CONFIG.forest_hum,
-                    0.35,
-                )) * 0.05,
-                Some((48.0, 0.7)),
+                close(c.temp, 0.3, 0.4).min(close(c.humidity, 0.6, 0.35)) * 0.05,
+                Some((48.0, 0.4)),
             )
         }),
         (MediumGrass, false, |c| {
             (
-                close(c.temp, CONFIG.temperate_temp, 0.4).min(close(
-                    c.humidity,
-                    CONFIG.forest_hum,
-                    0.35,
-                )) * 0.05,
-                Some((48.0, 0.4)),
+                close(c.temp, 0.0, 0.6).min(close(c.humidity, 0.6, 0.35)) * 0.05,
+                Some((48.0, 0.2)),
             )
         }),
         (LongGrass, false, |c| {
             (
-                close(c.temp, CONFIG.temperate_temp, 0.4).min(close(
-                    c.humidity,
-                    CONFIG.forest_hum,
-                    0.2,
-                )) * 0.05,
-                Some((48.0, 0.5)),
+                close(c.temp, 0.4, 0.4).min(close(c.humidity, 0.8, 0.2)) * 0.05,
+                Some((48.0, 0.1)),
             )
         }),
         // Jungle Sprites
@@ -210,7 +198,7 @@ pub fn apply_scatter_to<'a>(
                     CONFIG.desert_hum,
                     0.3,
                 )) * MUSH_FACT
-                    * 0.01,
+                    * 0.001,
                 None,
             )
         }),
@@ -221,7 +209,7 @@ pub fn apply_scatter_to<'a>(
                     CONFIG.desert_hum,
                     0.2,
                 )) * MUSH_FACT
-                    * 0.01,
+                    * 0.001,
                 None,
             )
         }),
@@ -232,7 +220,7 @@ pub fn apply_scatter_to<'a>(
                     CONFIG.desert_hum,
                     0.2,
                 )) * MUSH_FACT
-                    * 0.01,
+                    * 0.001,
                 None,
             )
         }),
@@ -243,7 +231,7 @@ pub fn apply_scatter_to<'a>(
                     CONFIG.desert_hum,
                     0.2,
                 )) * MUSH_FACT
-                    * 0.01,
+                    * 0.001,
                 None,
             )
         }),
@@ -254,7 +242,7 @@ pub fn apply_scatter_to<'a>(
                     CONFIG.desert_hum,
                     0.2,
                 )) * MUSH_FACT
-                    * 0.01,
+                    * 0.001,
                 None,
             )
         }),
@@ -265,7 +253,7 @@ pub fn apply_scatter_to<'a>(
                     CONFIG.desert_hum,
                     0.2,
                 )) * MUSH_FACT
-                    * 0.01,
+                    * 0.001,
                 None,
             )
         }),
@@ -276,7 +264,7 @@ pub fn apply_scatter_to<'a>(
                     CONFIG.desert_hum,
                     0.2,
                 )) * MUSH_FACT
-                    * 0.01,
+                    * 0.001,
                 None,
             )
         }),

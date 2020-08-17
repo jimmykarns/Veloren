@@ -440,6 +440,7 @@ impl BlockKind {
             BlockKind::Stones => true,
             BlockKind::Twigs => true,
             BlockKind::ShinyGem => true,
+            BlockKind::Crate => true,
             _ => false,
         }
     }
