@@ -38,7 +38,7 @@ const float earth_gravity = 9.807;
 
 struct Attr {
 	vec3 offs;
-	float scale;
+	vec3 scale;
 	vec3 col;
 	mat3 rot;
 };
@@ -93,7 +93,7 @@ void main() {
 				vec3(0.0, 0.0, 0.0),
 				vec3(rand2 * 0.1, rand3 * 0.1, 1.0 + rand4 * 0.1)// + vec3(sin(lifetime), sin(lifetime + 1.5), sin(lifetime * 4) * 0.25)
 			),
-			linear_scale(0.5),
+			vec3(linear_scale(0.5)) * SCALE,
 			vec3(1),
 			rotationMatrix(vec3(1,0,0),0)
 		);
@@ -103,7 +103,7 @@ void main() {
 				vec3(rand0 * 0.25, rand1 * 0.25, 0.3),
 				vec3(rand2 * 0.1, rand3 * 0.1, 2.0 + rand4 * 1.0)
 			),
-			1.0,
+			vec3(1.0) * SCALE,
 			vec3(2, rand5 + 2, 0),
 			rotationMatrix(vec3(1,0,0),0)
 		);
@@ -113,7 +113,7 @@ void main() {
 				vec3(rand0, rand1, rand3) * 0.3,
 				vec3(rand4, rand5, rand6) * 2.0 + grav_vel(earth_gravity)
 			),
-			1.0,
+			vec3(1.0) * SCALE,
 			vec3(3.5, 3 + rand7, 0),
 			rotationMatrix(vec3(1,0,0),0)
 		);
@@ -123,7 +123,7 @@ void main() {
 				vec3(0),
 				vec3(rand4, rand5, rand6) * 40.0 + grav_vel(earth_gravity)
 			),
-			3.0 + rand0,
+			vec3(3.0 + rand0) * SCALE,
 			vec3(0.6 + rand7 * 0.4),
 			rotationMatrix(vec3(1,0,0),0)
 		);
@@ -133,7 +133,7 @@ void main() {
 				vec3(0.0, 1.0, 1.0),
 				vec3(rand4, rand5, rand6) * 40.0 + grav_vel(earth_gravity)
 			),
-			3.0 + rand0,
+			vec3(3.0 + rand0) * SCALE,
 			vec3(0.6 + rand7 * 0.4),
 			rotationMatrix(vec3(1,0,0),0)
 		);
@@ -143,7 +143,7 @@ void main() {
 				vec3(0.0, 1.0, 0.0),
 				vec3(rand4, rand5, rand6) * 40.0 + grav_vel(earth_gravity)
 			),
-			3.0 + rand0,
+			vec3(3.0 + rand0) * SCALE,
 			vec3(0.6 + rand7 * 0.4),
 			rotationMatrix(vec3(1,0,0),0)
 		);
@@ -153,7 +153,7 @@ void main() {
 				vec3(1.0, 0.0, 1.0),
 				vec3(rand4, rand5, rand6) * 40.0 + grav_vel(earth_gravity)
 			),
-			3.0 + rand0,
+			vec3(3.0 + rand0) * SCALE,
 			vec3(0.6 + rand7 * 0.4),
 			rotationMatrix(vec3(1,0,0),0)
 		);
@@ -163,7 +163,7 @@ void main() {
 				vec3(1.0, 0.0, 0.0),
 				vec3(rand4, rand5, rand6) * 40.0 + grav_vel(earth_gravity)
 			),
-			3.0 + rand0,
+			vec3(3.0 + rand0) * SCALE,
 			vec3(0.6 + rand7 * 0.4),
 			rotationMatrix(vec3(1,0,0),0)
 		);
@@ -173,19 +173,18 @@ void main() {
 				vec3(1.0, 1.0, 0.0),
 				vec3(rand4, rand5, rand6) * 40.0 + grav_vel(earth_gravity)
 			),
-			3.0 + rand0,
+			vec3(3.0 + rand0) * SCALE,
 			vec3(0.6 + rand7 * 0.4),
 			rotationMatrix(vec3(1,0,0),0)
 		);
 	} else if (inst_mode == GROUND_SHOCKWAVE) {
 		attr = Attr(
-			linear_motion(
-				vec3(rand0 * 0.25, rand1 * 0.25, 0.0),
-				vec3(rand2 * 0.1, rand3 * 0.1, 0.0)
-			),
-			3.0 + 5.0 * rand5,
-			vec3(0.42, 0.32, 0.1),
-			rotationMatrix(vec3(rand6, rand7, rand8), rand9 * 3 + lifetime * 5)
+			vec3(0.0),
+			vec3(1.0, 1.0, (3.0 * rand0 * sin(2.0 * lifetime * 3.14 * 2.0))) / 3,
+			//3.0 + 5.0 * rand5,
+			vec3(0.32 + (rand0 * 0.04), 0.22 + (rand1 * 0.03), 0.05 + (rand2 * 0.01)),
+			//rotationMatrix(vec3(rand6, rand7, rand8), rand9 * 3 + lifetime * 5)
+			rotationMatrix(vec3(1,0,0),0)
 		);
 	} else {
 		attr = Attr(
@@ -193,13 +192,13 @@ void main() {
 				vec3(rand0 * 0.25, rand1 * 0.25, 1.7 + rand5),
 				vec3(rand2 * 0.1, rand3 * 0.1, 1.0 + rand4 * 0.5)
 			),
-			exp_scale(-0.2),
+			vec3(exp_scale(-0.2)) * SCALE,
 			vec3(1),
 			rotationMatrix(vec3(1,0,0),0)
 		);
 	}
 
-	f_pos = inst_pos + (v_pos * attr.scale * SCALE + attr.offs) * attr.rot;
+	f_pos = inst_pos + (v_pos * attr.scale + attr.offs) * attr.rot;
 
 	// First 3 normals are negative, next 3 are positive
 	vec3 normals[6] = vec3[](vec3(-1,0,0), vec3(1,0,0), vec3(0,-1,0), vec3(0,1,0), vec3(0,0,-1), vec3(0,0,1));
