@@ -1,11 +1,13 @@
 pub mod camera;
 pub mod figure;
+pub mod particle;
 pub mod simple;
 pub mod terrain;
 
-use self::{
+pub use self::{
     camera::{Camera, CameraMode},
     figure::FigureMgr,
+    particle::ParticleMgr,
     terrain::Terrain,
 };
 use crate::{
@@ -19,10 +21,12 @@ use crate::{
 use anim::character::SkeletonAttr;
 use common::{
     comp,
-    state::State,
+    outcome::Outcome,
+    state::{DeltaTime, State},
     terrain::{BlockKind, TerrainChunk},
     vol::ReadVol,
 };
+use comp::item::Reagent;
 use specs::{Entity as EcsEntity, Join, WorldExt};
 use vek::*;
 
@@ -38,6 +42,12 @@ const SHADOW_MAX_DIST: f32 = 96.0; // The distance beyond which shadows may not 
 /// Above this speed is considered running
 /// Used for first person camera effects
 const RUNNING_THRESHOLD: f32 = 0.7;
+
+struct EventLight {
+    light: Light,
+    timeout: f32,
+    fadeout: fn(f32) -> f32,
+}
 
 struct Skybox {
     model: Model<SkyboxPipeline>,
@@ -55,6 +65,7 @@ pub struct Scene {
     shadows: Consts<Shadow>,
     camera: Camera,
     camera_input_state: Vec2<f32>,
+    event_lights: Vec<EventLight>,
 
     skybox: Skybox,
     postprocess: PostProcess,
@@ -62,6 +73,7 @@ pub struct Scene {
     loaded_distance: f32,
     select_pos: Option<Vec3<i32>>,
 
+    particle_mgr: ParticleMgr,
     figure_mgr: FigureMgr,
     sfx_mgr: SfxMgr,
     music_mgr: MusicMgr,
@@ -70,6 +82,7 @@ pub struct Scene {
 pub struct SceneData<'a> {
     pub state: &'a State,
     pub player_entity: specs::Entity,
+    pub target_entity: Option<specs::Entity>,
     pub loaded_distance: f32,
     pub view_distance: u32,
     pub tick: u64,
@@ -77,6 +90,7 @@ pub struct SceneData<'a> {
     pub gamma: f32,
     pub mouse_smoothing: bool,
     pub sprite_render_distance: f32,
+    pub particles_enabled: bool,
     pub figure_lod_render_distance: f32,
     pub is_aiming: bool,
 }
@@ -96,6 +110,7 @@ impl Scene {
                 .unwrap(),
             camera: Camera::new(resolution.x / resolution.y, CameraMode::ThirdPerson),
             camera_input_state: Vec2::zero(),
+            event_lights: Vec::new(),
 
             skybox: Skybox {
                 model: renderer.create_model(&create_skybox_mesh()).unwrap(),
@@ -111,6 +126,7 @@ impl Scene {
             loaded_distance: 0.0,
             select_pos: None,
 
+            particle_mgr: ParticleMgr::new(renderer),
             figure_mgr: FigureMgr::new(),
             sfx_mgr: SfxMgr::new(),
             music_mgr: MusicMgr::new(),
@@ -125,6 +141,9 @@ impl Scene {
 
     /// Get a reference to the scene's terrain.
     pub fn terrain(&self) -> &Terrain<TerrainChunk> { &self.terrain }
+
+    /// Get a reference to the scene's particle manager.
+    pub fn particle_mgr(&self) -> &ParticleMgr { &self.particle_mgr }
 
     /// Get a reference to the scene's figure manager.
     pub fn figure_mgr(&self) -> &FigureMgr { &self.figure_mgr }
@@ -172,6 +191,47 @@ impl Scene {
             },
             // All other events are unhandled
             _ => false,
+        }
+    }
+
+    pub fn handle_outcome(
+        &mut self,
+        outcome: &Outcome,
+        scene_data: &SceneData,
+        audio: &mut AudioFrontend,
+    ) {
+        self.particle_mgr.handle_outcome(&outcome, &scene_data);
+        self.sfx_mgr.handle_outcome(&outcome, audio);
+
+        match outcome {
+            Outcome::Explosion {
+                pos,
+                power,
+                reagent,
+            } => self.event_lights.push(EventLight {
+                light: Light::new(
+                    *pos,
+                    match reagent {
+                        Some(Reagent::Blue) => Rgb::new(0.0, 0.0, 1.0),
+                        Some(Reagent::Green) => Rgb::new(0.0, 1.0, 0.0),
+                        Some(Reagent::Purple) => Rgb::new(1.0, 0.0, 1.0),
+                        Some(Reagent::Red) => Rgb::new(1.0, 0.0, 0.0),
+                        Some(Reagent::Yellow) => Rgb::new(1.0, 1.0, 0.0),
+                        None => Rgb::new(1.0, 0.5, 0.0),
+                    },
+                    *power
+                        * match reagent {
+                            Some(_) => 5.0,
+                            None => 2.5,
+                        },
+                ),
+                timeout: match reagent {
+                    Some(_) => 1.0,
+                    None => 0.5,
+                },
+                fadeout: |timeout| timeout * 2.0,
+            }),
+            Outcome::ProjectileShot { .. } => {},
         }
     }
 
@@ -264,6 +324,7 @@ impl Scene {
             view_mat,
             proj_mat,
             cam_pos,
+            ..
         } = self.camera.dependents();
 
         // Update chunk loaded distance smoothly for nice shader fog
@@ -306,12 +367,24 @@ impl Scene {
                     light_anim.strength,
                 )
             })
+            .chain(
+                self.event_lights
+                    .iter()
+                    .map(|el| el.light.with_strength((el.fadeout)(el.timeout))),
+            )
             .collect::<Vec<_>>();
         lights.sort_by_key(|light| light.get_pos().distance_squared(player_pos) as i32);
         lights.truncate(MAX_LIGHT_COUNT);
         renderer
             .update_consts(&mut self.lights, &lights)
             .expect("Failed to update light constants");
+
+        // Update event lights
+        let dt = ecs.fetch::<DeltaTime>().0;
+        self.event_lights.drain_filter(|el| {
+            el.timeout -= dt;
+            el.timeout <= 0.0
+        });
 
         // Update shadow constants
         let mut shadows = (
@@ -387,9 +460,16 @@ impl Scene {
         // Remove unused figures.
         self.figure_mgr.clean(scene_data.tick);
 
+        // Maintain the particles.
+        self.particle_mgr.maintain(renderer, &scene_data);
+
         // Maintain audio
-        self.sfx_mgr
-            .maintain(audio, scene_data.state, scene_data.player_entity);
+        self.sfx_mgr.maintain(
+            audio,
+            scene_data.state,
+            scene_data.player_entity,
+            &self.camera,
+        );
         self.music_mgr.maintain(audio, scene_data.state);
     }
 
@@ -420,6 +500,14 @@ impl Scene {
             &self.shadows,
             &self.camera,
             scene_data.figure_lod_render_distance,
+        );
+
+        self.particle_mgr.render(
+            renderer,
+            scene_data,
+            &self.globals,
+            &self.lights,
+            &self.shadows,
         );
 
         // Render the skybox.

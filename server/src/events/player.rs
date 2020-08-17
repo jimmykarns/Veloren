@@ -4,13 +4,13 @@ use crate::{
 };
 use common::{
     comp,
-    comp::Player,
+    comp::{group, Player},
     msg::{ClientState, PlayerListUpdate, ServerMsg},
     sync::{Uid, UidAllocator},
 };
 use futures_executor::block_on;
 use specs::{saveload::MarkerAllocator, Builder, Entity as EcsEntity, WorldExt};
-use tracing::{debug, error, trace};
+use tracing::{debug, error, trace, warn};
 
 pub fn handle_exit_ingame(server: &mut Server, entity: EcsEntity) {
     let state = server.state_mut();
@@ -22,6 +22,11 @@ pub fn handle_exit_ingame(server: &mut Server, entity: EcsEntity) {
     let maybe_client = state.ecs().write_storage::<Client>().remove(entity);
     let maybe_uid = state.read_component_cloned::<Uid>(entity);
     let maybe_player = state.ecs().write_storage::<comp::Player>().remove(entity);
+    let maybe_group = state
+        .ecs()
+        .write_storage::<group::Group>()
+        .get(entity)
+        .cloned();
     if let (Some(mut client), Some(uid), Some(player)) = (maybe_client, maybe_uid, maybe_player) {
         // Tell client its request was successful
         client.allow_state(ClientState::Registered);
@@ -29,13 +34,39 @@ pub fn handle_exit_ingame(server: &mut Server, entity: EcsEntity) {
         client.notify(ServerMsg::ExitIngameCleanup);
 
         let entity_builder = state.ecs_mut().create_entity().with(client).with(player);
+
+        let entity_builder = match maybe_group {
+            Some(group) => entity_builder.with(group),
+            None => entity_builder,
+        };
+
         // Ensure UidAllocator maps this uid to the new entity
         let uid = entity_builder
             .world
             .write_resource::<UidAllocator>()
             .allocate(entity_builder.entity, Some(uid.into()));
-        entity_builder.with(uid).build();
+        let new_entity = entity_builder.with(uid).build();
+        if let Some(group) = maybe_group {
+            let mut group_manager = state.ecs().write_resource::<group::GroupManager>();
+            if group_manager
+                .group_info(group)
+                .map(|info| info.leader == entity)
+                .unwrap_or(false)
+            {
+                group_manager.assign_leader(
+                    new_entity,
+                    &state.ecs().read_storage(),
+                    &state.ecs().entities(),
+                    &state.ecs().read_storage(),
+                    &state.ecs().read_storage(),
+                    // Nothing actually changing since Uid is transferred
+                    |_, _| {},
+                );
+            }
+        }
     }
+    // Erase group component to avoid group restructure when deleting the entity
+    state.ecs().write_storage::<group::Group>().remove(entity);
     // Delete old entity
     if let Err(e) = state.delete_entity_recorded(entity) {
         error!(
@@ -49,13 +80,31 @@ pub fn handle_exit_ingame(server: &mut Server, entity: EcsEntity) {
 pub fn handle_client_disconnect(server: &mut Server, entity: EcsEntity) -> Event {
     if let Some(client) = server.state().read_storage::<Client>().get(entity) {
         trace!("Closing participant of client");
-        let participant = client.participant.lock().unwrap().take().unwrap();
-        if let Err(e) = block_on(participant.disconnect()) {
-            debug!(
-                ?e,
-                "Error when disconnecting client, maybe the pipe already broke"
-            );
+        let participant = match client.participant.try_lock() {
+            Ok(mut p) => p.take().unwrap(),
+            Err(e) => {
+                error!(?e, "coudln't lock participant for removal");
+                return Event::ClientDisconnected { entity };
+            },
         };
+        std::thread::spawn(|| {
+            let pid = participant.remote_pid();
+            let now = std::time::Instant::now();
+            trace!(?pid, "start disconnect");
+            if let Err(e) = block_on(participant.disconnect()) {
+                debug!(
+                    ?e,
+                    "Error when disconnecting client, maybe the pipe already broke"
+                );
+            };
+            trace!(?pid, "finished disconnect");
+            let elapsed = now.elapsed();
+            if elapsed.as_millis() > 100 {
+                warn!(?elapsed, "disconecting took quite long");
+            } else {
+                debug!(?elapsed, "disconecting took");
+            }
+        });
     }
 
     let state = server.state_mut();

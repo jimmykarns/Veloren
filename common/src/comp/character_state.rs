@@ -41,6 +41,7 @@ pub enum CharacterState {
     Climb,
     Sit,
     Dance,
+    Sneak,
     Glide,
     GlideWield,
     /// A basic blocking state
@@ -74,7 +75,7 @@ pub enum CharacterState {
 
 impl CharacterState {
     pub fn is_wield(&self) -> bool {
-        match self {
+        matches!(self,
             CharacterState::Wielding
             | CharacterState::BasicMelee(_)
             | CharacterState::BasicRanged(_)
@@ -90,7 +91,7 @@ impl CharacterState {
     }
 
     pub fn is_attack(&self) -> bool {
-        match self {
+        matches!(self,
             CharacterState::BasicMelee(_)
             | CharacterState::BasicRanged(_)
             | CharacterState::DashMelee(_)
@@ -104,31 +105,19 @@ impl CharacterState {
     }
 
     pub fn is_aimed(&self) -> bool {
-        match self {
+        matches!(self,
             CharacterState::BasicMelee(_)
             | CharacterState::BasicRanged(_)
             | CharacterState::DashMelee(_)
             | CharacterState::TripleStrike(_)
             | CharacterState::BasicBlock
             | CharacterState::LeapMelee(_)
-            | CharacterState::ChargedRanged(_) => true,
-            _ => false,
-        }
+            | CharacterState::ChargedRanged(_))
     }
 
-    pub fn is_block(&self) -> bool {
-        match self {
-            CharacterState::BasicBlock => true,
-            _ => false,
-        }
-    }
+    pub fn is_block(&self) -> bool { matches!(self, CharacterState::BasicBlock) }
 
-    pub fn is_dodge(&self) -> bool {
-        match self {
-            CharacterState::Roll(_) => true,
-            _ => false,
-        }
-    }
+    pub fn is_dodge(&self) -> bool { matches!(self, CharacterState::Roll(_)) }
 
     /// Compares for shallow equality (does not check internal struct equality)
     pub fn same_variant(&self, other: &Self) -> bool {

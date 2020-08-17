@@ -142,7 +142,7 @@ impl Tool {
                     recover_duration: Duration::from_millis(300),
                     base_healthchange: (-120.0 * self.base_power()) as i32,
                     range: 3.5,
-                    max_angle: 60.0,
+                    max_angle: 20.0,
                 },
                 LeapMelee {
                     energy_cost: 800,
@@ -157,8 +157,8 @@ impl Tool {
                 buildup_duration: Duration::from_millis(700),
                 recover_duration: Duration::from_millis(150),
                 base_healthchange: (-50.0 * self.base_power()) as i32,
-                range: 3.0,
-                max_angle: 60.0,
+                range: 3.5,
+                max_angle: 20.0,
             }],
             Bow(_) => vec![
                 BasicRanged {
@@ -171,7 +171,7 @@ impl Tool {
                         hit_entity: vec![
                             projectile::Effect::Damage((-40.0 * self.base_power()) as i32),
                             projectile::Effect::Knockback(10.0),
-                            projectile::Effect::RewardEnergy(100),
+                            projectile::Effect::RewardEnergy(50),
                             projectile::Effect::Vanish,
                         ],
                         time_left: Duration::from_secs(15),
@@ -191,7 +191,7 @@ impl Tool {
                     prepare_duration: Duration::from_millis(100),
                     charge_duration: Duration::from_millis(1500),
                     recover_duration: Duration::from_millis(500),
-                    projectile_body: Body::Object(object::Body::Arrow),
+                    projectile_body: Body::Object(object::Body::MultiArrow),
                     projectile_light: None,
                 },
             ],
@@ -202,7 +202,7 @@ impl Tool {
                     recover_duration: Duration::from_millis(400),
                     base_healthchange: (-50.0 * self.base_power()) as i32,
                     range: 3.5,
-                    max_angle: 60.0,
+                    max_angle: 20.0,
                 },
                 DashMelee {
                     energy_cost: 700,
@@ -219,8 +219,8 @@ impl Tool {
                             buildup_duration: Duration::from_millis(0),
                             recover_duration: Duration::from_millis(300),
                             base_healthchange: (-10.0 * self.base_power()) as i32,
-                            range: 10.0,
-                            max_angle: 45.0,
+                            range: 5.0,
+                            max_angle: 20.0,
                         },
                         BasicMelee {
                             energy_cost: 350,
@@ -255,8 +255,8 @@ impl Tool {
                             buildup_duration: Duration::from_millis(100),
                             recover_duration: Duration::from_millis(300),
                             base_healthchange: (-40.0 * self.base_power()) as i32,
-                            range: 10.0,
-                            max_angle: 45.0,
+                            range: 3.5,
+                            max_angle: 20.0,
                         },
                         BasicRanged {
                             energy_cost: 0,
@@ -366,8 +366,8 @@ impl Tool {
                 buildup_duration: Duration::from_millis(0),
                 recover_duration: Duration::from_millis(1000),
                 base_healthchange: -20,
-                range: 5.0,
-                max_angle: 60.0,
+                range: 3.5,
+                max_angle: 15.0,
             }],
         }
     }

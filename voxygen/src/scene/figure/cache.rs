@@ -8,7 +8,7 @@ use anim::Skeleton;
 use common::{
     assets::watch::ReloadIndicator,
     comp::{
-        item::{armor::ArmorKind, tool::ToolKind, ItemKind, LanternKind},
+        item::{armor::ArmorKind, tool::ToolKind, ItemKind},
         Body, CharacterState, Loadout,
     },
     figure::Segment,
@@ -37,7 +37,7 @@ struct CharacterCacheKey {
     chest: Option<ArmorKind>,
     belt: Option<ArmorKind>,
     back: Option<ArmorKind>,
-    lantern: Option<LanternKind>,
+    lantern: Option<String>,
     hand: Option<ArmorKind>,
     pants: Option<ArmorKind>,
     foot: Option<ArmorKind>,
@@ -64,44 +64,44 @@ impl CharacterCacheKey {
             shoulder: if let Some(ItemKind::Armor(armor)) =
                 loadout.shoulder.as_ref().map(|i| &i.kind)
             {
-                Some(armor.kind)
+                Some(armor.kind.clone())
             } else {
                 None
             },
             chest: if let Some(ItemKind::Armor(armor)) = loadout.chest.as_ref().map(|i| &i.kind) {
-                Some(armor.kind)
+                Some(armor.kind.clone())
             } else {
                 None
             },
             belt: if let Some(ItemKind::Armor(armor)) = loadout.belt.as_ref().map(|i| &i.kind) {
-                Some(armor.kind)
+                Some(armor.kind.clone())
             } else {
                 None
             },
             back: if let Some(ItemKind::Armor(armor)) = loadout.back.as_ref().map(|i| &i.kind) {
-                Some(armor.kind)
+                Some(armor.kind.clone())
             } else {
                 None
             },
             lantern: if let Some(ItemKind::Lantern(lantern)) =
                 loadout.lantern.as_ref().map(|i| &i.kind)
             {
-                Some(lantern.kind)
+                Some(lantern.kind.clone())
             } else {
                 None
             },
             hand: if let Some(ItemKind::Armor(armor)) = loadout.hand.as_ref().map(|i| &i.kind) {
-                Some(armor.kind)
+                Some(armor.kind.clone())
             } else {
                 None
             },
             pants: if let Some(ItemKind::Armor(armor)) = loadout.pants.as_ref().map(|i| &i.kind) {
-                Some(armor.kind)
+                Some(armor.kind.clone())
             } else {
                 None
             },
             foot: if let Some(ItemKind::Armor(armor)) = loadout.foot.as_ref().map(|i| &i.kind) {
-                Some(armor.kind)
+                Some(armor.kind.clone())
             } else {
                 None
             },
@@ -576,6 +576,11 @@ impl<Skel: Skeleton> FigureModelCache<Skel> {
                         body.body_type,
                         generate_mesh,
                     )),
+                    Some(biped_large_center_spec.mesh_jaw(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
                     Some(biped_large_center_spec.mesh_torso_upper(
                         body.species,
                         body.body_type,
@@ -586,7 +591,17 @@ impl<Skel: Skeleton> FigureModelCache<Skel> {
                         body.body_type,
                         generate_mesh,
                     )),
+                    Some(biped_large_center_spec.mesh_tail(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
                     Some(biped_large_center_spec.mesh_main(
+                        body.species,
+                        body.body_type,
+                        generate_mesh,
+                    )),
+                    Some(biped_large_center_spec.mesh_second(
                         body.species,
                         body.body_type,
                         generate_mesh,
@@ -631,9 +646,6 @@ impl<Skel: Skeleton> FigureModelCache<Skel> {
                         body.body_type,
                         generate_mesh,
                     )),
-                    None,
-                    None,
-                    None,
                     None,
                 ]
             },

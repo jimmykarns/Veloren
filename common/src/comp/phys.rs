@@ -24,6 +24,10 @@ impl Component for Vel {
 #[derive(Copy, Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Ori(pub Dir);
 
+impl Ori {
+    pub fn vec(&self) -> &Vec3<f32> { &*self.0 }
+}
+
 impl Component for Ori {
     type Storage = IdvStorage<Self>;
 }
@@ -76,7 +80,7 @@ pub struct PhysicsState {
     pub on_ceiling: bool,
     pub on_wall: Option<Vec3<f32>>,
     pub touch_entity: Option<Uid>,
-    pub in_fluid: bool,
+    pub in_fluid: Option<f32>, // Depth
 }
 
 impl PhysicsState {
@@ -89,7 +93,7 @@ impl PhysicsState {
 }
 
 impl Component for PhysicsState {
-    type Storage = FlaggedStorage<Self, IdvStorage<Self>>;
+    type Storage = IdvStorage<Self>;
 }
 
 // ForceUpdate

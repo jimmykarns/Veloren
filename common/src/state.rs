@@ -125,6 +125,7 @@ impl State {
         ecs.register::<comp::Object>();
         ecs.register::<comp::Alignment>();
         ecs.register::<comp::Totem>();
+        ecs.register::<comp::Group>();
 
         // Register components send from clients -> server
         ecs.register::<comp::Controller>();
@@ -147,6 +148,7 @@ impl State {
         ecs.register::<comp::Last<comp::Pos>>();
         ecs.register::<comp::Last<comp::Vel>>();
         ecs.register::<comp::Last<comp::Ori>>();
+        ecs.register::<comp::Alignment>();
         ecs.register::<comp::Agent>();
         ecs.register::<comp::WaypointArea>();
         ecs.register::<comp::ForceUpdate>();
@@ -157,8 +159,9 @@ impl State {
         ecs.register::<comp::Attacking>();
         ecs.register::<comp::ItemDrop>();
         ecs.register::<comp::ChatMode>();
-        ecs.register::<comp::Group>();
         ecs.register::<comp::Faction>();
+        ecs.register::<comp::group::Invite>();
+        ecs.register::<comp::group::PendingInvites>();
 
         // Register synced resources used by the ECS.
         ecs.insert(TimeOfDay(0.0));
@@ -169,9 +172,10 @@ impl State {
         ecs.insert(TerrainGrid::new().unwrap());
         ecs.insert(BlockChange::default());
         ecs.insert(TerrainChanges::default());
+        ecs.insert(EventBus::<LocalEvent>::default());
         // TODO: only register on the server
         ecs.insert(EventBus::<ServerEvent>::default());
-        ecs.insert(EventBus::<LocalEvent>::default());
+        ecs.insert(comp::group::GroupManager::default());
         ecs.insert(RegionMap::new());
 
         ecs
@@ -197,7 +201,7 @@ impl State {
     }
 
     /// Read a component attributed to a particular entity.
-    pub fn read_component_cloned<C: Component + Clone>(&self, entity: EcsEntity) -> Option<C> {
+    pub fn read_component_cloned<C: Component + Copy>(&self, entity: EcsEntity) -> Option<C> {
         self.ecs.read_storage().get(entity).cloned()
     }
 

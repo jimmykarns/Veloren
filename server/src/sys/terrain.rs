@@ -137,9 +137,9 @@ impl<'a> System<'a> for Sys {
                                 energy_cost: 0,
                                 buildup_duration: Duration::from_millis(0),
                                 recover_duration: Duration::from_millis(400),
-                                base_healthchange: -60,
-                                range: 5.0,
-                                max_angle: 80.0,
+                                base_healthchange: -40,
+                                range: 3.5,
+                                max_angle: 15.0,
                             }),
                             ability2: None,
                             ability3: None,
@@ -319,12 +319,12 @@ impl<'a> System<'a> for Sys {
                     pos: Pos(entity.pos),
                     stats,
                     loadout,
-                    body,
                     agent: if entity.has_agency {
-                        Some(comp::Agent::new(entity.pos, can_speak))
+                        Some(comp::Agent::new(entity.pos, can_speak, &body))
                     } else {
                         None
                     },
+                    body,
                     alignment,
                     scale: comp::Scale(scale),
                     drop_item: entity.loot_drop,

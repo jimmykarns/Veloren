@@ -219,10 +219,14 @@ impl<'a> Widget for Skillbar<'a> {
 
         let exp_percentage = (self.stats.exp.current() as f64) / (self.stats.exp.maximum() as f64);
 
-        let hp_percentage =
+        let mut hp_percentage =
             self.stats.health.current() as f64 / self.stats.health.maximum() as f64 * 100.0;
-        let energy_percentage = self.energy.current() as f64 / self.energy.maximum() as f64 * 100.0;
-
+        let mut energy_percentage =
+            self.energy.current() as f64 / self.energy.maximum() as f64 * 100.0;
+        if self.stats.is_dead {
+            hp_percentage = 0.0;
+            energy_percentage = 0.0;
+        };
         let scale = 2.0;
 
         let bar_values = self.global_state.settings.gameplay.bar_numbers;
@@ -806,14 +810,12 @@ impl<'a> Widget for Skillbar<'a> {
                 })
         };
 
-        const SLOT_TOOLTIP_UPSHIFT: f64 = 70.0;
         //Slot 5
         let slot = slot_maker
             .fabricate(hotbar::Slot::Five, [20.0 * scale as f32; 2])
             .bottom_left_with_margins_on(state.ids.m1_slot, 0.0, -20.0 * scale);
         if let Some((title, desc)) = tooltip_text(hotbar::Slot::Five) {
             slot.with_tooltip(self.tooltip_manager, title, desc, &item_tooltip)
-                .bottom_offset(SLOT_TOOLTIP_UPSHIFT)
                 .set(state.ids.slot5, ui);
         } else {
             slot.set(state.ids.slot5, ui);
@@ -824,7 +826,6 @@ impl<'a> Widget for Skillbar<'a> {
             .left_from(state.ids.slot5, 0.0);
         if let Some((title, desc)) = tooltip_text(hotbar::Slot::Four) {
             slot.with_tooltip(self.tooltip_manager, title, desc, &item_tooltip)
-                .bottom_offset(SLOT_TOOLTIP_UPSHIFT)
                 .set(state.ids.slot4, ui);
         } else {
             slot.set(state.ids.slot4, ui);
@@ -835,7 +836,6 @@ impl<'a> Widget for Skillbar<'a> {
             .left_from(state.ids.slot4, 0.0);
         if let Some((title, desc)) = tooltip_text(hotbar::Slot::Three) {
             slot.with_tooltip(self.tooltip_manager, title, desc, &item_tooltip)
-                .bottom_offset(SLOT_TOOLTIP_UPSHIFT)
                 .set(state.ids.slot3, ui);
         } else {
             slot.set(state.ids.slot3, ui);
@@ -846,7 +846,6 @@ impl<'a> Widget for Skillbar<'a> {
             .left_from(state.ids.slot3, 0.0);
         if let Some((title, desc)) = tooltip_text(hotbar::Slot::Two) {
             slot.with_tooltip(self.tooltip_manager, title, desc, &item_tooltip)
-                .bottom_offset(SLOT_TOOLTIP_UPSHIFT)
                 .set(state.ids.slot2, ui);
         } else {
             slot.set(state.ids.slot2, ui);
@@ -860,7 +859,6 @@ impl<'a> Widget for Skillbar<'a> {
             .left_from(state.ids.slot2, 0.0);
         if let Some((title, desc)) = tooltip_text(hotbar::Slot::One) {
             slot.with_tooltip(self.tooltip_manager, title, desc, &item_tooltip)
-                .bottom_offset(SLOT_TOOLTIP_UPSHIFT)
                 .set(state.ids.slot1, ui);
         } else {
             slot.set(state.ids.slot1, ui);
@@ -874,7 +872,6 @@ impl<'a> Widget for Skillbar<'a> {
             .bottom_right_with_margins_on(state.ids.m2_slot, 0.0, -20.0 * scale);
         if let Some((title, desc)) = tooltip_text(hotbar::Slot::Six) {
             slot.with_tooltip(self.tooltip_manager, title, desc, &item_tooltip)
-                .bottom_offset(SLOT_TOOLTIP_UPSHIFT)
                 .set(state.ids.slot6, ui);
         } else {
             slot.set(state.ids.slot6, ui);
@@ -885,7 +882,6 @@ impl<'a> Widget for Skillbar<'a> {
             .right_from(state.ids.slot6, 0.0);
         if let Some((title, desc)) = tooltip_text(hotbar::Slot::Seven) {
             slot.with_tooltip(self.tooltip_manager, title, desc, &item_tooltip)
-                .bottom_offset(SLOT_TOOLTIP_UPSHIFT)
                 .set(state.ids.slot7, ui);
         } else {
             slot.set(state.ids.slot7, ui);
@@ -896,7 +892,6 @@ impl<'a> Widget for Skillbar<'a> {
             .right_from(state.ids.slot7, 0.0);
         if let Some((title, desc)) = tooltip_text(hotbar::Slot::Eight) {
             slot.with_tooltip(self.tooltip_manager, title, desc, &item_tooltip)
-                .bottom_offset(SLOT_TOOLTIP_UPSHIFT)
                 .set(state.ids.slot8, ui);
         } else {
             slot.set(state.ids.slot8, ui);
@@ -907,7 +902,6 @@ impl<'a> Widget for Skillbar<'a> {
             .right_from(state.ids.slot8, 0.0);
         if let Some((title, desc)) = tooltip_text(hotbar::Slot::Nine) {
             slot.with_tooltip(self.tooltip_manager, title, desc, &item_tooltip)
-                .bottom_offset(SLOT_TOOLTIP_UPSHIFT)
                 .set(state.ids.slot9, ui);
         } else {
             slot.set(state.ids.slot9, ui);
@@ -921,7 +915,6 @@ impl<'a> Widget for Skillbar<'a> {
             .right_from(state.ids.slot9, 0.0);
         if let Some((title, desc)) = tooltip_text(hotbar::Slot::Ten) {
             slot.with_tooltip(self.tooltip_manager, title, desc, &item_tooltip)
-                .bottom_offset(SLOT_TOOLTIP_UPSHIFT)
                 .set(state.ids.slot10, ui);
         } else {
             slot.set(state.ids.slot10, ui);
@@ -1164,15 +1157,14 @@ impl<'a> Widget for Skillbar<'a> {
             .w_h(100.0 * scale, 20.0 * scale)
             .top_left_with_margins_on(state.ids.m1_slot, 0.0, -100.0 * scale)
             .set(state.ids.healthbar_bg, ui);
+        let health_col = match hp_percentage as u8 {
+            0..=20 => crit_hp_color,
+            21..=40 => LOW_HP_COLOR,
+            _ => HP_COLOR,
+        };
         Image::new(self.imgs.bar_content)
             .w_h(97.0 * scale * hp_percentage / 100.0, 16.0 * scale)
-            .color(Some(if hp_percentage <= 20.0 {
-                crit_hp_color
-            } else if hp_percentage <= 40.0 {
-                LOW_HP_COLOR
-            } else {
-                HP_COLOR
-            }))
+            .color(Some(health_col))
             .top_right_with_margins_on(state.ids.healthbar_bg, 2.0 * scale, 1.0 * scale)
             .set(state.ids.healthbar_filling, ui);
         // Energybar
@@ -1192,11 +1184,22 @@ impl<'a> Widget for Skillbar<'a> {
         // Bar Text
         // Values
         if let BarNumbers::Values = bar_values {
-            let hp_text = format!(
+            let mut hp_text = format!(
                 "{}/{}",
-                (self.stats.health.current() / 10) as u32,
+                (self.stats.health.current() / 10).max(1) as u32, /* Don't show 0 health for
+                                                                   * living players */
                 (self.stats.health.maximum() / 10) as u32
             );
+            let mut energy_text = format!(
+                "{}/{}",
+                self.energy.current() as u32 / 10, /* TODO Fix regeneration with smaller energy
+                                                    * numbers instead of dividing by 10 here */
+                self.energy.maximum() as u32 / 10
+            );
+            if self.stats.is_dead {
+                hp_text = self.localized_strings.get("hud.group.dead").to_string();
+                energy_text = self.localized_strings.get("hud.group.dead").to_string();
+            };
             Text::new(&hp_text)
                 .mid_top_with_margin_on(state.ids.healthbar_bg, 6.0 * scale)
                 .font_size(self.fonts.cyri.scale(14))
@@ -1209,12 +1212,6 @@ impl<'a> Widget for Skillbar<'a> {
                 .font_id(self.fonts.cyri.conrod_id)
                 .color(TEXT_COLOR)
                 .set(state.ids.health_text, ui);
-            let energy_text = format!(
-                "{}/{}",
-                self.energy.current() as u32 / 10, /* TODO Fix regeneration with smaller energy
-                                                    * numbers instead of dividing by 10 here */
-                self.energy.maximum() as u32 / 10
-            );
             Text::new(&energy_text)
                 .mid_top_with_margin_on(state.ids.energybar_bg, 6.0 * scale)
                 .font_size(self.fonts.cyri.scale(14))

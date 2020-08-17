@@ -11,11 +11,9 @@ use common::{
         golem::{BodyType as GBodyType, Species as GSpecies},
         humanoid::{Body, BodyType, EyeColor, Skin, Species},
         item::{
-            armor::{
-                Armor, ArmorKind, Back, Belt, Chest, Foot, Hand, Head, Pants, Shoulder, Tabard,
-            },
+            armor::{Armor, ArmorKind},
             tool::{Tool, ToolKind},
-            ItemKind, Lantern, LanternKind,
+            ItemKind, Lantern,
         },
         object,
         quadruped_low::{BodyType as QLBodyType, Species as QLSpecies},
@@ -254,27 +252,27 @@ where
     map: HashMap<K, S>,
 }
 #[derive(Serialize, Deserialize)]
-pub struct HumArmorShoulderSpec(ArmorVoxSpecMap<Shoulder, SidedArmorVoxSpec>);
+pub struct HumArmorShoulderSpec(ArmorVoxSpecMap<String, SidedArmorVoxSpec>);
 #[derive(Serialize, Deserialize)]
-pub struct HumArmorChestSpec(ArmorVoxSpecMap<Chest, ArmorVoxSpec>);
+pub struct HumArmorChestSpec(ArmorVoxSpecMap<String, ArmorVoxSpec>);
 #[derive(Serialize, Deserialize)]
-pub struct HumArmorHandSpec(ArmorVoxSpecMap<Hand, SidedArmorVoxSpec>);
+pub struct HumArmorHandSpec(ArmorVoxSpecMap<String, SidedArmorVoxSpec>);
 #[derive(Serialize, Deserialize)]
-pub struct HumArmorBeltSpec(ArmorVoxSpecMap<Belt, ArmorVoxSpec>);
+pub struct HumArmorBeltSpec(ArmorVoxSpecMap<String, ArmorVoxSpec>);
 #[derive(Serialize, Deserialize)]
-pub struct HumArmorBackSpec(ArmorVoxSpecMap<Back, ArmorVoxSpec>);
+pub struct HumArmorBackSpec(ArmorVoxSpecMap<String, ArmorVoxSpec>);
 #[derive(Serialize, Deserialize)]
-pub struct HumArmorPantsSpec(ArmorVoxSpecMap<Pants, ArmorVoxSpec>);
+pub struct HumArmorPantsSpec(ArmorVoxSpecMap<String, ArmorVoxSpec>);
 #[derive(Serialize, Deserialize)]
-pub struct HumArmorFootSpec(ArmorVoxSpecMap<Foot, ArmorVoxSpec>);
+pub struct HumArmorFootSpec(ArmorVoxSpecMap<String, ArmorVoxSpec>);
 #[derive(Serialize, Deserialize)]
 pub struct HumMainWeaponSpec(HashMap<ToolKind, ArmorVoxSpec>);
 #[derive(Serialize, Deserialize)]
-pub struct HumArmorLanternSpec(ArmorVoxSpecMap<LanternKind, ArmorVoxSpec>);
+pub struct HumArmorLanternSpec(ArmorVoxSpecMap<String, ArmorVoxSpec>);
 #[derive(Serialize, Deserialize)]
-pub struct HumArmorHeadSpec(ArmorVoxSpecMap<Head, ArmorVoxSpec>);
+pub struct HumArmorHeadSpec(ArmorVoxSpecMap<String, ArmorVoxSpec>);
 #[derive(Serialize, Deserialize)]
-pub struct HumArmorTabardSpec(ArmorVoxSpecMap<Tabard, ArmorVoxSpec>);
+pub struct HumArmorTabardSpec(ArmorVoxSpecMap<String, ArmorVoxSpec>);
 
 impl Asset for HumArmorShoulderSpec {
     const ENDINGS: &'static [&'static str] = &["ron"];
@@ -372,7 +370,7 @@ impl HumArmorShoulderSpec {
             ..
         })) = loadout.shoulder.as_ref().map(|i| &i.kind)
         {
-            match self.0.map.get(&shoulder) {
+            match self.0.map.get(shoulder) {
                 Some(spec) => spec,
                 None => {
                     error!(?shoulder, "No shoulder specification exists");
@@ -454,7 +452,7 @@ impl HumArmorChestSpec {
             ..
         })) = loadout.chest.as_ref().map(|i| &i.kind)
         {
-            match self.0.map.get(&chest) {
+            match self.0.map.get(chest) {
                 Some(spec) => spec,
                 None => {
                     error!(?loadout.chest, "No chest specification exists");
@@ -511,7 +509,7 @@ impl HumArmorHandSpec {
             ..
         })) = loadout.hand.as_ref().map(|i| &i.kind)
         {
-            match self.0.map.get(&hand) {
+            match self.0.map.get(hand) {
                 Some(spec) => spec,
                 None => {
                     error!(?hand, "No hand specification exists");
@@ -587,7 +585,7 @@ impl HumArmorBeltSpec {
             ..
         })) = loadout.belt.as_ref().map(|i| &i.kind)
         {
-            match self.0.map.get(&belt) {
+            match self.0.map.get(belt) {
                 Some(spec) => spec,
                 None => {
                     error!(?belt, "No belt specification exists");
@@ -631,7 +629,7 @@ impl HumArmorBackSpec {
             ..
         })) = loadout.back.as_ref().map(|i| &i.kind)
         {
-            match self.0.map.get(&back) {
+            match self.0.map.get(back) {
                 Some(spec) => spec,
                 None => {
                     error!(?back, "No back specification exists");
@@ -674,7 +672,7 @@ impl HumArmorPantsSpec {
             ..
         })) = loadout.pants.as_ref().map(|i| &i.kind)
         {
-            match self.0.map.get(&pants) {
+            match self.0.map.get(pants) {
                 Some(spec) => spec,
                 None => {
                     error!(?pants, "No pants specification exists");
@@ -731,7 +729,7 @@ impl HumArmorFootSpec {
             ..
         })) = loadout.foot.as_ref().map(|i| &i.kind)
         {
-            match self.0.map.get(&foot) {
+            match self.0.map.get(foot) {
                 Some(spec) => spec,
                 None => {
                     error!(?foot, "No foot specification exists");
@@ -843,7 +841,7 @@ impl HumArmorLanternSpec {
         let spec = if let Some(ItemKind::Lantern(Lantern { kind, .. })) =
             loadout.lantern.as_ref().map(|i| &i.kind)
         {
-            match self.0.map.get(&kind) {
+            match self.0.map.get(kind) {
                 Some(spec) => spec,
                 None => {
                     error!(?kind, "No lantern specification exists");
@@ -886,7 +884,7 @@ impl HumArmorHeadSpec {
             ..
         })) = loadout.head.as_ref().map(|i| &i.kind)
         {
-            match self.0.map.get(&head) {
+            match self.0.map.get(head) {
                 Some(spec) => spec,
                 None => {
                     error!(?head, "No head specification exists");
@@ -941,7 +939,7 @@ impl HumArmorTabardSpec {
             ..
         })) = loadout.tabard.as_ref().map(|i| &i.kind)
         {
-            match self.0.map.get(&tabard) {
+            match self.0.map.get(tabard) {
                 Some(spec) => spec,
                 None => {
                     error!(?tabard, "No tabard specification exists");
@@ -2483,9 +2481,12 @@ pub struct BipedLargeCenterSpec(HashMap<(BLSpecies, BLBodyType), SidedBLCenterVo
 #[derive(Serialize, Deserialize)]
 struct SidedBLCenterVoxSpec {
     head: BipedLargeCenterSubSpec,
+    jaw: BipedLargeCenterSubSpec,
     torso_upper: BipedLargeCenterSubSpec,
     torso_lower: BipedLargeCenterSubSpec,
+    tail: BipedLargeCenterSubSpec,
     main: BipedLargeCenterSubSpec,
+    second: BipedLargeCenterSubSpec,
 }
 #[derive(Serialize, Deserialize)]
 struct BipedLargeCenterSubSpec {
@@ -2556,6 +2557,27 @@ impl BipedLargeCenterSpec {
         generate_mesh(&center, Vec3::from(spec.head.offset))
     }
 
+    pub fn mesh_jaw(
+        &self,
+        species: BLSpecies,
+        body_type: BLBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No jaw specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.jaw.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.jaw.offset))
+    }
+
     pub fn mesh_torso_upper(
         &self,
         species: BLSpecies,
@@ -2598,6 +2620,27 @@ impl BipedLargeCenterSpec {
         generate_mesh(&center, Vec3::from(spec.torso_lower.offset))
     }
 
+    pub fn mesh_tail(
+        &self,
+        species: BLSpecies,
+        body_type: BLBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No tail specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.tail.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.tail.offset))
+    }
+
     pub fn mesh_main(
         &self,
         species: BLSpecies,
@@ -2617,6 +2660,27 @@ impl BipedLargeCenterSpec {
         let center = graceful_load_segment(&spec.main.center.0);
 
         generate_mesh(&center, Vec3::from(spec.main.offset))
+    }
+
+    pub fn mesh_second(
+        &self,
+        species: BLSpecies,
+        body_type: BLBodyType,
+        generate_mesh: impl FnOnce(&Segment, Vec3<f32>) -> Mesh<FigurePipeline>,
+    ) -> Mesh<FigurePipeline> {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No second weapon specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.second.center.0);
+
+        generate_mesh(&center, Vec3::from(spec.second.offset))
     }
 }
 impl BipedLargeLateralSpec {
@@ -3354,6 +3418,26 @@ pub fn mesh_object(
             Vec3::new(-0.5, -6.0, -1.5),
         ),
         Body::Bomb => ("object.bomb", Vec3::new(-5.5, -5.5, 0.0)),
+        Body::FireworkBlue => (
+            "weapon.projectile.fireworks_blue-0",
+            Vec3::new(0.0, 0.0, 0.0),
+        ),
+        Body::FireworkGreen => (
+            "weapon.projectile.fireworks_green-0",
+            Vec3::new(0.0, 0.0, 0.0),
+        ),
+        Body::FireworkPurple => (
+            "weapon.projectile.fireworks_purple-0",
+            Vec3::new(0.0, 0.0, 0.0),
+        ),
+        Body::FireworkRed => (
+            "weapon.projectile.fireworks_red-0",
+            Vec3::new(0.0, 0.0, 0.0),
+        ),
+        Body::FireworkYellow => (
+            "weapon.projectile.fireworks_yellow-0",
+            Vec3::new(0.0, 0.0, 0.0),
+        ),
         Body::Scarecrow => ("object.scarecrow", Vec3::new(-9.5, -4.0, 0.0)),
         Body::Cauldron => ("object.cauldron", Vec3::new(-10.0, -10.0, 0.0)),
         Body::ChestVines => ("object.chest_vines", Vec3::new(-7.5, -6.0, 0.0)),
@@ -3412,6 +3496,7 @@ pub fn mesh_object(
         Body::BoltFire => ("weapon.projectile.fire-bolt-0", Vec3::new(-3.0, -5.5, -3.0)),
         Body::BoltFireBig => ("weapon.projectile.fire-bolt-1", Vec3::new(-6.0, -6.0, -6.0)),
         Body::TrainingDummy => ("object.training_dummy", Vec3::new(-7.0, -5.0, 0.0)),
+        Body::MultiArrow => ("weapon.projectile.multi-arrow", Vec3::new(-4.0, -9.5, -5.0)),
     };
     load_mesh(name, offset, generate_mesh)
 }

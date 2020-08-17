@@ -21,6 +21,7 @@ use common::{
     },
     event::EventBus,
     msg::ClientState,
+    outcome::Outcome,
     terrain::{Block, BlockKind},
     util::Dir,
     vol::ReadVol,
@@ -52,6 +53,8 @@ pub struct SessionState {
     free_look: bool,
     auto_walk: bool,
     is_aiming: bool,
+    target_entity: Option<specs::Entity>,
+    selected_entity: Option<(specs::Entity, std::time::Instant)>,
 }
 
 /// Represents an active game session (i.e., the one being played).
@@ -86,6 +89,8 @@ impl SessionState {
             free_look: false,
             auto_walk: false,
             is_aiming: false,
+            target_entity: None,
+            selected_entity: None,
         }
     }
 
@@ -96,7 +101,12 @@ impl SessionState {
     }
 
     /// Tick the session (and the client attached to it).
-    fn tick(&mut self, dt: Duration, global_state: &mut GlobalState) -> Result<TickAction, Error> {
+    fn tick(
+        &mut self,
+        dt: Duration,
+        global_state: &mut GlobalState,
+        outcomes: &mut Vec<Outcome>,
+    ) -> Result<TickAction, Error> {
         self.inputs.tick(dt);
 
         let mut client = self.client.borrow_mut();
@@ -154,6 +164,7 @@ impl SessionState {
                     global_state.settings.graphics.view_distance = vd;
                     global_state.settings.save_to_file_warn();
                 },
+                client::Event::Outcome(outcome) => outcomes.push(outcome),
             }
         }
 
@@ -180,6 +191,7 @@ impl PlayState for SessionState {
     }
 
     fn tick(&mut self, global_state: &mut GlobalState, events: Vec<Event>) -> PlayStateResult {
+        // NOTE: Not strictly necessary, but useful for hotloading translation changes.
         self.voxygen_i18n = load_expect::<VoxygenLocalization>(&i18n_asset_key(
             &global_state.settings.language.selected_language,
         ));
@@ -204,20 +216,8 @@ impl PlayState for SessionState {
                 .camera_mut()
                 .compute_dependents(&*self.client.borrow().state().terrain());
             let camera::Dependents {
-                view_mat, cam_pos, ..
+                cam_pos, cam_dir, ..
             } = self.scene.camera().dependents();
-
-            // Choose a spot above the player's head for item distance checks
-            let player_pos = match self
-                .client
-                .borrow()
-                .state()
-                .read_storage::<comp::Pos>()
-                .get(self.client.borrow().entity())
-            {
-                Some(pos) => pos.0 + (Vec3::unit_z() * 2.0),
-                _ => cam_pos, // Should never happen, but a safe fallback
-            };
 
             let (is_aiming, aim_dir_offset) = {
                 let client = self.client.borrow();
@@ -239,33 +239,11 @@ impl PlayState for SessionState {
             };
             self.is_aiming = is_aiming;
 
-            let cam_dir: Vec3<f32> = Vec3::from(view_mat.inverted() * -Vec4::unit_z());
-
             // Check to see whether we're aiming at anything
-            let (build_pos, select_pos) = {
-                let client = self.client.borrow();
-                let terrain = client.state().terrain();
-
-                let cam_ray = terrain
-                    .ray(cam_pos, cam_pos + cam_dir * 100.0)
-                    .until(|block| block.is_tangible())
-                    .cast();
-
-                let cam_dist = cam_ray.0;
-
-                match cam_ray.1 {
-                    Ok(Some(_))
-                        if player_pos.distance_squared(cam_pos + cam_dir * cam_dist)
-                            <= MAX_PICKUP_RANGE_SQR =>
-                    {
-                        (
-                            Some((cam_pos + cam_dir * (cam_dist - 0.01)).map(|e| e.floor() as i32)),
-                            Some((cam_pos + cam_dir * (cam_dist + 0.01)).map(|e| e.floor() as i32)),
-                        )
-                    },
-                    _ => (None, None),
-                }
-            };
+            let (build_pos, select_pos, target_entity) =
+                under_cursor(&self.client.borrow(), cam_pos, cam_dir);
+            // Throw out distance info, it will be useful in the future
+            self.target_entity = target_entity.map(|x| x.0);
 
             let can_build = self
                 .client
@@ -349,8 +327,11 @@ impl PlayState for SessionState {
                     Event::InputUpdate(GameInput::Jump, state) => {
                         self.inputs.jump.set_state(state);
                     },
-                    Event::InputUpdate(GameInput::Swim, state) => {
-                        self.inputs.swim.set_state(state);
+                    Event::InputUpdate(GameInput::SwimUp, state) => {
+                        self.inputs.swimup.set_state(state);
+                    },
+                    Event::InputUpdate(GameInput::SwimDown, state) => {
+                        self.inputs.swimdown.set_state(state);
                     },
                     Event::InputUpdate(GameInput::Sit, state)
                         if state != self.key_state.toggle_sit =>
@@ -369,6 +350,15 @@ impl PlayState for SessionState {
                         if state {
                             self.stop_auto_walk();
                             self.client.borrow_mut().toggle_dance();
+                        }
+                    }
+                    Event::InputUpdate(GameInput::Sneak, state)
+                        if state != self.key_state.toggle_sneak =>
+                    {
+                        self.key_state.toggle_sneak = state;
+                        if state {
+                            self.stop_auto_walk();
+                            self.client.borrow_mut().toggle_sneak();
                         }
                     }
                     Event::InputUpdate(GameInput::MoveForward, state) => {
@@ -558,6 +548,24 @@ impl PlayState for SessionState {
                         let camera = self.scene.camera_mut();
                         camera.next_mode(self.client.borrow().is_admin());
                     },
+                    Event::InputUpdate(GameInput::Select, state) => {
+                        if !state {
+                            self.selected_entity =
+                                self.target_entity.map(|e| (e, std::time::Instant::now()));
+                        }
+                    },
+                    Event::InputUpdate(GameInput::AcceptGroupInvite, true) => {
+                        let mut client = self.client.borrow_mut();
+                        if client.group_invite().is_some() {
+                            client.accept_group_invite();
+                        }
+                    },
+                    Event::InputUpdate(GameInput::DeclineGroupInvite, true) => {
+                        let mut client = self.client.borrow_mut();
+                        if client.group_invite().is_some() {
+                            client.decline_group_invite();
+                        }
+                    },
                     Event::AnalogGameInput(input) => match input {
                         AnalogGameInput::MovementX(v) => {
                             self.key_state.analog_matrix.x = v;
@@ -642,10 +650,16 @@ impl PlayState for SessionState {
 
             self.inputs.climb = self.key_state.climb();
 
+            let mut outcomes = Vec::new();
+
             // Runs if either in a multiplayer server or the singleplayer server is unpaused
             if !global_state.paused() {
                 // Perform an in-game tick.
-                match self.tick(global_state.clock.get_avg_delta(), global_state) {
+                match self.tick(
+                    global_state.clock.get_avg_delta(),
+                    global_state,
+                    &mut outcomes,
+                ) {
                     Ok(TickAction::Continue) => {}, // Do nothing
                     Ok(TickAction::Disconnect) => return PlayStateResult::Pop, // Go to main menu
                     Err(err) => {
@@ -698,6 +712,9 @@ impl PlayState for SessionState {
                     num_visible_chunks: self.scene.terrain().visible_chunk_count() as u32,
                     num_figures: self.scene.figure_mgr().figure_count() as u32,
                     num_figures_visible: self.scene.figure_mgr().figure_count_visible() as u32,
+                    num_particles: self.scene.particle_mgr().particle_count() as u32,
+                    num_particles_visible: self.scene.particle_mgr().particle_count_visible()
+                        as u32,
                 },
                 &self.scene.camera(),
                 global_state.clock.get_last_delta(),
@@ -707,6 +724,8 @@ impl PlayState for SessionState {
                         self.scene.camera().get_mode(),
                         camera::CameraMode::FirstPerson
                     ),
+                    target_entity: self.target_entity,
+                    selected_entity: self.selected_entity,
                 },
             );
 
@@ -930,6 +949,37 @@ impl PlayState for SessionState {
                         global_state.settings.graphics.fluid_mode = new_fluid_mode;
                         global_state.settings.save_to_file_warn();
                     },
+                    HudEvent::ChangeResolution(new_resolution) => {
+                        // Do this first so if it crashes the setting isn't saved :)
+                        global_state.window.fullscreen(
+                            global_state.settings.graphics.fullscreen,
+                            new_resolution,
+                            global_state.settings.graphics.bit_depth,
+                            global_state.settings.graphics.refresh_rate,
+                        );
+                        global_state.settings.graphics.resolution = new_resolution;
+                        global_state.settings.save_to_file_warn();
+                    },
+                    HudEvent::ChangeBitDepth(new_bit_depth) => {
+                        global_state.window.fullscreen(
+                            global_state.settings.graphics.fullscreen,
+                            global_state.settings.graphics.resolution,
+                            new_bit_depth,
+                            global_state.settings.graphics.refresh_rate,
+                        );
+                        global_state.settings.graphics.bit_depth = new_bit_depth;
+                        global_state.settings.save_to_file_warn();
+                    },
+                    HudEvent::ChangeRefreshRate(new_refresh_rate) => {
+                        global_state.window.fullscreen(
+                            global_state.settings.graphics.fullscreen,
+                            global_state.settings.graphics.resolution,
+                            global_state.settings.graphics.bit_depth,
+                            new_refresh_rate,
+                        );
+                        global_state.settings.graphics.refresh_rate = new_refresh_rate;
+                        global_state.settings.save_to_file_warn();
+                    },
                     HudEvent::ChangeLanguage(new_language) => {
                         global_state.settings.language.selected_language =
                             new_language.language_identifier;
@@ -940,6 +990,10 @@ impl PlayState for SessionState {
                         .unwrap();
                         self.voxygen_i18n.log_missing_entries();
                         self.hud.update_language(self.voxygen_i18n.clone());
+                    },
+                    HudEvent::ToggleParticlesEnabled(particles_enabled) => {
+                        global_state.settings.graphics.particles_enabled = particles_enabled;
+                        global_state.settings.save_to_file_warn();
                     },
                     HudEvent::ToggleFullscreen => {
                         global_state
@@ -970,6 +1024,24 @@ impl PlayState for SessionState {
                     HudEvent::CraftRecipe(r) => {
                         self.client.borrow_mut().craft_recipe(&r);
                     },
+                    HudEvent::InviteMember(uid) => {
+                        self.client.borrow_mut().send_group_invite(uid);
+                    },
+                    HudEvent::AcceptInvite => {
+                        self.client.borrow_mut().accept_group_invite();
+                    },
+                    HudEvent::DeclineInvite => {
+                        self.client.borrow_mut().decline_group_invite();
+                    },
+                    HudEvent::KickMember(uid) => {
+                        self.client.borrow_mut().kick_from_group(uid);
+                    },
+                    HudEvent::LeaveGroup => {
+                        self.client.borrow_mut().leave_group();
+                    },
+                    HudEvent::AssignLeader(uid) => {
+                        self.client.borrow_mut().assign_group_leader(uid);
+                    },
                 }
             }
 
@@ -978,6 +1050,7 @@ impl PlayState for SessionState {
                 let scene_data = SceneData {
                     state: client.state(),
                     player_entity: client.entity(),
+                    target_entity: self.target_entity,
                     loaded_distance: client.loaded_distance(),
                     view_distance: client.view_distance().unwrap_or(1),
                     tick: client.get_tick(),
@@ -986,6 +1059,7 @@ impl PlayState for SessionState {
                     mouse_smoothing: global_state.settings.gameplay.smooth_pan_enable,
                     sprite_render_distance: global_state.settings.graphics.sprite_render_distance
                         as f32,
+                    particles_enabled: global_state.settings.graphics.particles_enabled,
                     figure_lod_render_distance: global_state
                         .settings
                         .graphics
@@ -1001,6 +1075,12 @@ impl PlayState for SessionState {
                         &mut global_state.audio,
                         &scene_data,
                     );
+
+                    // Process outcomes from client
+                    for outcome in outcomes {
+                        self.scene
+                            .handle_outcome(&outcome, &scene_data, &mut global_state.audio);
+                    }
                 }
             }
 
@@ -1032,6 +1112,7 @@ impl PlayState for SessionState {
             let scene_data = SceneData {
                 state: client.state(),
                 player_entity: client.entity(),
+                target_entity: self.target_entity,
                 loaded_distance: client.loaded_distance(),
                 view_distance: client.view_distance().unwrap_or(1),
                 tick: client.get_tick(),
@@ -1040,6 +1121,7 @@ impl PlayState for SessionState {
                 mouse_smoothing: settings.gameplay.smooth_pan_enable,
                 sprite_render_distance: settings.graphics.sprite_render_distance as f32,
                 figure_lod_render_distance: settings.graphics.figure_lod_render_distance as f32,
+                particles_enabled: settings.graphics.particles_enabled,
                 is_aiming: self.is_aiming,
             };
             self.scene.render(
@@ -1053,4 +1135,109 @@ impl PlayState for SessionState {
         // Draw the UI to the screen
         self.hud.render(renderer, self.scene.globals());
     }
+}
+
+/// Max distance an entity can be "targeted"
+const MAX_TARGET_RANGE: f32 = 30.0;
+/// Calculate what the cursor is pointing at within the 3d scene
+#[allow(clippy::type_complexity)]
+fn under_cursor(
+    client: &Client,
+    cam_pos: Vec3<f32>,
+    cam_dir: Vec3<f32>,
+) -> (
+    Option<Vec3<i32>>,
+    Option<Vec3<i32>>,
+    Option<(specs::Entity, f32)>,
+) {
+    // Choose a spot above the player's head for item distance checks
+    let player_entity = client.entity();
+    let player_pos = match client
+        .state()
+        .read_storage::<comp::Pos>()
+        .get(player_entity)
+    {
+        Some(pos) => pos.0 + (Vec3::unit_z() * 2.0),
+        _ => cam_pos, // Should never happen, but a safe fallback
+    };
+    let terrain = client.state().terrain();
+
+    let cam_ray = terrain
+        .ray(cam_pos, cam_pos + cam_dir * 100.0)
+        .until(|block| block.is_tangible())
+        .cast();
+
+    let cam_dist = cam_ray.0;
+
+    // The ray hit something, is it within range?
+    let (build_pos, select_pos) = if matches!(cam_ray.1, Ok(Some(_)) if 
+        player_pos.distance_squared(cam_pos + cam_dir * cam_dist)
+        <= MAX_PICKUP_RANGE_SQR)
+    {
+        (
+            Some((cam_pos + cam_dir * (cam_dist - 0.01)).map(|e| e.floor() as i32)),
+            Some((cam_pos + cam_dir * (cam_dist + 0.01)).map(|e| e.floor() as i32)),
+        )
+    } else {
+        (None, None)
+    };
+
+    // See if ray hits entities
+    // Currently treated as spheres
+    let ecs = client.state().ecs();
+    // Don't cast through blocks
+    // Could check for intersection with entity from last frame to narrow this down
+    let cast_dist = if let Ok(Some(_)) = cam_ray.1 {
+        cam_dist.min(MAX_TARGET_RANGE)
+    } else {
+        MAX_TARGET_RANGE
+    };
+
+    // Need to raycast by distance to cam
+    // But also filter out by distance to the player (but this only needs to be done
+    // on final result)
+    let mut nearby = (
+        &ecs.entities(),
+        &ecs.read_storage::<comp::Pos>(),
+        ecs.read_storage::<comp::Scale>().maybe(),
+        &ecs.read_storage::<comp::Body>()
+    )
+        .join()
+        .filter(|(e, _, _, _)| *e != player_entity)
+        .map(|(e, p, s, b)| {
+            const RADIUS_SCALE: f32 = 3.0;
+            let radius = s.map_or(1.0, |s| s.0) * b.radius() * RADIUS_SCALE;
+            // Move position up from the feet
+            let pos = Vec3::new(p.0.x, p.0.y, p.0.z + radius);
+            // Distance squared from camera to the entity
+            let dist_sqr = pos.distance_squared(cam_pos);
+            (e, pos, radius, dist_sqr)
+        })
+        // Roughly filter out entities farther than ray distance
+        .filter(|(_, _, r, d_sqr)| *d_sqr <= cast_dist.powi(2) + 2.0 * cast_dist * r + r.powi(2))
+        // Ignore entities intersecting the camera
+        .filter(|(_, _, r, d_sqr)| *d_sqr > r.powi(2))
+        // Substract sphere radius from distance to the camera
+        .map(|(e, p, r, d_sqr)| (e, p, r, d_sqr.sqrt() - r))
+        .collect::<Vec<_>>();
+    // Sort by distance
+    nearby.sort_unstable_by(|a, b| a.3.partial_cmp(&b.3).unwrap());
+
+    let seg_ray = LineSegment3 {
+        start: cam_pos,
+        end: cam_pos + cam_dir * cam_dist,
+    };
+    // TODO: fuzzy borders
+    let target_entity = nearby
+        .iter()
+        .map(|(e, p, r, _)| (e, *p, r))
+        // Find first one that intersects the ray segment
+        .find(|(_, p, r)| seg_ray.projected_point(*p).distance_squared(*p) < r.powi(2))
+        .and_then(|(e, p, r)| {
+            let dist_to_player = p.distance(player_pos);
+            (dist_to_player - r < MAX_TARGET_RANGE).then_some((*e, dist_to_player))
+        });
+
+    // TODO: consider setting build/select to None when targeting an entity
+    (build_pos, select_pos, target_entity)
 }

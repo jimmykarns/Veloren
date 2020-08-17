@@ -3,9 +3,9 @@ Item(
     description: "Probably made of the finest leather.",
     kind: Armor(
         (
-            kind: Back(Short0),
+            kind: Back("Short0"),
             stats: (
-                protection: Normal(0.0),
+                protection: Normal(0.2),
             ),
         )
     ),

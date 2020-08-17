@@ -14,6 +14,7 @@ pub mod leap_melee;
 pub mod roll;
 pub mod sit;
 pub mod spawn_totem;
+pub mod sneak;
 pub mod spin_melee;
 pub mod triple_strike;
 pub mod utils;

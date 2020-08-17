@@ -1,4 +1,4 @@
-use crate::{assets, comp, npc};
+use crate::{assets, comp, npc, terrain};
 use lazy_static::lazy_static;
 use std::{
     collections::HashMap,
@@ -38,6 +38,7 @@ pub enum ChatCommand {
     Adminify,
     Alias,
     Build,
+    Campfire,
     Debug,
     DebugColumn,
     Dummy,
@@ -50,12 +51,12 @@ pub enum ChatCommand {
     Health,
     Help,
     JoinFaction,
-    JoinGroup,
     Jump,
     Kill,
     KillNpcs,
     Lantern,
     Light,
+    MakeBlock,
     Motd,
     Object,
     Players,
@@ -80,6 +81,7 @@ pub static CHAT_COMMANDS: &[ChatCommand] = &[
     ChatCommand::Adminify,
     ChatCommand::Alias,
     ChatCommand::Build,
+    ChatCommand::Campfire,
     ChatCommand::Debug,
     ChatCommand::DebugColumn,
     ChatCommand::Dummy,
@@ -92,12 +94,12 @@ pub static CHAT_COMMANDS: &[ChatCommand] = &[
     ChatCommand::Health,
     ChatCommand::Help,
     ChatCommand::JoinFaction,
-    ChatCommand::JoinGroup,
     ChatCommand::Jump,
     ChatCommand::Kill,
     ChatCommand::KillNpcs,
     ChatCommand::Lantern,
     ChatCommand::Light,
+    ChatCommand::MakeBlock,
     ChatCommand::Motd,
     ChatCommand::Object,
     ChatCommand::Players,
@@ -149,6 +151,11 @@ lazy_static! {
     .map(|s| s.to_string())
     .collect();
 
+    static ref BLOCK_KINDS: Vec<String> = terrain::block::BLOCK_KINDS
+        .keys()
+        .cloned()
+        .collect();
+
     /// List of item specifiers. Useful for tab completing
     static ref ITEM_SPECS: Vec<String> = {
         let path = assets::ASSETS_PATH.join("common").join("items");
@@ -187,6 +194,7 @@ impl ChatCommand {
             ),
             ChatCommand::Alias => cmd(vec![Any("name", Required)], "Change your alias", NoAdmin),
             ChatCommand::Build => cmd(vec![], "Toggles build mode on and off", Admin),
+            ChatCommand::Campfire => cmd(vec![], "Spawns a campfire", Admin),
             ChatCommand::Debug => cmd(vec![], "Place all debug items into your pack.", Admin),
             ChatCommand::DebugColumn => cmd(
                 vec![Integer("x", 15000, Required), Integer("y", 15000, Required)],
@@ -246,11 +254,6 @@ impl ChatCommand {
                 "Join/leave the specified faction",
                 NoAdmin,
             ),
-            ChatCommand::JoinGroup => ChatCommandData::new(
-                vec![Any("group", Optional)],
-                "Join/leave the specified group",
-                NoAdmin,
-            ),
             ChatCommand::Jump => cmd(
                 vec![
                     Float("x", 0.0, Required),
@@ -283,6 +286,11 @@ impl ChatCommand {
                     Float("strength", 5.0, Optional),
                 ],
                 "Spawn entity with light",
+                Admin,
+            ),
+            ChatCommand::MakeBlock => cmd(
+                vec![Enum("block", BLOCK_KINDS.clone(), Required)],
+                "Make a block",
                 Admin,
             ),
             ChatCommand::Motd => cmd(
@@ -372,6 +380,7 @@ impl ChatCommand {
             ChatCommand::Adminify => "adminify",
             ChatCommand::Alias => "alias",
             ChatCommand::Build => "build",
+            ChatCommand::Campfire => "campfire",
             ChatCommand::Debug => "debug",
             ChatCommand::DebugColumn => "debug_column",
             ChatCommand::Dummy => "dummy",
@@ -383,13 +392,13 @@ impl ChatCommand {
             ChatCommand::Group => "group",
             ChatCommand::Health => "health",
             ChatCommand::JoinFaction => "join_faction",
-            ChatCommand::JoinGroup => "join_group",
             ChatCommand::Help => "help",
             ChatCommand::Jump => "jump",
             ChatCommand::Kill => "kill",
             ChatCommand::KillNpcs => "kill_npcs",
             ChatCommand::Lantern => "lantern",
             ChatCommand::Light => "light",
+            ChatCommand::MakeBlock => "make_block",
             ChatCommand::Motd => "motd",
             ChatCommand::Object => "object",
             ChatCommand::Players => "players",
