@@ -498,11 +498,7 @@ impl Block {
             | BlockKind::Pot
             | BlockKind::Chest
             | BlockKind::DropGate
-            | BlockKind::DropGateBottom
-            | BlockKind::ShortGrass
-            | BlockKind::MediumGrass
-            | BlockKind::LongGrass
-            | BlockKind::LargeGrass
+            | BlockKind::DropGateBottom           
             | BlockKind::Door => Some(self.color[0] & 0b111),
             _ => None,
         }
