@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
-- Fullscreen modes are now differentiated between "Exclusive" and "Borderless"
+- Fixed a bug where leaving the Settings menu by pressing "N" in single player kept the game paused
 
 ### Removed
 
