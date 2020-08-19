@@ -1,0 +1,12 @@
+Item(
+    name: "Agile Belt",
+    description: "",
+    kind: Armor(
+        (
+            kind: Belt("Leather2"),
+            stats: (
+                protection: Normal(0.0),
+            ),
+        )
+    ),
+)

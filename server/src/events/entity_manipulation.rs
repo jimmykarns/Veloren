@@ -263,7 +263,7 @@ pub fn handle_destroy(server: &mut Server, entity: EcsEntity, cause: HealthSourc
                 },
             },
             Some(common::comp::Body::BipedLarge(biped_large)) => match biped_large.species {
-                _ => match rng.gen_range(0, 9) {
+                _ => match rng.gen_range(0, 12) {
                     0 => {
                         assets::load_expect::<Lottery<String>>("common.loot_tables.loot_table_food")
                     },
@@ -288,7 +288,9 @@ pub fn handle_destroy(server: &mut Server, entity: EcsEntity, cause: HealthSourc
                     7 => assets::load_expect::<Lottery<String>>(
                         "common.loot_tables.loot_table_weapon_rare",
                     ),
-                    _ => assets::load_expect::<Lottery<String>>("common.loot_tables.loot_table"),
+                    _ => assets::load_expect::<Lottery<String>>(
+                        "common.loot_tables.loot_table_cave_large",
+                    ),
                 },
             },
             Some(common::comp::Body::Golem(golem)) => match golem.species {
