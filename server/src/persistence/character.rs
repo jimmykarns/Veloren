@@ -12,10 +12,10 @@ use crate::{
     comp,
     persistence::{
         conversions::{
-            convert_character_from_database, convert_inventory_from_database_items,
-            convert_inventory_to_database_items, convert_loadout_from_database_items,
-            convert_loadout_to_database_items, convert_stats_from_database,
-            convert_stats_to_database,
+            convert_body_to_database_json, convert_character_from_database,
+            convert_inventory_from_database_items, convert_inventory_to_database_items,
+            convert_loadout_from_database_items, convert_loadout_to_database_items,
+            convert_stats_from_database, convert_stats_to_database,
         },
         error::Error::DatabaseError,
     },
@@ -24,7 +24,8 @@ use common::character::{CharacterId, CharacterItem, MAX_CHARACTERS_PER_PLAYER};
 use crossbeam::{channel, channel::TryIter};
 use diesel::prelude::*;
 use std::sync::atomic::Ordering;
-use tracing::{error, info, warn};
+use tracing::{error, info};
+use crate::persistence::conversions::convert_body_from_database;
 
 pub(crate) type EntityId = i64;
 
@@ -245,7 +246,7 @@ fn load_character_data(
     char_id: CharacterId,
     db_dir: &str,
 ) -> CharacterDataResult {
-    use schema::{character::dsl::*, item::dsl::*, stats::dsl::*};
+    use schema::{body::dsl::*, character::dsl::*, item::dsl::*, stats::dsl::*};
     let connection = establish_connection(db_dir)?;
 
     // TODO: Store the character's pseudo-container IDs during login so we don't
@@ -266,16 +267,18 @@ fn load_character_data(
 
     let (character_data, stats_data) = character
         .filter(
-            character_id
+            schema::character::dsl::character_id
                 .eq(char_id)
                 .and(player_uuid.eq(requesting_player_uuid)),
         )
         .inner_join(stats)
         .first::<(Character, Stats)>(&connection)?;
 
-    let body = comp::Body::Humanoid(comp::body::humanoid::Body::random()); // TODO: actual body
+    let char_body = body.filter(schema::body::dsl::body_id.eq(character_data.body_id))
+        .first::<Body>(&connection)?;
+
     Ok((
-        body,
+        convert_body_from_database(&char_body)?,
         convert_stats_from_database(&stats_data, character_data.alias),
         convert_inventory_from_database_items(&inventory_items),
         convert_loadout_from_database_items(&loadout_items),
@@ -290,14 +293,14 @@ fn load_character_data(
 /// stats, body, etc...) the character is skipped, and no entry will be
 /// returned.
 fn load_character_list(player_uuid_: &str, db_dir: &str) -> CharacterListResult {
-    use schema::{character::dsl::*, item::dsl::*, stats::dsl::*};
+    use schema::{body::dsl::*, character::dsl::*, item::dsl::*, stats::dsl::*};
 
     let connection = establish_connection(db_dir)?;
 
     let result = character
         .filter(player_uuid.eq(player_uuid_))
         .inner_join(stats)
-        .order(id.desc())
+        .order(schema::character::dsl::character_id.desc())
         .load::<(Character, Stats)>(&connection);
 
     match result {
@@ -306,7 +309,13 @@ fn load_character_list(player_uuid_: &str, db_dir: &str) -> CharacterListResult 
             .map(|(character_data, char_stats)| {
                 // TODO: Database failures here should skip the character, not crash the server
                 let char = convert_character_from_database(character_data);
-                let char_body = comp::Body::Humanoid(comp::body::humanoid::Body::random());
+
+                let bodyx = body.filter(schema::body::dsl::body_id.eq(character_data.body_id))
+                    .first::<Body>(&connection)
+                    .expect("failed to fetch body for character");
+
+                let char_body = convert_body_from_database(&bodyx)
+                    .expect("failed to convert body for character");
 
                 let loadout_container_id = get_pseudo_container_id(
                     &connection,
@@ -358,91 +367,88 @@ fn create_character(
         use schema::{body, character, stats};
 
         let (body, stats, inventory, loadout) = persisted_components;
-        match body {
-            comp::Body::Humanoid(body_data) => {
-                let character_id = get_new_entity_id(&connection)?;
 
-                // Insert character record
-                let new_character = NewCharacter {
-                    id: character_id,
-                    player_uuid: uuid,
-                    alias: &character_alias,
-                };
-                diesel::insert_into(character::table)
-                    .values(&new_character)
-                    .execute(&connection)?;
-
-                // Create pseudo-container items for character
-                let inventory_container_id = get_new_entity_id(&connection)?;
-                let loadout_container_id = get_new_entity_id(&connection)?;
-                let pseudo_containers = vec![
-                    NewItem {
-                        stack_size: None,
-                        item_id: Some(character_id),
-                        parent_container_item_id: WORLD_PSEUDO_CONTAINER_ID,
-                        item_definition_id: CHARACTER_PSEUDO_CONTAINER_DEF_ID.to_owned(),
-                        position: None,
-                    },
-                    NewItem {
-                        stack_size: None,
-                        item_id: Some(inventory_container_id),
-                        parent_container_item_id: character_id,
-                        item_definition_id: INVENTORY_PSEUDO_CONTAINER_DEF_ID.to_owned(),
-                        position: None,
-                    },
-                    NewItem {
-                        stack_size: None,
-                        item_id: Some(loadout_container_id),
-                        parent_container_item_id: character_id,
-                        item_definition_id: LOADOUT_PSEUDO_CONTAINER_DEF_ID.to_owned(),
-                        position: None,
-                    },
-                ];
-                diesel::insert_into(item)
-                    .values(pseudo_containers)
-                    .execute(&connection)?;
-
-                // Insert stats record
-                let db_stats = convert_stats_to_database(character_id, &stats);
-                diesel::insert_into(stats::table)
-                    .values(&db_stats)
-                    .execute(&connection)?;
-
-                // Insert default inventory and loadout item records
-                let mut item_pairs =
-                    convert_inventory_to_database_items(inventory, inventory_container_id);
-                item_pairs.extend(convert_loadout_to_database_items(
-                    loadout,
-                    loadout_container_id,
-                ));
-
-                for mut item_pair in item_pairs.into_iter() {
-                    let id = get_new_entity_id(&connection)?;
-                    item_pair.model.item_id = Some(id);
-                    diesel::insert_into(item)
-                        .values(item_pair.model)
-                        .execute(&connection)?;
-                }
-
-                // Insert body record
-                let new_body = Body {
-                    character_id,
-                    species: body_data.species as i16,
-                    body_type: body_data.body_type as i16,
-                    hair_style: body_data.hair_style as i16,
-                    beard: body_data.beard as i16,
-                    eyes: body_data.eyes as i16,
-                    accessory: body_data.accessory as i16,
-                    hair_color: body_data.hair_color as i16,
-                    skin: body_data.skin as i16,
-                    eye_color: body_data.eye_color as i16,
-                };
-                diesel::insert_into(body::table)
-                    .values(&new_body)
-                    .execute(&connection)?;
-            },
-            _ => warn!("Creating non-humanoid characters is not supported."),
+        // Insert body record
+        let new_body = NewBody {
+            body_id: None,
+            body_data: convert_body_to_database_json(&body)
+                .map_err(|x| diesel::result::Error::SerializationError(Box::new(x)))?,
+            variant: "humanoid".to_string()
         };
+
+        diesel::insert_into(body::table)
+            .values(&new_body)
+            .execute(&connection)?;
+
+        let body_id = body::table
+            .order(schema::body::dsl::body_id.desc())
+            .select(schema::body::dsl::body_id)
+            .first::<i32>(&connection)?;
+
+        let character_id = get_new_entity_id(&connection)?;
+
+        // Insert character record
+        let new_character = NewCharacter {
+            character_id,
+            body_id,
+            player_uuid: uuid,
+            alias: &character_alias,
+        };
+        diesel::insert_into(character::table)
+            .values(&new_character)
+            .execute(&connection)?;
+
+        // Create pseudo-container items for character
+        let inventory_container_id = get_new_entity_id(&connection)?;
+        let loadout_container_id = get_new_entity_id(&connection)?;
+        let pseudo_containers = vec![
+            NewItem {
+                stack_size: None,
+                item_id: Some(character_id),
+                parent_container_item_id: WORLD_PSEUDO_CONTAINER_ID,
+                item_definition_id: CHARACTER_PSEUDO_CONTAINER_DEF_ID.to_owned(),
+                position: None,
+            },
+            NewItem {
+                stack_size: None,
+                item_id: Some(inventory_container_id),
+                parent_container_item_id: character_id,
+                item_definition_id: INVENTORY_PSEUDO_CONTAINER_DEF_ID.to_owned(),
+                position: None,
+            },
+            NewItem {
+                stack_size: None,
+                item_id: Some(loadout_container_id),
+                parent_container_item_id: character_id,
+                item_definition_id: LOADOUT_PSEUDO_CONTAINER_DEF_ID.to_owned(),
+                position: None,
+            },
+        ];
+        diesel::insert_into(item)
+            .values(pseudo_containers)
+            .execute(&connection)?;
+
+        // Insert stats record
+        let db_stats = convert_stats_to_database(character_id, &stats);
+        diesel::insert_into(stats::table)
+            .values(&db_stats)
+            .execute(&connection)?;
+
+        // Insert default inventory and loadout item records
+        let mut item_pairs =
+            convert_inventory_to_database_items(inventory, inventory_container_id);
+        item_pairs.extend(convert_loadout_to_database_items(
+            loadout,
+            loadout_container_id,
+        ));
+
+        for mut item_pair in item_pairs.into_iter() {
+            let id = get_new_entity_id(&connection)?;
+            item_pair.model.item_id = Some(id);
+            diesel::insert_into(item)
+                .values(item_pair.model)
+                .execute(&connection)?;
+        }
 
         Ok(())
     })?;
@@ -458,7 +464,7 @@ fn delete_character(uuid: &str, character_id: CharacterId, db_dir: &str) -> Char
     connection.transaction::<_, diesel::result::Error, _>(|| {
         diesel::delete(
             character
-                .filter(id.eq(character_id))
+                .filter(character_id.eq(character_id))
                 .filter(player_uuid.eq(uuid)),
         )
         .execute(&connection)?;

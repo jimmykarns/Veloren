@@ -1,5 +1,5 @@
 --
--- 1) Back up existing tables and drop them - this migration retains none of the existing tables except character
+-- 1) Back up existing tables and drop them - this migration recreates or drops all existing tables
 --
 
 -- Body
@@ -88,6 +88,24 @@ FROM    stats;
 
 DROP TABLE stats;
 
+-- Character
+CREATE TEMP TABLE _character_temp
+(
+    character_id INT NOT NULL
+        PRIMARY KEY,
+    player_uuid TEXT NOT NULL,
+    alias TEXT NOT NULL
+);
+
+INSERT
+INTO    _character_temp
+SELECT  id,
+        player_uuid,
+        alias
+FROM    character;
+
+DROP TABLE character;
+
 --
 -- 2) Create new tables
 --
@@ -151,38 +169,69 @@ CREATE TEMP TABLE _new_character_ids
 INSERT
 INTO    entity
 SELECT  NULL
-FROM    character;
+FROM    _character_temp;
 
 
 WITH char AS (
-    SELECT  id,
-            ROW_NUMBER() OVER (ORDER BY id) AS rownum
-    FROM    character
+    SELECT  character_id,
+            ROW_NUMBER() OVER (ORDER BY character_id) AS rownum
+    FROM    _character_temp
 )
-INSERT INTO _new_character_ids
-    SELECT  c.id AS character_id,
-            e.entity_id
-    FROM    char c
-    JOIN    entity e ON (e.entity_id = (
-          (SELECT MAX(entity_id) FROM entity)
-        - (SELECT COUNT(1) FROM char)
+INSERT
+INTO    _new_character_ids
+SELECT  c.character_id,
+        e.entity_id
+FROM    char c
+            JOIN    entity e ON (e.entity_id = (
+            (SELECT MAX(entity_id) FROM entity)
+            - (SELECT COUNT(1) FROM char)
         + c.rownum));
 
 -- Update characters to use new entity IDs
 -- Add 1000000 to each character id since SQLite verifies unique constraints
 -- on every individual row in an UPDATE statement. Remove it in the subsequent
 -- UPDATE statement.
-UPDATE  character
-SET     id = (  SELECT  entity_id + 1000000
-                FROM    _new_character_ids
-                WHERE   character_id = character.id);
+UPDATE  _character_temp
+SET     character_id = (SELECT  entity_id + 1000000
+                        FROM    _new_character_ids
+                        WHERE   character_id = _character_temp.character_id);
 
-UPDATE  character
-SET     id = id - 1000000;
+UPDATE  _character_temp
+SET     character_id = character_id - 1000000;
 
 --
--- 5) Re-create the Body table using the new schema and migrate the existing data
+-- 5) Re-create the Body and Character tables using the new schema and migrate the existing data
 --
+
+-- Intermediate table for body_id/character_id mapping
+CREATE TEMP TABLE _body_temp_char
+(
+    body_id INTEGER NOT NULL
+        CONSTRAINT body_pk PRIMARY KEY AUTOINCREMENT
+        CONSTRAINT body_pk_2 UNIQUE,
+    character_id INTEGER NOT NULL,
+    variant TEXT NOT NULL,
+    body_data TEXT NOT NULL
+);
+
+INSERT
+INTO    _body_temp_char
+SELECT  NULL,
+        nci.character_id,
+        'humanoid',
+        json_object(
+                'species', species,
+                'body_type', body_type,
+                'hair_style', hair_style,
+                'beard', beard,
+                'eyes', eyes,
+                'accessory', accessory,
+                'hair_color', hair_color,
+                'skin', skin,
+                'eye_color', eye_color
+            ) AS body_json
+FROM    _body_temp b
+            JOIN    _new_character_ids nci ON b.character_id = nci.character_id;
 
 CREATE TABLE body
 (
@@ -195,21 +244,32 @@ CREATE TABLE body
 
 INSERT
 INTO    body
-SELECT nci.character_id,
-       'humanoid',
-       json_object(
-               'species', species,
-               'body_type', body_type,
-               'hair_style', hair_style,
-               'beard', beard,
-               'eyes', eyes,
-               'accessory', accessory,
-               'hair_color', hair_color,
-               'skin', skin,
-               'eye_color', eye_color
-           ) AS body_json
-FROM    _body_temp b
-JOIN    _new_character_ids nci ON b.character_id = nci.character_id;
+SELECT  body_id,
+        variant,
+        body_data
+FROM    _body_temp_char;
+
+CREATE TABLE character
+(
+    character_id INT NOT NULL
+        PRIMARY KEY,
+    player_uuid TEXT NOT NULL,
+    body_id INT NOT NULL
+        REFERENCES body(body_id),
+    alias TEXT NOT NULL
+);
+
+CREATE INDEX idx_player_uuid
+    ON character(player_uuid);
+
+INSERT
+INTO    character
+SELECT  c.character_id,
+        c.player_uuid,
+        b.body_id,
+        c.alias
+FROM    _character_temp c
+            JOIN    _body_temp_char b ON b.character_id = c.character_id;
 
 --
 -- 6) Re-create the Loadout table temporarily, using the new character IDs
@@ -220,7 +280,7 @@ CREATE TABLE loadout
     id INTEGER NOT NULL
         PRIMARY KEY,
     character_id INT NOT NULL
-        REFERENCES character(id),
+        REFERENCES character(character_id),
     items TEXT NOT NULL
 );
 
@@ -230,7 +290,7 @@ SELECT  l.id,
         nci.entity_id,
         l.items
 FROM    _loadout_temp l
-JOIN    _new_character_ids nci ON l.character_id = nci.character_id;
+            JOIN    _new_character_ids nci ON l.character_id = nci.character_id;
 
 --
 -- 7) Re-create the Inventory table temporarily, using the new character IDs
@@ -240,7 +300,7 @@ CREATE TABLE inventory
 (
     character_id INTEGER NOT NULL
         PRIMARY KEY
-        REFERENCES character(id),
+        REFERENCES character(character_id),
     items TEXT NOT NULL
 );
 
@@ -249,17 +309,17 @@ INTO    inventory
 SELECT  nci.entity_id,
         i.items
 FROM    _inventory_temp i
-JOIN    _new_character_ids nci ON i.character_id = nci.character_id;
+            JOIN    _new_character_ids nci ON i.character_id = nci.character_id;
 
 --
--- 6) Re-create the Stats table using the new schema and migrate the existing data
+-- 8) Re-create the Stats table using the new schema and migrate the existing data
 --
 
 CREATE TABLE stats
 (
     character_id INT NOT NULL
         PRIMARY KEY
-        REFERENCES character(id),
+        REFERENCES character(character_id),
     level INT DEFAULT 1 NOT NULL,
     exp INT DEFAULT 0 NOT NULL,
     endurance INT DEFAULT 0 NOT NULL,
@@ -278,15 +338,15 @@ SELECT  nci.entity_id,
         s.willpower,
         s.skills
 FROM    _stats_temp s
-JOIN    _new_character_ids nci ON s.character_id = nci.character_id;
+            JOIN    _new_character_ids nci ON s.character_id = nci.character_id;
 
 --
--- 7) Create Character pseudo-containers for existing characters
+-- 9) Create Character pseudo-containers for existing characters
 --
 
 INSERT
 INTO    item
-SELECT  c.id,
+SELECT  c.character_id,
         1, -- Parent container as World pseudo-container
         'veloren.core.pseudo_containers.character',
         NULL,
@@ -294,7 +354,7 @@ SELECT  c.id,
 FROM    character c;
 
 --
--- 8) Create Inventory pseudo-containers for existing characters
+-- 10) Create Inventory pseudo-containers for existing characters
 --
 
 -- Create an entity_id for each character's inventory pseudo-container
@@ -304,25 +364,25 @@ SELECT  NULL
 FROM    character;
 
 WITH char AS (
-    SELECT  id,
-            ROW_NUMBER() OVER (ORDER BY id) AS rownum
+    SELECT  character_id,
+            ROW_NUMBER() OVER (ORDER BY character_id) AS rownum
     FROM    character
 )
 INSERT
 INTO    item
 SELECT  e.entity_id,
-        c.id, -- Inventory pseudo-container has character's Player item pseudo-container as its parent
+        c.character_id, -- Inventory pseudo-container has character's Player item pseudo-container as its parent
         'veloren.core.pseudo_containers.inventory',
         NULL,
         NULL
 FROM    char c
-JOIN    entity e ON (e.entity_id = (
-              (SELECT MAX(entity_id) FROM entity)
+            JOIN    entity e ON (e.entity_id = (
+            (SELECT MAX(entity_id) FROM entity)
             - (SELECT COUNT(1) FROM char)
-            + c.rownum));
+        + c.rownum));
 
 --
--- 9) Create Loadout pseudo-containers for existing characters
+-- 11) Create Loadout pseudo-containers for existing characters
 --
 
 -- Create an entity_id for each character's loadout pseudo-container
@@ -332,25 +392,25 @@ SELECT  NULL
 FROM    character;
 
 WITH char AS (
-    SELECT  id,
-            ROW_NUMBER() OVER (ORDER BY id) AS rownum
+    SELECT  character_id,
+            ROW_NUMBER() OVER (ORDER BY character_id) AS rownum
     FROM    character
 )
 INSERT
 INTO    item
 SELECT  e.entity_id,
-        c.id, -- Loadout pseudo-container has character's Player item pseudo-container as its parent
+        c.character_id, -- Loadout pseudo-container has character's Player item pseudo-container as its parent
         'veloren.core.pseudo_containers.loadout',
         NULL,
         NULL
 FROM    char c
-JOIN    entity e ON (e.entity_id = (
-              (SELECT MAX(entity_id) FROM entity)
+            JOIN    entity e ON (e.entity_id = (
+            (SELECT MAX(entity_id) FROM entity)
             - (SELECT COUNT(1) FROM char)
-            + c.rownum));
+        + c.rownum));
 
 --
--- 10) Create a temporary table containing mappings of item name/kind to item definition ID
+-- 12) Create a temporary table containing mappings of item name/kind to item definition ID
 --
 
 CREATE TEMP TABLE _temp_item_defs
@@ -700,7 +760,7 @@ DELETE FROM _temp_item_defs WHERE item_definition_id = 'common.items.debug.culti
 DELETE FROM _temp_item_defs WHERE item_definition_id = 'common.items.debug.cultist_boots';
 
 --
--- 11) Migrate inventory items extracted from the inventory items JSON in the old schema
+-- 14) Migrate inventory items extracted from the inventory items JSON in the old schema
 --
 
 CREATE TEMP TABLE _temp_inventory_items
@@ -762,20 +822,20 @@ WITH items AS (
                ) AS weapon_armor_kind
     FROM item_json i
 ),
-inventory_entity AS (
-    SELECT parent_container_item_id AS character_id,
-           item_id                  as inventory_item_id
-    FROM item i
-    WHERE item_definition_id = 'veloren.core.pseudo_containers.inventory'
-)
+     inventory_entity AS (
+         SELECT parent_container_item_id AS character_id,
+                item_id                  as inventory_item_id
+         FROM item i
+         WHERE item_definition_id = 'veloren.core.pseudo_containers.inventory'
+     )
 INSERT INTO _temp_inventory_items
 SELECT  NULL,
         inv.inventory_item_id AS parent_container_item_id,
         d.item_definition_id,
         amount
 FROM    items i
-JOIN    inventory_entity inv ON (inv.character_id = i.character_id)
-JOIN    _temp_item_defs d ON ((i.weapon_armor_kind = d.kind AND i.item_name = d.item_name) OR (i.weapon_armor_kind IS NULL AND i.item_name = d.item_name));
+            JOIN    inventory_entity inv ON (inv.character_id = i.character_id)
+            JOIN    _temp_item_defs d ON ((i.weapon_armor_kind = d.kind AND i.item_name = d.item_name) OR (i.weapon_armor_kind IS NULL AND i.item_name = d.item_name));
 
 -- Create an entity_id for each inventory item
 INSERT
@@ -792,13 +852,13 @@ SELECT  e.entity_id,
         i.stack_size,
         NULL --position
 FROM    _temp_inventory_items i
-JOIN    entity e ON (e.entity_id = (
-              (SELECT MAX(entity_id) FROM entity)
+            JOIN    entity e ON (e.entity_id = (
+            (SELECT MAX(entity_id) FROM entity)
             - (SELECT COUNT(1) FROM _temp_inventory_items)
-            + i.temp_item_id));
+        + i.temp_item_id));
 
 --
--- 12) Migrate loadout items extracted from the loadout items JSON in the old schema
+-- 15) Migrate loadout items extracted from the loadout items JSON in the old schema
 --
 
 CREATE TEMP TABLE _temp_loadout_items
@@ -811,48 +871,48 @@ CREATE TEMP TABLE _temp_loadout_items
 );
 -- TODO Fix this query taking ages to run
 WITH item_json AS (
-SELECT  *
-FROM    loadout,
+    SELECT  *
+    FROM    loadout,
         json_each(items)
-WHERE   value IS NOT NULL),
-items AS (
-    SELECT  character_id,
-            key AS position,
-            COALESCE(
-                json_extract(i.value, '$.name'),
-                json_extract(i.value, '$.item.name')) AS item_name,
-            COALESCE(
-                json_extract(value, '$.item.kind.Tool.kind.Sword'),
-                json_extract(value, '$.item.kind.Tool.kind.Axe'),
-                json_extract(value, '$.item.kind.Tool.kind.Hammer'),
-                json_extract(value, '$.item.kind.Tool.kind.Bow'),
-                json_extract(value, '$.item.kind.Tool.kind.Dagger'),
-                json_extract(value, '$.item.kind.Tool.kind.Staff'),
-                json_extract(value, '$.item.kind.Tool.kind.Shield'),
-                json_extract(value, '$.item.kind.Tool.kind.Debug'),
-                json_extract(value, '$.item.kind.Tool.kind.Farming'),
-                json_extract(value, '$.item.kind.Tool.kind.Empty'),
-                json_extract(value, '$.kind.Armor.kind.Shoulder'),
-                json_extract(value, '$.kind.Armor.kind.Chest'),
-                json_extract(value, '$.kind.Armor.kind.Belt'),
-                json_extract(value, '$.kind.Armor.kind.Hand'),
-                json_extract(value, '$.kind.Armor.kind.Pants'),
-                json_extract(value, '$.kind.Armor.kind.Foot'),
-                json_extract(value, '$.kind.Armor.kind.Back'),
-                json_extract(value, '$.kind.Armor.kind.Ring'),
-                json_extract(value, '$.kind.Armor.kind.Neck'),
-                json_extract(value, '$.kind.Armor.kind.Head'),
-                json_extract(value, '$.kind.Armor.kind.Tabard'),
-                json_extract(value, '$.kind.Lantern.kind')
-            ) AS weapon_armor_kind
-    FROM    item_json i
-),
-loadout_entity AS (
-    SELECT  parent_container_item_id AS character_id,
-            item_id                  as loadout_item_id
-    FROM    item i
-    WHERE   item_definition_id = 'veloren.core.pseudo_containers.loadout'
-)
+    WHERE   value IS NOT NULL),
+     items AS (
+         SELECT  character_id,
+                 key AS position,
+                 COALESCE(
+                         json_extract(i.value, '$.name'),
+                         json_extract(i.value, '$.item.name')) AS item_name,
+                 COALESCE(
+                         json_extract(value, '$.item.kind.Tool.kind.Sword'),
+                         json_extract(value, '$.item.kind.Tool.kind.Axe'),
+                         json_extract(value, '$.item.kind.Tool.kind.Hammer'),
+                         json_extract(value, '$.item.kind.Tool.kind.Bow'),
+                         json_extract(value, '$.item.kind.Tool.kind.Dagger'),
+                         json_extract(value, '$.item.kind.Tool.kind.Staff'),
+                         json_extract(value, '$.item.kind.Tool.kind.Shield'),
+                         json_extract(value, '$.item.kind.Tool.kind.Debug'),
+                         json_extract(value, '$.item.kind.Tool.kind.Farming'),
+                         json_extract(value, '$.item.kind.Tool.kind.Empty'),
+                         json_extract(value, '$.kind.Armor.kind.Shoulder'),
+                         json_extract(value, '$.kind.Armor.kind.Chest'),
+                         json_extract(value, '$.kind.Armor.kind.Belt'),
+                         json_extract(value, '$.kind.Armor.kind.Hand'),
+                         json_extract(value, '$.kind.Armor.kind.Pants'),
+                         json_extract(value, '$.kind.Armor.kind.Foot'),
+                         json_extract(value, '$.kind.Armor.kind.Back'),
+                         json_extract(value, '$.kind.Armor.kind.Ring'),
+                         json_extract(value, '$.kind.Armor.kind.Neck'),
+                         json_extract(value, '$.kind.Armor.kind.Head'),
+                         json_extract(value, '$.kind.Armor.kind.Tabard'),
+                         json_extract(value, '$.kind.Lantern.kind')
+                     ) AS weapon_armor_kind
+         FROM    item_json i
+     ),
+     loadout_entity AS (
+         SELECT  parent_container_item_id AS character_id,
+                 item_id                  as loadout_item_id
+         FROM    item i
+         WHERE   item_definition_id = 'veloren.core.pseudo_containers.loadout'
+     )
 INSERT
 INTO    _temp_loadout_items
 SELECT  NULL,
@@ -860,8 +920,8 @@ SELECT  NULL,
         d.item_definition_id,
         i.position
 FROM    items i
-JOIN    loadout_entity load ON (load.character_id = i.character_id)
-JOIN    _temp_item_defs d ON ((i.weapon_armor_kind = d.kind AND i.item_name = d.item_name) OR (i.weapon_armor_kind IS NULL AND i.item_name = d.item_name));
+            JOIN    loadout_entity load ON (load.character_id = i.character_id)
+            JOIN    _temp_item_defs d ON ((i.weapon_armor_kind = d.kind AND i.item_name = d.item_name) OR (i.weapon_armor_kind IS NULL AND i.item_name = d.item_name));
 
 -- Create an entity_id for each loadout item
 INSERT
@@ -878,10 +938,7 @@ SELECT  e.entity_id,
         NULL, --stack size
         NULL --position
 FROM    _temp_loadout_items l
-JOIN    entity e ON (e.entity_id = (
-              (SELECT MAX(entity_id) FROM entity)
+            JOIN    entity e ON (e.entity_id = (
+            (SELECT MAX(entity_id) FROM entity)
             - (SELECT COUNT(1) FROM _temp_loadout_items)
-            + l.temp_item_id));
-
-DROP TABLE inventory;
-DROP TABLE loadout;
+        + l.temp_item_id));

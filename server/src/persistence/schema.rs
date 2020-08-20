@@ -1,21 +1,15 @@
 table! {
-    body (character_id) {
-        character_id -> BigInt,
-        species -> SmallInt,
-        body_type -> SmallInt,
-        hair_style -> SmallInt,
-        beard -> SmallInt,
-        eyes -> SmallInt,
-        accessory -> SmallInt,
-        hair_color -> SmallInt,
-        skin -> SmallInt,
-        eye_color -> SmallInt,
+    body (body_id) {
+        body_id -> Integer,
+        variant -> Text,
+        body_data -> Text,
     }
 }
 
 table! {
-    character (id) {
-        id -> BigInt,
+    character (character_id) {
+        character_id -> BigInt,
+        body_id -> Integer,
         player_uuid -> Text,
         alias -> Text,
     }
@@ -49,7 +43,7 @@ table! {
     }
 }
 
-joinable!(body -> character (character_id));
+joinable!(character -> body (body_id));
 joinable!(stats -> character (character_id));
 
 allow_tables_to_appear_in_same_query!(body, character, entity, item, stats,);

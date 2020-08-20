@@ -4,7 +4,7 @@ extern crate diesel;
 
 use std::fmt;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum Error {
     // The player has already reached the max character limit
     CharacterLimitReached,
@@ -16,6 +16,7 @@ pub enum Error {
     DatabaseError(diesel::result::Error),
     // Unable to load body or stats for a character
     CharacterDataError,
+    SerializationError(serde_json::Error)
 }
 
 impl fmt::Display for Error {
@@ -26,6 +27,7 @@ impl fmt::Display for Error {
             Self::DatabaseConnectionError(error) => error.to_string(),
             Self::DatabaseMigrationError(error) => error.to_string(),
             Self::CharacterDataError => String::from("Error while loading character data"),
+            Self::SerializationError(error) => error.to_string()
         })
     }
 }
@@ -36,6 +38,10 @@ impl From<diesel::result::Error> for Error {
 
 impl From<diesel::ConnectionError> for Error {
     fn from(error: diesel::ConnectionError) -> Error { Error::DatabaseConnectionError(error) }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(error: serde_json::Error) -> Error { Error::SerializationError(error) }
 }
 
 impl From<diesel_migrations::RunMigrationsError> for Error {

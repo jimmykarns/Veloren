@@ -1,6 +1,6 @@
 use crate::persistence::{
     character::EntityId,
-    models::{Character, Item, NewItem, Stats},
+    models::{Body, Character, Item, NewItem, Stats},
 };
 
 use common::{character::CharacterId, comp::*, loadout_builder};
@@ -9,6 +9,7 @@ use std::sync::{
     Arc,
 };
 use tracing::warn;
+use crate::persistence::json_models::HumanoidBody;
 
 pub struct ItemModelPair {
     pub comp: common::comp::item::Item,
@@ -82,6 +83,17 @@ pub fn convert_loadout_to_database_items(
     .collect()
 }
 
+pub fn convert_body_to_database_json(body: &common::comp::Body) -> Result<String, serde_json::Error> {
+    let json_model = match body {
+        common::comp::Body::Humanoid(humanoid_body) => {
+            HumanoidBody::from(humanoid_body)
+        }
+        _ => unimplemented!("Only humanoid bodies are currently supported for persistence")
+    };
+
+    serde_json::to_string(&json_model)
+}
+
 pub fn convert_stats_to_database(character_id: CharacterId, stats: &common::comp::Stats) -> Stats {
     Stats {
         character_id,
@@ -97,6 +109,7 @@ pub fn convert_stats_to_database(character_id: CharacterId, stats: &common::comp
 pub fn convert_inventory_from_database_items(database_items: &[Item]) -> Inventory {
     let mut inventory = Inventory::new_empty();
     let item_iter = database_items.iter().map(|db_item| {
+        // TODO: Don't use expect, propagate an error instead to catch missing migrations
         let mut item =
             common::comp::Item::new_from_asset_expect(db_item.item_definition_id.as_str());
         item.item_id = Arc::new(AtomicU64::new(db_item.item_id as u64));
@@ -153,9 +166,29 @@ pub fn convert_loadout_from_database_items(database_items: &[Item]) -> Loadout {
     loadout.build()
 }
 
+pub fn convert_body_from_database(body: &Body) -> Result<common::comp::body::Body, serde_json::Error> {
+    Ok(match body.variant .as_str() {
+        "humanoid" => {
+            let json_model = serde_json::de::from_str::<HumanoidBody>(&body.body_data)?;
+            common::comp::body::Body::Humanoid(common::comp::humanoid::Body {
+                species: common::comp::humanoid::ALL_SPECIES[json_model.species as usize],
+                body_type: common::comp::humanoid::ALL_BODY_TYPES[json_model.body_type as usize],
+                hair_style: json_model.hair_style,
+                beard: json_model.beard,
+                eyes: json_model.eyes,
+                accessory: json_model.accessory,
+                hair_color: json_model.hair_color,
+                skin: json_model.skin,
+                eye_color: json_model.eye_color
+            })
+        }
+        _ => unimplemented!("x")
+    })
+}
+
 pub fn convert_character_from_database(character: &Character) -> common::character::Character {
     common::character::Character {
-        id: Some(character.id),
+        id: Some(character.character_id),
         alias: String::from(&character.alias),
     }
 }
