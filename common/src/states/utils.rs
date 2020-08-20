@@ -43,6 +43,7 @@ impl Body {
             Body::Golem(_) => 60.0,
             Body::Critter(_) => 85.0,
             Body::QuadrupedLow(_) => 120.0,
+            Body::Slime(_) => 100.0,
         }
     }
 
@@ -61,6 +62,7 @@ impl Body {
             Body::Golem(_) => 8.0,
             Body::Critter(_) => 35.0,
             Body::QuadrupedLow(_) => 12.0,
+            Body::Slime(_) => 15.0,
         }
     }
 }

@@ -21,7 +21,7 @@ use anim::{
     bird_small::BirdSmallSkeleton, character::CharacterSkeleton, critter::CritterSkeleton,
     dragon::DragonSkeleton, fish_medium::FishMediumSkeleton, fish_small::FishSmallSkeleton,
     golem::GolemSkeleton, object::ObjectSkeleton, quadruped_low::QuadrupedLowSkeleton,
-    quadruped_medium::QuadrupedMediumSkeleton, quadruped_small::QuadrupedSmallSkeleton, Animation,
+    quadruped_medium::QuadrupedMediumSkeleton, quadruped_small::QuadrupedSmallSkeleton, slime::SlimeSkeleton, Animation,
     Skeleton,
 };
 use common::{
@@ -92,6 +92,7 @@ struct FigureMgrStates {
     fish_small_states: HashMap<EcsEntity, FigureState<FishSmallSkeleton>>,
     biped_large_states: HashMap<EcsEntity, FigureState<BipedLargeSkeleton>>,
     golem_states: HashMap<EcsEntity, FigureState<GolemSkeleton>>,
+    slime_states: HashMap<EcsEntity, FigureState<SlimeSkeleton>>,
     object_states: HashMap<EcsEntity, FigureState<ObjectSkeleton>>,
 }
 
@@ -110,6 +111,7 @@ impl FigureMgrStates {
             fish_small_states: HashMap::new(),
             biped_large_states: HashMap::new(),
             golem_states: HashMap::new(),
+            slime_states: HashMap::new(),
             object_states: HashMap::new(),
         }
     }
@@ -166,6 +168,7 @@ impl FigureMgrStates {
                 .get_mut(&entity)
                 .map(DerefMut::deref_mut),
             Body::Golem(_) => self.golem_states.get_mut(&entity).map(DerefMut::deref_mut),
+            Body::Slime(_) => self.slime_states.get_mut(&entity).map(DerefMut::deref_mut),
             Body::Object(_) => self.object_states.get_mut(&entity).map(DerefMut::deref_mut),
         }
     }
@@ -190,6 +193,7 @@ impl FigureMgrStates {
             Body::FishSmall(_) => self.fish_small_states.remove(&entity).map(|e| e.meta),
             Body::BipedLarge(_) => self.biped_large_states.remove(&entity).map(|e| e.meta),
             Body::Golem(_) => self.golem_states.remove(&entity).map(|e| e.meta),
+            Body::Slime(_) => self.slime_states.remove(&entity).map(|e| e.meta),
             Body::Object(_) => self.object_states.remove(&entity).map(|e| e.meta),
         }
     }
@@ -207,6 +211,7 @@ impl FigureMgrStates {
         self.fish_small_states.retain(|k, v| f(k, &mut *v));
         self.biped_large_states.retain(|k, v| f(k, &mut *v));
         self.golem_states.retain(|k, v| f(k, &mut *v));
+        self.slime_states.retain(|k, v| f(k, &mut *v));
         self.object_states.retain(|k, v| f(k, &mut *v));
     }
 
@@ -224,6 +229,7 @@ impl FigureMgrStates {
             + self.fish_small_states.len()
             + self.biped_large_states.len()
             + self.golem_states.len()
+            + self.slime_states.len()
             + self.object_states.len()
     }
 
@@ -288,6 +294,11 @@ impl FigureMgrStates {
                 .filter(|(_, c)| c.visible())
                 .count()
             + self
+                .slime_states
+                .iter()
+                .filter(|(_, c)| c.visible())
+                .count()
+            + self
                 .object_states
                 .iter()
                 .filter(|(_, c)| c.visible())
@@ -309,6 +320,7 @@ pub struct FigureMgr {
     fish_small_model_cache: FigureModelCache<FishSmallSkeleton>,
     biped_large_model_cache: FigureModelCache<BipedLargeSkeleton>,
     golem_model_cache: FigureModelCache<GolemSkeleton>,
+    slime_model_cache: FigureModelCache<SlimeSkeleton>,
     states: FigureMgrStates,
 }
 
@@ -328,6 +340,7 @@ impl FigureMgr {
             fish_small_model_cache: FigureModelCache::new(),
             biped_large_model_cache: FigureModelCache::new(),
             golem_model_cache: FigureModelCache::new(),
+            slime_model_cache: FigureModelCache::new(),
             states: FigureMgrStates::default(),
         }
     }
@@ -355,6 +368,7 @@ impl FigureMgr {
         self.biped_large_model_cache
             .clean(&mut self.col_lights, tick);
         self.golem_model_cache.clean(&mut self.col_lights, tick);
+        self.slime_model_cache.clean(&mut self.col_lights, tick);
     }
 
     #[allow(clippy::redundant_pattern_matching)]
@@ -2056,6 +2070,87 @@ impl FigureMgr {
                         &mut update_buf,
                     );
                 },
+                Body::Slime(_) => {
+                    let (model, skeleton_attr) = self.slime_model_cache.get_or_create_model(
+                        renderer,
+                        &mut self.col_lights,
+                        *body,
+                        loadout,
+                        tick,
+                        player_camera_mode,
+                        player_character_state,
+                    );
+
+                    let state =
+                        self.states.slime_states.entry(entity).or_insert_with(|| {
+                            FigureState::new(renderer, SlimeSkeleton::default())
+                        });
+
+                    let (character, last_character) = match (character, last_character) {
+                        (Some(c), Some(l)) => (c, l),
+                        _ => continue,
+                    };
+
+                    if !character.same_variant(&last_character.0) {
+                        state.state_time = 0.0;
+                    }
+
+                    let target_base = match (
+                        physics.on_ground,
+                        vel.0.magnitude_squared() > MOVING_THRESHOLD_SQR, // Moving
+                        physics.in_fluid.is_some(),                       // In water
+                    ) {
+                        // Standing
+                        (true, false, false) => anim::slime::IdleAnimation::update_skeleton(
+                            &SlimeSkeleton::default(),
+                            time,
+                            state.state_time,
+                            &mut state_animation_rate,
+                            skeleton_attr,
+                        ),
+                        // Running
+                        (true, true, false) => anim::slime::RunAnimation::update_skeleton(
+                            &SlimeSkeleton::default(),
+                            (vel.0.magnitude(), time),
+                            state.state_time,
+                            &mut state_animation_rate,
+                            skeleton_attr,
+                        ),
+                        // In air
+                        (false, _, false) => anim::slime::JumpAnimation::update_skeleton(
+                            &SlimeSkeleton::default(),
+                            (vel.0.magnitude(), time),
+                            state.state_time,
+                            &mut state_animation_rate,
+                            skeleton_attr,
+                        ),
+
+                        // TODO!
+                        _ => anim::slime::IdleAnimation::update_skeleton(
+                            &SlimeSkeleton::default(),
+                            time,
+                            state.state_time,
+                            &mut state_animation_rate,
+                            skeleton_attr,
+                        ),
+                    };
+                    state.skeleton = anim::vek::Lerp::lerp(&state.skeleton, &target_base, dt);
+                    state.update(
+                        renderer,
+                        pos.0,
+                        ori,
+                        scale,
+                        col,
+                        dt,
+                        state_animation_rate,
+                        &model,
+                        lpindex,
+                        in_frustum,
+                        is_player,
+                        camera,
+                        &mut update_buf,
+                    );
+                },
                 Body::Object(_) => {
                     let (model, _) = &self.model_cache.get_or_create_model(
                         renderer,
@@ -2296,6 +2391,7 @@ impl FigureMgr {
             fish_small_model_cache,
             biped_large_model_cache,
             golem_model_cache,
+            slime_model_cache,
             states:
                 FigureMgrStates {
                     character_states,
@@ -2310,6 +2406,7 @@ impl FigureMgr {
                     fish_small_states,
                     biped_large_states,
                     golem_states,
+                    slime_states,
                     object_states,
                 },
         } = self;
@@ -2543,6 +2640,26 @@ impl FigureMgr {
                         state.locals(),
                         state.bone_consts(),
                         &golem_model_cache
+                            .get_or_create_model(
+                                renderer,
+                                col_lights,
+                                *body,
+                                loadout,
+                                tick,
+                                player_camera_mode,
+                                character_state,
+                            )
+                            .0,
+                    )
+                }),
+            Body::Slime(_) => slime_states
+                .get(&entity)
+                .filter(|state| filter_state(&*state))
+                .map(move |state| {
+                    (
+                        state.locals(),
+                        state.bone_consts(),
+                        &slime_model_cache
                             .get_or_create_model(
                                 renderer,
                                 col_lights,

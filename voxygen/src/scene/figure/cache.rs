@@ -965,6 +965,57 @@ impl<Skel: Skeleton> FigureModelCache<Skel> {
                     None,
                 ]
             },
+            Body::Slime(body) => {
+                let slime_center_spec =
+                    SlimeCenterSpec::load_watched(manifest_indicator);
+
+                [
+                    Some(slime_center_spec.mesh_body_1(
+                        body.species,
+                        body.body_type,
+                        |segment, offset| generate_mesh(segment, offset),
+                    )),
+                    Some(slime_center_spec.mesh_body_2(
+                        body.species,
+                        body.body_type,
+                        |segment, offset| generate_mesh(segment, offset),
+                    )),
+                    Some(slime_center_spec.mesh_body_3(
+                        body.species,
+                        body.body_type,
+                        |segment, offset| generate_mesh(segment, offset),
+                    )),
+                    Some(slime_center_spec.mesh_body_4(
+                        body.species,
+                        body.body_type,
+                        |segment, offset| generate_mesh(segment, offset),
+                    )),
+                    Some(slime_center_spec.mesh_body_5(
+                        body.species,
+                        body.body_type,
+                        |segment, offset| generate_mesh(segment, offset),
+                    )),
+                    Some(slime_center_spec.mesh_tail_upper(
+                        body.species,
+                        body.body_type,
+                        |segment, offset| generate_mesh(segment, offset),
+                    )),
+                    Some(slime_center_spec.mesh_tail_lower(
+                        body.species,
+                        body.body_type,
+                        |segment, offset| generate_mesh(segment, offset),
+                    )),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ]
+            },
             Body::Object(object) => [
                 Some(mesh_object(object, generate_mesh)),
                 None,

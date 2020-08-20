@@ -598,6 +598,20 @@
             }
         }
     },
+    "slime": {
+        "body": {
+            "keyword": "slime",
+            "names": [
+                "flubber"
+            ]
+        },
+        "species": {
+            "greenslime": {
+                "keyword": "greenslime",
+                "generic": "GreenSlime"
+            }
+        }
+    },
     "object": {
         "body": {
             "keyword": "object",

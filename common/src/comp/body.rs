@@ -11,6 +11,7 @@ pub mod object;
 pub mod quadruped_low;
 pub mod quadruped_medium;
 pub mod quadruped_small;
+pub mod slime;
 
 use crate::{
     assets::{self, Asset},
@@ -40,6 +41,7 @@ make_case_elim!(
         Golem(body: golem::Body) = 10,
         Critter(body: critter::Body) = 11,
         QuadrupedLow(body: quadruped_low::Body) = 12,
+        Slime(body: slime::Body)= 13,
     }
 );
 
@@ -73,6 +75,7 @@ pub struct AllBodies<BodyMeta, SpeciesMeta> {
     pub golem: BodyData<BodyMeta, golem::AllSpecies<SpeciesMeta>>,
     pub critter: BodyData<BodyMeta, critter::AllSpecies<SpeciesMeta>>,
     pub quadruped_low: BodyData<BodyMeta, quadruped_low::AllSpecies<SpeciesMeta>>,
+    pub slime: BodyData<BodyMeta, slime::AllSpecies<SpeciesMeta>>,
 }
 
 /// Can only retrieve body metadata by direct index.
@@ -91,6 +94,7 @@ impl<BodyMeta, SpeciesMeta> core::ops::Index<NpcKind> for AllBodies<BodyMeta, Sp
             NpcKind::Rat => &self.critter.body,
             NpcKind::Reddragon => &self.dragon.body,
             NpcKind::Crocodile => &self.quadruped_low.body,
+            NpcKind::GreenSlime => &self.slime.body,
         }
     }
 }
@@ -115,6 +119,7 @@ impl<'a, BodyMeta, SpeciesMeta> core::ops::Index<&'a Body> for AllBodies<BodyMet
             Body::Golem(_) => &self.golem.body,
             Body::Critter(_) => &self.critter.body,
             Body::QuadrupedLow(_) => &self.quadruped_low.body,
+            Body::Slime(_) => &self.slime.body,
         }
     }
 }
@@ -151,6 +156,7 @@ impl Body {
             Body::BipedLarge(_) => 2.0,
             Body::Golem(_) => 2.5,
             Body::QuadrupedLow(_) => 1.0,
+            Body::Slime(_) => 0.4,
             Body::Object(_) => 0.3,
         }
     }
@@ -175,6 +181,7 @@ impl Body {
             Body::BipedLarge(_) => 4.0,
             Body::Golem(_) => 5.0,
             Body::QuadrupedLow(_) => 0.5,
+            Body::Slime(_) => 0.6,
             Body::Object(_) => 0.6,
         }
     }
@@ -194,6 +201,7 @@ impl Body {
             Body::Golem(_) => 1680,
             Body::Critter(_) => 320,
             Body::QuadrupedLow(_) => 640,
+            Body::Slime(_) => 500,
         }
     }
 
@@ -212,6 +220,7 @@ impl Body {
             Body::Golem(_) => 170,
             Body::Critter(_) => 30,
             Body::QuadrupedLow(_) => 60,
+            Body::Slime(_) => 60,
         }
     }
 
@@ -230,6 +239,7 @@ impl Body {
             Body::Golem(_) => 75,
             Body::Critter(_) => 8,
             Body::QuadrupedLow(_) => 24,
+            Body::Slime(_) => 20,
         }
     }
 
@@ -248,6 +258,7 @@ impl Body {
             Body::Golem(_) => 15,
             Body::Critter(_) => 2,
             Body::QuadrupedLow(_) => 5,
+            Body::Slime(_) => 4,
         }
     }
 
@@ -266,6 +277,7 @@ impl Body {
             Body::Golem(_) => 360,
             Body::Critter(_) => 70,
             Body::QuadrupedLow(_) => 110,
+            Body::Slime(_) => 100,
         }
     }
 
@@ -284,6 +296,7 @@ impl Body {
             Body::Golem(_) => 7.5,
             Body::Critter(_) => 3.0,
             Body::QuadrupedLow(_) => 4.5,
+            Body::Slime(_) => 5.5,
         }
     }
 }

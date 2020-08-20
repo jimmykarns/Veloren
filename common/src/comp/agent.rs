@@ -73,6 +73,7 @@ impl<'a> From<&'a Body> for Psyche {
                 Body::Golem(_) => 1.0,
                 Body::Critter(_) => 0.1,
                 Body::Dragon(_) => 1.0,
+                Body::Slime(_) => 1.0,
             },
         }
     }

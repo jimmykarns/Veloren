@@ -15,6 +15,7 @@ use common::{
         quadruped_low::{BodyType as QLBodyType, Species as QLSpecies},
         quadruped_medium::{BodyType as QMBodyType, Species as QMSpecies},
         quadruped_small::{BodyType as QSBodyType, Species as QSSpecies},
+        slime::{BodyType as SLBodyType, Species as SLSpecies},
     },
     figure::{DynaUnionizer, MatSegment, Material, Segment},
 };
@@ -3138,7 +3139,188 @@ impl GolemLateralSpec {
     }
 }
 
-///
+////
+#[derive(Serialize, Deserialize)]
+pub struct SlimeCenterSpec(HashMap<(SLSpecies, SLBodyType), SidedSLCenterVoxSpec>);
+
+#[derive(Serialize, Deserialize)]
+struct SidedSLCenterVoxSpec {
+    body_1: SlimeCenterSubSpec,
+    body_2: SlimeCenterSubSpec,
+    body_3: SlimeCenterSubSpec,
+    body_4: SlimeCenterSubSpec,
+    body_5: SlimeCenterSubSpec,
+    tail_upper: SlimeCenterSubSpec,
+    tail_lower: SlimeCenterSubSpec,
+}
+#[derive(Serialize, Deserialize)]
+struct SlimeCenterSubSpec {
+    offset: [f32; 3], // Should be relative to initial origin
+    center: VoxSimple,
+}
+
+impl Asset for SlimeCenterSpec {
+    const ENDINGS: &'static [&'static str] = &["ron"];
+
+    fn parse(buf_reader: BufReader<File>) -> Result<Self, assets::Error> {
+        ron::de::from_reader(buf_reader).map_err(assets::Error::parse_error)
+    }
+}
+
+impl SlimeCenterSpec {
+    pub fn load_watched(indicator: &mut ReloadIndicator) -> Arc<Self> {
+        assets::load_watched::<Self>("voxygen.voxel.slime_center_manifest", indicator)
+            .unwrap()
+    }
+
+    pub fn mesh_body_1(
+        &self,
+        species: SLSpecies,
+        body_type: SLBodyType,
+        generate_mesh: impl FnOnce(Segment, Vec3<f32>) -> BoneMeshes,
+    ) -> BoneMeshes {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body_1 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body_1.center.0);
+
+        generate_mesh(center, Vec3::from(spec.body_1.offset))
+    }
+
+    pub fn mesh_body_2(
+        &self,
+        species: SLSpecies,
+        body_type: SLBodyType,
+        generate_mesh: impl FnOnce(Segment, Vec3<f32>) -> BoneMeshes,
+    ) -> BoneMeshes {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body_2 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body_2.center.0);
+
+        generate_mesh(center, Vec3::from(spec.body_2.offset))
+    }
+
+    pub fn mesh_body_3(
+        &self,
+        species: SLSpecies,
+        body_type: SLBodyType,
+        generate_mesh: impl FnOnce(Segment, Vec3<f32>) -> BoneMeshes,
+    ) -> BoneMeshes {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body_3 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body_3.center.0);
+
+        generate_mesh(center, Vec3::from(spec.body_3.offset))
+    }
+
+    pub fn mesh_body_4(
+        &self,
+        species: SLSpecies,
+        body_type: SLBodyType,
+        generate_mesh: impl FnOnce(Segment, Vec3<f32>) -> BoneMeshes,
+    ) -> BoneMeshes {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body_4 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body_4.center.0);
+
+        generate_mesh(center, Vec3::from(spec.body_4.offset))
+    }
+
+    pub fn mesh_body_5(
+        &self,
+        species: SLSpecies,
+        body_type: SLBodyType,
+        generate_mesh: impl FnOnce(Segment, Vec3<f32>) -> BoneMeshes,
+    ) -> BoneMeshes {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No body_5 specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.body_5.center.0);
+
+        generate_mesh(center, Vec3::from(spec.body_5.offset))
+    }
+
+    pub fn mesh_tail_upper(
+        &self,
+        species: SLSpecies,
+        body_type: SLBodyType,
+        generate_mesh: impl FnOnce(Segment, Vec3<f32>) -> BoneMeshes,
+    ) -> BoneMeshes {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No tail_upper specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.tail_upper.center.0);
+
+        generate_mesh(center, Vec3::from(spec.tail_upper.offset))
+    }
+
+    pub fn mesh_tail_lower(
+        &self,
+        species: SLSpecies,
+        body_type: SLBodyType,
+        generate_mesh: impl FnOnce(Segment, Vec3<f32>) -> BoneMeshes,
+    ) -> BoneMeshes {
+        let spec = match self.0.get(&(species, body_type)) {
+            Some(spec) => spec,
+            None => {
+                error!(
+                    "No tail_lower specification exists for the combination of {:?} and {:?}",
+                    species, body_type
+                );
+                return load_mesh("not_found", Vec3::new(-5.0, -5.0, -2.5), generate_mesh);
+            },
+        };
+        let center = graceful_load_segment(&spec.tail_lower.center.0);
+
+        generate_mesh(center, Vec3::from(spec.tail_lower.offset))
+    }
+}
+////
 
 #[derive(Serialize, Deserialize)]
 pub struct QuadrupedLowCentralSpec(HashMap<(QLSpecies, QLBodyType), SidedQLCentralVoxSpec>);

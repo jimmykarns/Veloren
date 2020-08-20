@@ -118,6 +118,7 @@ impl EntityInfo {
             Body::QuadrupedLow(body) => Some(get_npc_name(&NPC_NAMES.quadruped_low, body.species)),
             Body::Golem(body) => Some(get_npc_name(&NPC_NAMES.golem, body.species)),
             Body::BipedLarge(body) => Some(get_npc_name(&NPC_NAMES.biped_large, body.species)),
+            Body::Slime(body) => Some(get_npc_name(&NPC_NAMES.slime, body.species)),
             _ => None,
         }
         .map(|s| {

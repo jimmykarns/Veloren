@@ -1,0 +1,62 @@
+({
+    (GreenSlime, Male): (
+        body_1: (
+            offset: (-10.0, -10.0, -2.0),
+            center: ("npc.greenslime.male.body_1"),
+        ),
+        body_2: (
+            offset: (-10.0, -10.0, -2.0),
+            center: ("npc.greenslime.male.body_2"),
+        ),
+        body_3: (
+            offset: (-10.0, -10.0, -2.0),
+            center: ("npc.greenslime.male.body_3"),
+        ),
+        body_4: (
+            offset: (-10.0, -10.0, -2.0),
+            center: ("npc.greenslime.male.body_4"),
+        ),
+        body_5: (
+            offset: (-10.0, -10.0, -2.0),
+            center: ("npc.greenslime.male.body_5"),
+        ),
+        tail_upper: (
+            offset: (-5.0, -5.0, -5.0),
+            center: ("npc.greenslime.male.tail_upper"),
+        ),
+        tail_lower: (
+            offset: (-3.0, -5.0, -2.5),
+            center: ("npc.greenslime.male.tail_lower"),
+        ),
+    ),
+    (GreenSlime, Female): (
+        body_1: (
+            offset: (-10.0, -10.0, -2.0),
+            center: ("npc.greenslime.male.body_1"),
+        ),
+        body_2: (
+            offset: (-10.0, -10.0, -2.0),
+            center: ("npc.greenslime.male.body_2"),
+        ),
+        body_3: (
+            offset: (-10.0, -10.0, -2.0),
+            center: ("npc.greenslime.male.body_3"),
+        ),
+        body_4: (
+            offset: (-10.0, -10.0, -2.0),
+            center: ("npc.greenslime.male.body_4"),
+        ),
+        body_5: (
+            offset: (-10.0, -10.0, -2.0),
+            center: ("npc.greenslime.male.body_5"),
+        ),
+        tail_upper: (
+            offset: (-5.0, -5.0, -5.0),
+            center: ("npc.greenslime.male.tail_upper"),
+        ),
+        tail_lower: (
+            offset: (-3.0, -5.0, -2.5),
+            center: ("npc.greenslime.male.tail_lower"),
+        ),
+    ),
+})

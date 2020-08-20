@@ -367,7 +367,7 @@ pub fn apply_caves_supplement<'a>(
                         cave_base as f32,
                     ))
                     .with_alignment(comp::Alignment::Enemy)
-                    .with_body(match rng.gen_range(0, 6) {
+                    .with_body(match rng.gen_range(0, 7) {
                         0 => {
                             let species = match rng.gen_range(0, 2) {
                                 0 => comp::quadruped_small::Species::Truffler,
@@ -405,6 +405,13 @@ pub fn apply_caves_supplement<'a>(
                                 _ => comp::golem::Species::StoneGolem,
                             };
                             comp::golem::Body::random_with(rng, &species).into()
+                        },
+                        5 => {
+                            #[allow(clippy::match_single_binding)]
+                            let species = match rng.gen_range(0, 1) {
+                                _ => comp::slime::Species::GreenSlime,
+                            };
+                            comp::slime::Body::random_with(rng, &species).into()
                         },
                         _ => {
                             let species = match rng.gen_range(0, 4) {
