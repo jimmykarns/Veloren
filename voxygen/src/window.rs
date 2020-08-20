@@ -1098,11 +1098,8 @@ impl Window {
 
     pub fn is_fullscreen(&self) -> bool {
         let fullscreen = self.fullscreen;
-        if let FullscreenMode::Off = fullscreen {
-            false
-        } else {
-            true
-        }
+
+        matches!(fullscreen, FullscreenMode::Off)
     }
 
     pub fn select_video_mode_rec(
