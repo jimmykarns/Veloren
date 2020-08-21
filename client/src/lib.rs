@@ -23,7 +23,7 @@ use common::{
     msg::{
         validate_chat_msg, ChatMsgValidationError, ClientMsg, ClientState, InviteAnswer,
         Notification, PlayerInfo, PlayerListUpdate, RegisterError, RequestStateError, ServerInfo,
-        ServerMsg, MAX_BYTES_CHAT_MSG,
+        ServerMsg, ServerStats, MAX_BYTES_CHAT_MSG,
     },
     outcome::Outcome,
     recipe::RecipeBook,
@@ -415,6 +415,19 @@ impl Client {
     pub fn with_thread_pool(mut self, thread_pool: ThreadPool) -> Self {
         self.thread_pool = thread_pool;
         self
+    }
+
+    /// Request `ServerStats`
+    pub fn request_server_stats(&mut self) -> Result<ServerStats, Error> {
+        self.singleton_stream.send(ClientMsg::ServerStats)?;
+
+        block_on(async {
+            loop {
+                if let ServerMsg::ServerStats(stats) = self.singleton_stream.recv().await? {
+                    break Ok(stats);
+                }
+            }
+        })
     }
 
     /// Request a state transition to `ClientState::Registered`.
@@ -1408,6 +1421,7 @@ impl Client {
                 ServerMsg::Outcomes(outcomes) => {
                     frontend_events.extend(outcomes.into_iter().map(Event::Outcome))
                 },
+                ServerMsg::ServerStats(_) => { /* How should this be handled */ },
             }
         }
     }

@@ -644,7 +644,7 @@ impl Server {
         // Report other info
         self.tick_metrics
             .player_online
-            .set(self.state.ecs().read_storage::<Client>().join().count() as i64);
+            .set(self.state.ecs().read_storage::<Client>().join().count() as u64);
         self.tick_metrics
             .time_of_day
             .set(self.state.ecs().read_resource::<TimeOfDay>().0);
@@ -808,7 +808,13 @@ impl Server {
             .is_some()
     }
 
-    pub fn number_of_players(&self) -> i64 { self.tick_metrics.player_online.get() }
+    pub fn number_of_players(&self) -> u64 {
+        self.state
+            .ecs()
+            .read_storage::<comp::Player>()
+            .join()
+            .count() as u64
+    }
 }
 
 impl Drop for Server {

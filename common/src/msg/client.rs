@@ -48,4 +48,5 @@ pub enum ClientMsg {
     UnlockSkill(Skill),
     RefundSkill(Skill),
     UnlockSkillGroup(SkillGroupType),
+    ServerStats,
 }

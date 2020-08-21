@@ -177,6 +177,11 @@ pub enum InviteAnswer {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerStats {
+    pub player_count: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Notification {
     WaypointSaved,
 }
@@ -243,6 +248,7 @@ pub enum ServerMsg {
     Notification(Notification),
     SetViewDistance(u32),
     Outcomes(Vec<Outcome>),
+    ServerStats(ServerStats),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
